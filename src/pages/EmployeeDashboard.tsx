@@ -11,7 +11,6 @@ import {
     QrCode,
     Phone,
     Wallet,
-    EyeOff,
     User,
     Mail,
     Briefcase,

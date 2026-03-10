@@ -56,7 +56,7 @@ export const LeadsTracker: React.FC = () => {
         worker_id: '',
         deal_value: 0,
         down_payment: 0,
-        payment_status: 'Downpayment Only' as const
+        payment_status: 'Downpayment Only' as string
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
