@@ -1,8 +1,7 @@
 import React from 'react';
 import {
   TrendingUp,
-  Layers,
-  DollarSign
+  Layers
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
@@ -91,7 +90,7 @@ const Dashboard = () => {
 
   React.useEffect(() => {
     const fetchStats = async () => {
-      const query = supabase.from('leads').select('deal_value, down_payment, status, payment_status, worker_id');
+      const query = supabase.from('leads').select('deal_value, down_payment, status, payment_status, worker_id, commission_rate');
       if (!isOwner && profile?.id) {
         query.eq('worker_id', profile.id);
       }
