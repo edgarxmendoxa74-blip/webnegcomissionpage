@@ -75,7 +75,7 @@ export const LoginPage: React.FC = () => {
                 <div className="w-full max-w-4xl">
                     <div className="text-center mb-16">
                         <h1 className="text-6xl font-black tracking-tighter text-black uppercase italic mb-4">WebNegosyo</h1>
-                        <p className="text-zinc-400 text-xs font-black uppercase tracking-[0.4em]">Choice of Portal</p>
+                        <p className="text-zinc-400 text-xs font-black uppercase tracking-[0.4em]">Management for Commissions</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
