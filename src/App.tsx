@@ -154,7 +154,7 @@ const Dashboard = () => {
           <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Monthly Revenue</p>
           <div>
             <span className="text-sm font-bold opacity-50 block mb-1">Current Payouts</span>
-            <p className="text-5xl font-black tracking-tighter tabular-nums">₱{stats.earnings.toLocaleString()}</p>
+            <p className="text-3xl font-black tracking-tighter tabular-nums">₱{stats.earnings.toLocaleString()}</p>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
             <div className="w-2 h-2 rounded-full bg-green-500" />
