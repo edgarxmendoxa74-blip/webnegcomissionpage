@@ -28,6 +28,7 @@ interface Lead {
     payment_status: 'Fully Paid' | 'Cancelled Project' | 'Downpayment Only';
     deal_value: number;
     down_payment: number;
+    tip: number;
     worker_id: string;
     webdev_id?: string;
     worker?: { name: string; commission_percentage: number };
@@ -62,6 +63,7 @@ export const LeadsTracker: React.FC = () => {
         webdev_id: '',
         deal_value: 0,
         down_payment: 0,
+        tip: 0,
         payment_status: 'Downpayment Only' as string
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,6 +120,7 @@ export const LeadsTracker: React.FC = () => {
                     status: 'closed',
                     deal_value: dealValue,
                     down_payment: formData.down_payment,
+                    tip: formData.tip,
                     payment_status: formData.payment_status,
                     webdev_id: formData.webdev_id || null,
                     closed_at: new Date().toISOString()
@@ -287,6 +290,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
@@ -340,10 +344,17 @@ export const LeadsTracker: React.FC = () => {
                                         <div className="text-sm font-black text-amber-600 tabular-nums">₱{Number(lead.down_payment).toLocaleString()}</div>
                                     </td>
                                     <td className="px-8 py-5 text-right">
+                                        <div className="text-sm font-black text-blue-600 tabular-nums">₱{Number(lead.tip || 0).toLocaleString()}</div>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
                                         <div className="text-sm font-black text-red-600 tabular-nums">
-                                            ₱{Number(lead.payment_status === 'Cancelled Project'
-                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 20) / 100)
-                                                : lead.deal_value - lead.down_payment).toLocaleString()}
+                                            ₱{Number(
+                                                lead.payment_status === 'Cancelled Project'
+                                                    ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 10) / 100)
+                                                    : lead.payment_status === 'Fully Paid'
+                                                        ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
+                                                        : lead.deal_value - lead.down_payment
+                                            ).toLocaleString()}
                                         </div>
                                     </td>
                                     <td className="px-8 py-5">
@@ -411,11 +422,16 @@ export const LeadsTracker: React.FC = () => {
                             {filteredLeads.length > 0 && (
                                 <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
                                     <td colSpan={6} className="px-8 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                    <td className="px-8 py-6 text-right text-lg text-blue-600 tabular-nums">
+                                        ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
+                                    </td>
                                     <td className="px-8 py-6 text-right text-lg text-red-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => {
                                             const balance = lead.payment_status === 'Cancelled Project'
-                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 20) / 100)
-                                                : lead.deal_value - lead.down_payment;
+                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 10) / 100)
+                                                : lead.payment_status === 'Fully Paid'
+                                                    ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
+                                                    : lead.deal_value - lead.down_payment;
                                             return sum + (Number(balance) || 0);
                                         }, 0).toLocaleString()}
                                     </td>
@@ -463,6 +479,16 @@ export const LeadsTracker: React.FC = () => {
                                         placeholder="Down Payment 0.00"
                                         value={formData.down_payment || ''}
                                         onChange={(e) => setFormData({ ...formData, down_payment: Number(e.target.value) })}
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
+                                    <input
+                                        type="number"
+                                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
+                                        placeholder="Tip 0.00"
+                                        value={formData.tip || ''}
+                                        onChange={(e) => setFormData({ ...formData, tip: Number(e.target.value) })}
                                     />
                                 </div>
                                 <div className="space-y-2 text-left">

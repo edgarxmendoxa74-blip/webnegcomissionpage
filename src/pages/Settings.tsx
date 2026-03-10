@@ -61,6 +61,8 @@ export const SettingsPage: React.FC = () => {
     const [showDealsModal, setShowDealsModal] = useState(false);
     const [allDeals, setAllDeals] = useState<any[]>([]);
     const [loadingDeals, setLoadingDeals] = useState(false);
+    const [, setSelectedWorkerId] = useState<string | null>(null);
+    const [selectedWorkerName, setSelectedWorkerName] = useState<string | null>(null);
 
     // Form State for Worker
     const [workerFormData, setWorkerFormData] = useState({
@@ -190,13 +192,19 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
-    const fetchAllDeals = async () => {
+    const fetchAllDeals = async (workerId?: string) => {
         setLoadingDeals(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('leads')
                 .select('*, worker:workers!worker_id(name), webdev:workers!webdev_id(name)')
                 .order('created_at', { ascending: false });
+
+            if (workerId) {
+                query = query.eq('worker_id', workerId);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
             if (data) setAllDeals(data);
         } catch (err) {
@@ -296,11 +304,16 @@ export const SettingsPage: React.FC = () => {
 
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => { fetchAllDeals(); setShowDealsModal(true); }}
+                            onClick={() => {
+                                setSelectedWorkerId(null);
+                                setSelectedWorkerName(null);
+                                fetchAllDeals();
+                                setShowDealsModal(true);
+                            }}
                             className="px-8 py-4 bg-zinc-100 text-black border border-zinc-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-200 transition-all active:scale-95 flex items-center gap-3"
                         >
                             <Briefcase className="w-4 h-4" />
-                            Show Clients Deals List
+                            Show All Deals List
                         </button>
                         <button
                             onClick={() => { resetWorkerForm(); setShowAddModal(true); }}
@@ -369,6 +382,18 @@ export const SettingsPage: React.FC = () => {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedWorkerId(worker.id);
+                                                        setSelectedWorkerName(worker.name);
+                                                        fetchAllDeals(worker.id);
+                                                        setShowDealsModal(true);
+                                                    }}
+                                                    title="Show Deals"
+                                                    className="p-3 bg-zinc-100 text-black rounded-xl hover:bg-black hover:text-white transition-all active:scale-90"
+                                                >
+                                                    <Briefcase className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleToggleVisibility(worker)}
                                                     title={worker.active ? "Hide Record" : "Unhide Record"}
@@ -635,8 +660,12 @@ export const SettingsPage: React.FC = () => {
                         >
                             <div className="p-10 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/30">
                                 <div>
-                                    <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black leading-none">Clients Deals List</h2>
-                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-2">All client projects and assignments</p>
+                                    <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black leading-none">
+                                        {selectedWorkerName ? `${selectedWorkerName}'s Deals` : 'Clients Deals List'}
+                                    </h2>
+                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-2">
+                                        {selectedWorkerName ? `Viewing all projects for ${selectedWorkerName}` : 'All client projects and assignments'}
+                                    </p>
                                 </div>
                                 <button title="Close modal" onClick={() => setShowDealsModal(false)} className="p-4 hover:bg-white rounded-2xl transition-colors">
                                     <X className="w-6 h-6 text-zinc-300" />
@@ -700,9 +729,13 @@ export const SettingsPage: React.FC = () => {
                                                         </td>
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="text-sm font-black text-red-600 tabular-nums">
-                                                                ₱{Number(deal.payment_status === 'Cancelled Project'
-                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 20) / 100)
-                                                                    : deal.deal_value - deal.down_payment).toLocaleString()}
+                                                                ₱{Number(
+                                                                    deal.payment_status === 'Cancelled Project'
+                                                                        ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
+                                                                        : deal.payment_status === 'Fully Paid'
+                                                                            ? deal.deal_value - (deal.deal_value * (deal.commission_rate || 20) / 100)
+                                                                            : deal.deal_value - deal.down_payment
+                                                                ).toLocaleString()}
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6 text-right">
@@ -718,8 +751,10 @@ export const SettingsPage: React.FC = () => {
                                                         <td className="px-8 py-8 text-right text-lg text-red-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => {
                                                                 const balance = deal.payment_status === 'Cancelled Project'
-                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 20) / 100)
-                                                                    : deal.deal_value - deal.down_payment;
+                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
+                                                                    : deal.payment_status === 'Fully Paid'
+                                                                        ? deal.deal_value - (deal.deal_value * (deal.commission_rate || 20) / 100)
+                                                                        : deal.deal_value - deal.down_payment;
                                                                 return sum + (Number(balance) || 0);
                                                             }, 0).toLocaleString()}
                                                         </td>

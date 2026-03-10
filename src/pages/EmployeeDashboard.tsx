@@ -35,6 +35,7 @@ interface Lead {
     payment_status: 'Fully Paid' | 'Cancelled Project' | 'Downpayment Only';
     deal_value: number;
     down_payment: number;
+    tip: number;
     worker_id: string;
     webdev_id?: string;
     is_hidden: boolean;
@@ -73,6 +74,7 @@ export const EmployeeDashboard: React.FC = () => {
         client_name: '',
         deal_value: 0,
         down_payment: 0,
+        tip: 0,
         payment_status: 'Downpayment Only' as string,
     });
 
@@ -85,6 +87,7 @@ export const EmployeeDashboard: React.FC = () => {
         ad_source: 'Direct',
         deal_value: 0,
         down_payment: 0,
+        tip: 0,
         payment_status: 'Downpayment Only' as string,
         commission_rate: 20,
         webdev_id: '',
@@ -172,6 +175,7 @@ export const EmployeeDashboard: React.FC = () => {
             client_name: lead.client_name,
             deal_value: lead.deal_value,
             down_payment: lead.down_payment,
+            tip: lead.tip || 0,
             payment_status: lead.payment_status || 'Downpayment Only',
         });
     };
@@ -180,6 +184,10 @@ export const EmployeeDashboard: React.FC = () => {
         if (lead.payment_status === 'Cancelled Project') {
             const commissionRate = lead.commission_rate || 10;
             return Number(lead.down_payment) - (Number(lead.deal_value) * commissionRate / 100);
+        }
+        if (lead.payment_status === 'Fully Paid') {
+            const commissionRate = lead.commission_rate || 20;
+            return Number(lead.deal_value) - (Number(lead.deal_value) * commissionRate / 100);
         }
         return Number(lead.deal_value) - Number(lead.down_payment);
     };
@@ -194,6 +202,7 @@ export const EmployeeDashboard: React.FC = () => {
                     client_name: editForm.client_name,
                     deal_value: editForm.deal_value,
                     down_payment: editForm.down_payment,
+                    tip: editForm.tip,
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
                         : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
@@ -230,6 +239,7 @@ export const EmployeeDashboard: React.FC = () => {
                 ad_source: addForm.ad_source,
                 deal_value: addForm.deal_value,
                 down_payment: addForm.down_payment,
+                tip: addForm.tip,
                 payment_status: (addForm.payment_status === 'Cancelled Project' || addForm.payment_status === 'Downpayment Only')
                     ? addForm.payment_status
                     : (balance <= 0 ? 'Fully Paid' : addForm.payment_status),
@@ -254,6 +264,7 @@ export const EmployeeDashboard: React.FC = () => {
                 ad_source: 'Direct',
                 deal_value: 0,
                 down_payment: 0,
+                tip: 0,
                 payment_status: 'Downpayment Only',
                 commission_rate: 20,
                 webdev_id: profile?.assigned_webdev_id || '',
@@ -437,6 +448,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
+                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
@@ -529,6 +541,20 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 <span className="text-sm font-black text-amber-600 tabular-nums">₱{Number(lead.down_payment).toLocaleString()}</span>
                                                             )}
                                                         </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            {editingId === lead.id ? (
+                                                                <input
+                                                                    type="number"
+                                                                    title="Tip"
+                                                                    placeholder="0"
+                                                                    className="w-28 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:border-black transition-all text-right"
+                                                                    value={editForm.tip || ''}
+                                                                    onChange={(e) => setEditForm({ ...editForm, tip: Number(e.target.value) })}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm font-black text-blue-600 tabular-nums">₱{Number(lead.tip || 0).toLocaleString()}</span>
+                                                            )}
+                                                        </td>
                                                         <td className="px-6 py-4">
                                                             {editingId === lead.id ? (
                                                                 <select
@@ -611,6 +637,9 @@ export const EmployeeDashboard: React.FC = () => {
                                                         <td colSpan={7} className="px-6 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
                                                         <td className="px-6 py-6 text-right text-lg text-red-600 tabular-nums">
                                                             ₱{filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-right text-lg text-blue-600 tabular-nums">
+                                                            ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
                                                         </td>
                                                         <td className="px-6 py-6 text-right text-lg text-green-600 tabular-nums">
                                                             ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0).toLocaleString()}
@@ -907,6 +936,17 @@ export const EmployeeDashboard: React.FC = () => {
                                             className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
                                             value={addForm.down_payment || ''}
                                             onChange={(e) => setAddForm({ ...addForm, down_payment: Number(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Tip (₱)</span>
+                                        <input
+                                            type="number"
+                                            title="Tip"
+                                            placeholder="0"
+                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                            value={addForm.tip || ''}
+                                            onChange={(e) => setAddForm({ ...addForm, tip: Number(e.target.value) })}
                                         />
                                     </div>
                                 </div>
