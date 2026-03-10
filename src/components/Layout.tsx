@@ -108,7 +108,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
             {/* Sidebar */}
             <aside className={cn(
-                "fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-white border-r border-zinc-100 p-8 transition-transform duration-500 lg:translate-x-0 shadow-sm",
+                "fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-white border-r border-zinc-100 p-8 flex flex-col transition-transform duration-500 lg:translate-x-0 shadow-sm overflow-y-auto",
                 !isOpen && "-translate-x-full"
             )}>
                 <div className="flex flex-col items-center mb-12 px-2 text-center">
@@ -150,7 +150,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                     ))}
                 </nav>
 
-                <div className="absolute bottom-6 left-6 right-6 space-y-2">
+                <div className="mt-auto space-y-2 pt-8">
                     {isOwner && (
                         <button
                             onClick={() => setActiveTab('Settings')}
