@@ -190,7 +190,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-auto bg-[#fafafa]">
+            <main className="flex-1 min-w-0 overflow-auto bg-[#fafafa]">
                 <header className="h-24 px-12 flex items-center justify-between sticky top-0 bg-white/60 backdrop-blur-2xl z-30 border-b border-zinc-100/50">
                     <div className="flex items-center gap-6">
                         <button
