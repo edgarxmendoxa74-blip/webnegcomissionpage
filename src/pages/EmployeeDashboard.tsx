@@ -14,6 +14,7 @@ import {
     User,
     Mail,
     Briefcase,
+    Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -61,6 +62,7 @@ export const EmployeeDashboard: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [activeSection, setActiveSection] = useState<'deals' | 'profile'>('deals');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Edit form state
     const [editForm, setEditForm] = useState({
@@ -139,6 +141,10 @@ export const EmployeeDashboard: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const filteredLeads = leads.filter(lead =>
+        lead.client_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const startEditing = (lead: Lead) => {
         setEditingId(lead.id);
@@ -366,13 +372,25 @@ export const EmployeeDashboard: React.FC = () => {
                                         <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic">Client Deals</h2>
                                         <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Your closed deals and project collections</p>
                                     </div>
-                                    <button
-                                        onClick={() => setShowAddModal(true)}
-                                        className="flex items-center gap-2 px-6 py-3.5 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Add Client
-                                    </button>
+                                    <div className="flex flex-col md:flex-row items-center gap-4">
+                                        <div className="relative group w-full md:w-72">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search client name..."
+                                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-[10px] uppercase tracking-widest transition-all"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setShowAddModal(true)}
+                                            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Add Client
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Deals Table */}
@@ -399,17 +417,21 @@ export const EmployeeDashboard: React.FC = () => {
                                                             <td colSpan={8} className="px-6 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                                         </tr>
                                                     ))
-                                                ) : leads.length === 0 ? (
+                                                ) : filteredLeads.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={8} className="px-6 py-20 text-center">
+                                                        <td colSpan={9} className="px-6 py-20 text-center">
                                                             <div className="text-zinc-300 mb-4">
                                                                 <Briefcase className="w-12 h-12 mx-auto" />
                                                             </div>
-                                                            <p className="text-zinc-400 font-bold text-sm">No deals yet</p>
-                                                            <p className="text-zinc-300 text-xs mt-1">Click "Add Client" to record your first deal.</p>
+                                                            <p className="text-zinc-400 font-bold text-sm">
+                                                                {searchQuery ? "No matching clients found" : "No deals yet"}
+                                                            </p>
+                                                            <p className="text-zinc-300 text-xs mt-1">
+                                                                {searchQuery ? "Try searching for a different name." : "Click \"Add Client\" to record your first deal."}
+                                                            </p>
                                                         </td>
                                                     </tr>
-                                                ) : leads.map((lead) => (
+                                                ) : filteredLeads.map((lead) => (
                                                     <tr key={lead.id} className={cn(
                                                         "group transition-colors",
                                                         lead.payment_status === 'Fully Paid' ? "bg-yellow-50/50 hover:bg-yellow-100/50" :
