@@ -109,7 +109,8 @@ export const LeadsTracker: React.FC = () => {
             if (leadError) throw leadError;
 
             // 2. Calculate commission
-            const commissionAmount = (dealValue * (closingLead.worker?.commission_percentage || 10)) / 100;
+            const commissionRate = formData.payment_status === 'Cancelled Project' ? 10 : (closingLead.worker?.commission_percentage || 10);
+            const commissionAmount = (dealValue * commissionRate) / 100;
 
             // 3. Insert commission record
             const { error: commError } = await supabase
@@ -179,7 +180,7 @@ export const LeadsTracker: React.FC = () => {
     };
 
     const exportToCSV = () => {
-        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission (20%)'];
+        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
         const rows = leads.map(l => {
             const date = new Date(l.created_at);
             return [
@@ -190,7 +191,7 @@ export const LeadsTracker: React.FC = () => {
                 l.down_payment,
                 Number(l.deal_value - l.down_payment).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number(l.deal_value * 0.2).toFixed(2)
+                Number(l.deal_value * (l.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toFixed(2)
             ];
         });
 
@@ -255,7 +256,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission (20%)</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -323,7 +324,9 @@ export const LeadsTracker: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                        <div className="text-sm font-black text-green-600 tabular-nums">₱{Number(lead.deal_value * 0.2).toLocaleString()}</div>
+                                        <div className="text-sm font-black text-green-600 tabular-nums">
+                                            ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toLocaleString()}
+                                        </div>
                                     </td>
                                     <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
                                         {lead.status === 'pending' && (

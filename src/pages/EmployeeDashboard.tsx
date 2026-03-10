@@ -385,7 +385,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission (20%)</th>
+                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Actions</th>
                                                 </tr>
                                             </thead>
@@ -498,7 +498,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
                                                             <span className="text-sm font-black text-green-600 tabular-nums">
-                                                                ₱{Number(lead.deal_value * 0.2).toLocaleString()}
+                                                                ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toLocaleString()}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
