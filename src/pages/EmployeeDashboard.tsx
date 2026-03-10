@@ -36,10 +36,12 @@ interface Lead {
     deal_value: number;
     down_payment: number;
     worker_id: string;
+    webdev_id?: string;
     is_hidden: boolean;
     month: string;
     commission_rate?: number;
     created_at: string;
+    webdev?: { name: string };
 }
 
 interface ProfileData {
@@ -51,6 +53,7 @@ interface ProfileData {
     photo_url: string;
     qr_code_url: string;
     contact_email?: string;
+    assigned_webdev_id?: string;
 }
 
 export const EmployeeDashboard: React.FC = () => {
@@ -63,6 +66,7 @@ export const EmployeeDashboard: React.FC = () => {
     const [activeSection, setActiveSection] = useState<'deals' | 'profile'>('deals');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [workers, setWorkers] = useState<{ id: string, name: string }[]>([]);
 
     // Edit form state
     const [editForm, setEditForm] = useState({
@@ -83,6 +87,7 @@ export const EmployeeDashboard: React.FC = () => {
         down_payment: 0,
         payment_status: 'Downpayment Only' as string,
         commission_rate: 20,
+        webdev_id: '',
     });
 
     // Profile form state
@@ -105,6 +110,7 @@ export const EmployeeDashboard: React.FC = () => {
     useEffect(() => {
         fetchLeads();
         fetchLogo();
+        fetchWorkers();
         if (profile) {
             setProfileForm({
                 name: profile.name || '',
@@ -115,6 +121,7 @@ export const EmployeeDashboard: React.FC = () => {
                 photo_url: profile.photo_url || '',
                 qr_code_url: profile.qr_code_url || '',
                 contact_email: profile.contact_email || '',
+                assigned_webdev_id: profile.assigned_webdev_id || '',
             });
         }
     }, [profile]);
@@ -124,13 +131,26 @@ export const EmployeeDashboard: React.FC = () => {
         if (data?.logo_url) setLogoUrl(data.logo_url);
     };
 
+    const fetchWorkers = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('workers')
+                .select('id, name')
+                .eq('active', true);
+            if (error) throw error;
+            setWorkers(data || []);
+        } catch (err) {
+            console.error('Error fetching workers:', err);
+        }
+    };
+
     const fetchLeads = async () => {
         if (!profile?.id) return;
         setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('leads')
-                .select('*')
+                .select('*, webdev:workers!webdev_id(name)')
                 .eq('worker_id', profile.id)
                 .order('created_at', { ascending: false });
             if (error) throw error;
@@ -157,7 +177,10 @@ export const EmployeeDashboard: React.FC = () => {
     };
 
     const getBalance = (lead: Lead) => {
-        if (lead.payment_status === 'Cancelled Project') return 0;
+        if (lead.payment_status === 'Cancelled Project') {
+            const commissionRate = lead.commission_rate || 10;
+            return Number(lead.down_payment) - (Number(lead.deal_value) * commissionRate / 100);
+        }
         return Number(lead.deal_value) - Number(lead.down_payment);
     };
 
@@ -174,6 +197,7 @@ export const EmployeeDashboard: React.FC = () => {
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
                         : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
+                    commission_rate: editForm.payment_status === 'Cancelled Project' ? 10 : undefined,
                     status: 'closed',
                     closed_at: new Date().toISOString(),
                 })
@@ -211,6 +235,7 @@ export const EmployeeDashboard: React.FC = () => {
                     : (balance <= 0 ? 'Fully Paid' : addForm.payment_status),
                 status: 'closed',
                 worker_id: profile?.id,
+                webdev_id: addForm.webdev_id || profile?.assigned_webdev_id || null,
                 month: addForm.month,
                 commission_rate: addForm.commission_rate,
                 closed_at: createdAt,
@@ -230,7 +255,8 @@ export const EmployeeDashboard: React.FC = () => {
                 deal_value: 0,
                 down_payment: 0,
                 payment_status: 'Downpayment Only',
-                commission_rate: 20
+                commission_rate: 20,
+                webdev_id: profile?.assigned_webdev_id || '',
             });
             fetchLeads();
         } catch (err) {
@@ -371,6 +397,12 @@ export const EmployeeDashboard: React.FC = () => {
                                     <div>
                                         <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic">Client Deals</h2>
                                         <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Your closed deals and project collections</p>
+                                        <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                            <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                                                We release the commissions of webnegosyo employees every 2 weeks.
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="flex flex-col md:flex-row items-center gap-4">
                                         <div className="relative group w-full md:w-72">
@@ -402,6 +434,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Month</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Date</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Client Name</th>
+                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
                                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
@@ -462,6 +495,11 @@ export const EmployeeDashboard: React.FC = () => {
                                                             ) : (
                                                                 <span className="font-bold text-black text-sm">{lead.client_name}</span>
                                                             )}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-[10px] font-black text-black uppercase tracking-widest">
+                                                                {lead.webdev?.name || 'Unassigned'}
+                                                            </span>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
                                                             {editingId === lead.id ? (
@@ -568,6 +606,18 @@ export const EmployeeDashboard: React.FC = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
+                                                {filteredLeads.length > 0 && (
+                                                    <tr className="bg-zinc-50/50 font-black border-t border-zinc-100">
+                                                        <td colSpan={7} className="px-6 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td className="px-6 py-6 text-right text-lg text-red-600 tabular-nums">
+                                                            ₱{filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-right text-lg text-green-600 tabular-nums">
+                                                            ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0).toLocaleString()}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
@@ -895,12 +945,27 @@ export const EmployeeDashboard: React.FC = () => {
                                         value={addForm.payment_status}
                                         onChange={(e) => {
                                             const status = e.target.value;
-                                            setAddForm({ ...addForm, payment_status: status, commission_rate: status === 'Cancelled Project' ? 10 : addForm.commission_rate === 10 && status !== 'Cancelled Project' ? 20 : addForm.commission_rate });
+                                            setAddForm({ ...addForm, payment_status: status, commission_rate: status === 'Cancelled Project' ? 10 : addForm.commission_rate });
                                         }}
                                     >
                                         <option value="Fully Paid">Fully Paid</option>
                                         <option value="Cancelled Project">Cancelled Project</option>
                                         <option value="Downpayment Only">Downpayment Only</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Assigned Webdev</span>
+                                    <select
+                                        title="Assigned Webdev"
+                                        className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs uppercase tracking-widest transition-all appearance-none"
+                                        value={addForm.webdev_id}
+                                        onChange={(e) => setAddForm({ ...addForm, webdev_id: e.target.value })}
+                                    >
+                                        <option value="">Select Webdev</option>
+                                        {workers.map(worker => (
+                                            <option key={worker.id} value={worker.id}>{worker.name}</option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -930,6 +995,6 @@ export const EmployeeDashboard: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };

@@ -29,7 +29,9 @@ interface Lead {
     deal_value: number;
     down_payment: number;
     worker_id: string;
+    webdev_id?: string;
     worker?: { name: string; commission_percentage: number };
+    webdev?: { name: string };
     is_hidden: boolean;
     commission_rate?: number;
     created_at: string;
@@ -39,12 +41,13 @@ interface Worker {
     id: string;
     name: string;
     commission_percentage: number;
+    assigned_webdev_id?: string;
 }
 
 export const LeadsTracker: React.FC = () => {
     const { profile, isOwner } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
-    const [, setWorkers] = useState<Worker[]>([]);
+    const [workers, setWorkers] = useState<Worker[]>([]);
     const [loading, setLoading] = useState(true);
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden, setShowHidden] = useState(false);
@@ -56,6 +59,7 @@ export const LeadsTracker: React.FC = () => {
         contact_info: '',
         ad_source: '',
         worker_id: '',
+        webdev_id: '',
         deal_value: 0,
         down_payment: 0,
         payment_status: 'Downpayment Only' as string
@@ -66,10 +70,20 @@ export const LeadsTracker: React.FC = () => {
         fetchData();
     }, []);
 
+    // Auto-assign webdev based on worker
+    useEffect(() => {
+        if (closingLead) {
+            const worker = workers.find(w => w.id === closingLead.worker_id);
+            if (worker?.assigned_webdev_id) {
+                setFormData(prev => ({ ...prev, webdev_id: worker.assigned_webdev_id || '' }));
+            }
+        }
+    }, [closingLead, workers]);
+
     const fetchData = async () => {
         try {
             setLoading(true);
-            const leadsQuery = supabase.from('leads').select('*, worker:workers(name, commission_percentage)').order('created_at', { ascending: false });
+            const leadsQuery = supabase.from('leads').select('*, worker:workers!worker_id(name, commission_percentage), webdev:workers!webdev_id(name)').order('created_at', { ascending: false });
 
             if (!isOwner && profile?.id) {
                 leadsQuery.eq('worker_id', profile.id);
@@ -77,7 +91,7 @@ export const LeadsTracker: React.FC = () => {
 
             const [leadsRes, workersRes] = await Promise.all([
                 leadsQuery,
-                supabase.from('workers').select('id, name, commission_percentage').eq('active', true)
+                supabase.from('workers').select('id, name, commission_percentage, assigned_webdev_id').eq('active', true)
             ]);
 
             if (leadsRes.error) throw leadsRes.error;
@@ -105,6 +119,7 @@ export const LeadsTracker: React.FC = () => {
                     deal_value: dealValue,
                     down_payment: formData.down_payment,
                     payment_status: formData.payment_status,
+                    webdev_id: formData.webdev_id || null,
                     closed_at: new Date().toISOString()
                 })
                 .eq('id', closingLead.id);
@@ -269,6 +284,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
                                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
@@ -281,12 +297,12 @@ export const LeadsTracker: React.FC = () => {
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={9} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
+                                        <td colSpan={10} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                     </tr>
                                 ))
                             ) : filteredLeads.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-8 py-20 text-center">
+                                    <td colSpan={10} className="px-8 py-20 text-center">
                                         <p className="text-zinc-400 font-bold text-sm">
                                             {searchQuery ? "No matching clients found" : "No records found"}
                                         </p>
@@ -314,6 +330,9 @@ export const LeadsTracker: React.FC = () => {
                                         <div className="font-bold text-black text-sm">{lead.client_name}</div>
                                         <div className="text-[10px] text-zinc-400 font-medium">{lead.contact_info}</div>
                                     </td>
+                                    <td className="px-8 py-5">
+                                        <div className="font-bold text-black text-xs uppercase tracking-widest">{lead.webdev?.name || 'Unassigned'}</div>
+                                    </td>
                                     <td className="px-8 py-5 text-right">
                                         <div className="text-sm font-black text-black tabular-nums">₱{Number(lead.deal_value).toLocaleString()}</div>
                                     </td>
@@ -321,7 +340,11 @@ export const LeadsTracker: React.FC = () => {
                                         <div className="text-sm font-black text-amber-600 tabular-nums">₱{Number(lead.down_payment).toLocaleString()}</div>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                        <div className="text-sm font-black text-red-600 tabular-nums">₱{Number(lead.payment_status === 'Cancelled Project' ? 0 : lead.deal_value - lead.down_payment).toLocaleString()}</div>
+                                        <div className="text-sm font-black text-red-600 tabular-nums">
+                                            ₱{Number(lead.payment_status === 'Cancelled Project'
+                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 20) / 100)
+                                                : lead.deal_value - lead.down_payment).toLocaleString()}
+                                        </div>
                                     </td>
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col gap-1.5">
@@ -385,6 +408,24 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {filteredLeads.length > 0 && (
+                                <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
+                                    <td colSpan={6} className="px-8 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                    <td className="px-8 py-6 text-right text-lg text-red-600 tabular-nums">
+                                        ₱{filteredLeads.reduce((sum, lead) => {
+                                            const balance = lead.payment_status === 'Cancelled Project'
+                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 20) / 100)
+                                                : lead.deal_value - lead.down_payment;
+                                            return sum + (Number(balance) || 0);
+                                        }, 0).toLocaleString()}
+                                    </td>
+                                    <td></td>
+                                    <td className="px-8 py-6 text-right text-lg text-green-600 tabular-nums">
+                                        ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : (lead.commission_rate || 20) / 100)) || 0), 0).toLocaleString()}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -435,6 +476,20 @@ export const LeadsTracker: React.FC = () => {
                                         <option value="Downpayment Only">Downpayment Only</option>
                                         <option value="Fully Paid">Fully Paid</option>
                                         <option value="Cancelled Project">Cancelled Project</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2 text-left">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Webdev Assigned</span>
+                                    <select
+                                        title="Webdev Assigned"
+                                        className="w-full px-6 py-4 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-xs font-black uppercase tracking-widest focus:border-black transition-all appearance-none"
+                                        value={formData.webdev_id}
+                                        onChange={(e) => setFormData({ ...formData, webdev_id: e.target.value })}
+                                    >
+                                        <option value="">Select Webdev</option>
+                                        {workers.map(worker => (
+                                            <option key={worker.id} value={worker.id}>{worker.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>

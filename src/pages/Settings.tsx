@@ -42,6 +42,7 @@ interface Worker {
     contact_email?: string;
     commission_percentage: number;
     active: boolean;
+    assigned_webdev_id?: string;
     created_at: string;
 }
 
@@ -57,6 +58,9 @@ export const SettingsPage: React.FC = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
     const [isSubmittingWorker, setIsSubmittingWorker] = useState(false);
+    const [showDealsModal, setShowDealsModal] = useState(false);
+    const [allDeals, setAllDeals] = useState<any[]>([]);
+    const [loadingDeals, setLoadingDeals] = useState(false);
 
     // Form State for Worker
     const [workerFormData, setWorkerFormData] = useState({
@@ -67,6 +71,7 @@ export const SettingsPage: React.FC = () => {
         gcash_number: '',
         contact_email: '',
         commission_percentage: 10,
+        assigned_webdev_id: '',
         active: true
     });
     const [workerPhotoFile, setWorkerPhotoFile] = useState<File | null>(null);
@@ -139,7 +144,8 @@ export const SettingsPage: React.FC = () => {
                 ...workerFormData,
                 email: emailValue,
                 photo_url,
-                qr_code_url
+                qr_code_url,
+                assigned_webdev_id: workerFormData.assigned_webdev_id || null
             };
 
             if (editingWorker) {
@@ -184,8 +190,24 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    const fetchAllDeals = async () => {
+        setLoadingDeals(true);
+        try {
+            const { data, error } = await supabase
+                .from('leads')
+                .select('*, worker:workers!worker_id(name), webdev:workers!webdev_id(name)')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            if (data) setAllDeals(data);
+        } catch (err) {
+            console.error('Error fetching all deals:', err);
+        } finally {
+            setLoadingDeals(false);
+        }
+    };
+
     const resetWorkerForm = () => {
-        setWorkerFormData({ name: '', email: '', contact_email: '', phone: '', role: 'Agent', gcash_number: '', commission_percentage: 10, active: true });
+        setWorkerFormData({ name: '', email: '', contact_email: '', phone: '', role: 'Agent', gcash_number: '', commission_percentage: 10, assigned_webdev_id: '', active: true });
         setWorkerPhotoFile(null);
         setWorkerQrFile(null);
     };
@@ -272,13 +294,22 @@ export const SettingsPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => { resetWorkerForm(); setShowAddModal(true); }}
-                        className="px-8 py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 flex items-center gap-3"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Onboard Person
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => { fetchAllDeals(); setShowDealsModal(true); }}
+                            className="px-8 py-4 bg-zinc-100 text-black border border-zinc-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-200 transition-all active:scale-95 flex items-center gap-3"
+                        >
+                            <Briefcase className="w-4 h-4" />
+                            Show Clients Deals List
+                        </button>
+                        <button
+                            onClick={() => { resetWorkerForm(); setShowAddModal(true); }}
+                            className="px-8 py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 flex items-center gap-3"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Onboard Person
+                        </button>
+                    </div>
                 </div>
 
                 <div className="bg-white border border-zinc-100 rounded-[2.5rem] overflow-hidden shadow-sm">
@@ -530,6 +561,20 @@ export const SettingsPage: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
+                                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Assigned Webdev</span>
+                                                <select
+                                                    title="Assigned Webdev"
+                                                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all appearance-none"
+                                                    value={workerFormData.assigned_webdev_id}
+                                                    onChange={(e) => setWorkerFormData({ ...workerFormData, assigned_webdev_id: e.target.value })}
+                                                >
+                                                    <option value="">No Webdev Assigned</option>
+                                                    {workers.filter(w => w.role.toLowerCase().includes('web') || w.role.toLowerCase().includes('dev')).map(webdev => (
+                                                        <option key={webdev.id} value={webdev.id}>{webdev.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
                                                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Status</span>
                                                 <select
                                                     title="Account Status"
@@ -567,6 +612,127 @@ export const SettingsPage: React.FC = () => {
                                     </div>
                                 </div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Deals List Modal */}
+            <AnimatePresence>
+                {showDealsModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setShowDealsModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-6xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="p-10 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/30">
+                                <div>
+                                    <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black leading-none">Clients Deals List</h2>
+                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-2">All client projects and assignments</p>
+                                </div>
+                                <button title="Close modal" onClick={() => setShowDealsModal(false)} className="p-4 hover:bg-white rounded-2xl transition-colors">
+                                    <X className="w-6 h-6 text-zinc-300" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                                <div className="bg-white border border-zinc-100 rounded-[2rem] overflow-hidden shadow-sm">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-zinc-50/50 border-b border-zinc-100">
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date/Month</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Info</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package Value</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-zinc-50">
+                                                {loadingDeals ? (
+                                                    <tr className="animate-pulse">
+                                                        <td colSpan={6} className="px-8 py-20 text-center text-zinc-300 font-black uppercase tracking-widest text-xs">Loading deals...</td>
+                                                    </tr>
+                                                ) : allDeals.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-8 py-20 text-center text-zinc-400 font-medium">No deals found.</td>
+                                                    </tr>
+                                                ) : allDeals.map(deal => (
+                                                    <tr key={deal.id} className="group hover:bg-zinc-50/50 transition-colors">
+                                                        <td className="px-8 py-6">
+                                                            <div className="font-bold text-black text-xs uppercase tracking-widest">{deal.month || new Date(deal.created_at).toLocaleString('default', { month: 'short' })}</div>
+                                                            <div className="text-[10px] text-zinc-400 font-black tabular-nums">{new Date(deal.created_at).toLocaleDateString()}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="font-bold text-black text-sm">{deal.client_name}</div>
+                                                            <div className="text-[10px] text-zinc-400 font-medium">{deal.contact_info}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="text-xs font-bold text-black">{deal.worker?.name || 'Unknown'}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="text-xs font-bold text-black">{deal.webdev?.name || 'Unassigned'}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="text-sm font-black text-black tabular-nums">₱{Number(deal.deal_value).toLocaleString()}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-center">
+                                                            <span className={cn(
+                                                                "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border",
+                                                                deal.payment_status === 'Fully Paid' ? "bg-green-50 text-green-600 border-green-100" :
+                                                                    deal.payment_status === 'Downpayment Only' ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                                                        deal.payment_status === 'Cancelled Project' ? "bg-zinc-100 text-zinc-500 border-zinc-200" :
+                                                                            "bg-red-50 text-red-500 border-red-100"
+                                                            )}>
+                                                                {deal.payment_status || 'Downpayment Only'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="text-sm font-black text-red-600 tabular-nums">
+                                                                ₱{Number(deal.payment_status === 'Cancelled Project'
+                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 20) / 100)
+                                                                    : deal.deal_value - deal.down_payment).toLocaleString()}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="text-sm font-black text-green-600 tabular-nums">
+                                                                ₱{Number(deal.deal_value * (deal.payment_status === 'Cancelled Project' ? 0.1 : (deal.commission_rate || 20) / 100)).toLocaleString()}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {allDeals.length > 0 && (
+                                                    <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
+                                                        <td colSpan={6} className="px-8 py-8 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td className="px-8 py-8 text-right text-lg text-red-600 tabular-nums">
+                                                            ₱{allDeals.reduce((sum, deal) => {
+                                                                const balance = deal.payment_status === 'Cancelled Project'
+                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 20) / 100)
+                                                                    : deal.deal_value - deal.down_payment;
+                                                                return sum + (Number(balance) || 0);
+                                                            }, 0).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-8 py-8 text-right text-lg text-green-600 tabular-nums">
+                                                            ₱{allDeals.reduce((sum, deal) => sum + (Number(deal.deal_value * (deal.payment_status === 'Cancelled Project' ? 0.1 : (deal.commission_rate || 20) / 100)) || 0), 0).toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}
