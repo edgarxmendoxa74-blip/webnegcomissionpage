@@ -126,7 +126,6 @@ export const WorkersPage: React.FC = () => {
                                                     {worker.active ? 'Active' : 'Inactive'}
                                                 </p>
                                             </div>
-                                            <p className="text-[10px] text-zinc-300 font-bold uppercase tracking-[0.2em]">{worker.commission_percentage}% Commission</p>
                                         </div>
                                     </div>
                                 </div>
@@ -209,11 +208,6 @@ export const WorkersPage: React.FC = () => {
                                         <div className="absolute bottom-2 right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
                                             <div className={cn("w-3 h-3 rounded-full", selectedWorker.active ? "bg-green-500" : "bg-red-500")} />
                                         </div>
-                                    </div>
-                                    <div>
-                                        <span className="inline-block px-4 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
-                                            {selectedWorker.commission_percentage}% Commission Rate
-                                        </span>
                                     </div>
                                 </div>
 

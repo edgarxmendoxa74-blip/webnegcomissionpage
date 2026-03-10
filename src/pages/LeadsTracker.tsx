@@ -30,6 +30,7 @@ interface Lead {
     worker_id: string;
     worker?: { name: string; commission_percentage: number };
     is_hidden: boolean;
+    commission_rate?: number;
     created_at: string;
 }
 
@@ -109,7 +110,7 @@ export const LeadsTracker: React.FC = () => {
             if (leadError) throw leadError;
 
             // 2. Calculate commission
-            const commissionRate = formData.payment_status === 'Cancelled Project' ? 10 : (closingLead.worker?.commission_percentage || 10);
+            const commissionRate = formData.payment_status === 'Cancelled Project' ? 10 : (closingLead.commission_rate || closingLead.worker?.commission_percentage || 20);
             const commissionAmount = (dealValue * commissionRate) / 100;
 
             // 3. Insert commission record
@@ -191,7 +192,7 @@ export const LeadsTracker: React.FC = () => {
                 l.down_payment,
                 Number(l.deal_value - l.down_payment).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number(l.deal_value * (l.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toFixed(2)
+                Number(l.deal_value * (l.payment_status === 'Cancelled Project' ? 0.1 : (l.commission_rate || 20) / 100)).toFixed(2)
             ];
         });
 
@@ -325,7 +326,7 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
                                     <td className="px-8 py-5 text-right">
                                         <div className="text-sm font-black text-green-600 tabular-nums">
-                                            ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toLocaleString()}
+                                            ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : (lead.commission_rate || 20) / 100)).toLocaleString()}
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-right flex items-center justify-end gap-2">

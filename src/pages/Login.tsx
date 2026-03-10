@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, AlertCircle, Loader2, User, UserPlus, Eye, EyeOff, CheckCircle, PartyPopper } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {

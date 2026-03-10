@@ -38,6 +38,7 @@ interface Lead {
     worker_id: string;
     is_hidden: boolean;
     month: string;
+    commission_rate?: number;
     created_at: string;
 }
 
@@ -80,6 +81,7 @@ export const EmployeeDashboard: React.FC = () => {
         deal_value: 0,
         down_payment: 0,
         payment_status: 'Downpayment Only' as string,
+        commission_rate: 20,
     });
 
     // Profile form state
@@ -205,6 +207,7 @@ export const EmployeeDashboard: React.FC = () => {
                 status: 'closed',
                 worker_id: profile?.id,
                 month: addForm.month,
+                commission_rate: addForm.commission_rate,
                 closed_at: createdAt,
                 created_at: createdAt
             });
@@ -221,7 +224,8 @@ export const EmployeeDashboard: React.FC = () => {
                 ad_source: 'Direct',
                 deal_value: 0,
                 down_payment: 0,
-                payment_status: 'Downpayment Only'
+                payment_status: 'Downpayment Only',
+                commission_rate: 20
             });
             fetchLeads();
         } catch (err) {
@@ -498,7 +502,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
                                                             <span className="text-sm font-black text-green-600 tabular-nums">
-                                                                ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : 0.2)).toLocaleString()}
+                                                                ₱{Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)).toLocaleString()}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
@@ -844,9 +848,20 @@ export const EmployeeDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2 text-green-600">Comission (20%)</span>
+                                        <div className="flex items-center justify-between px-2">
+                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block text-green-600">Comission ({addForm.commission_rate}%)</span>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-3 h-3 accent-black"
+                                                    checked={addForm.commission_rate === 10}
+                                                    onChange={(e) => setAddForm({ ...addForm, commission_rate: e.target.checked ? 10 : 20 })}
+                                                />
+                                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">10% Rate</span>
+                                            </label>
+                                        </div>
                                         <div className="w-full px-6 py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-sm text-green-600 tabular-nums">
-                                            ₱{Number(addForm.deal_value * 0.2).toLocaleString()}
+                                            ₱{Number(addForm.deal_value * (addForm.commission_rate / 100)).toLocaleString()}
                                         </div>
                                     </div>
                                 </div>
@@ -857,7 +872,10 @@ export const EmployeeDashboard: React.FC = () => {
                                         title="Payment Status"
                                         className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs uppercase tracking-widest transition-all appearance-none"
                                         value={addForm.payment_status}
-                                        onChange={(e) => setAddForm({ ...addForm, payment_status: e.target.value })}
+                                        onChange={(e) => {
+                                            const status = e.target.value;
+                                            setAddForm({ ...addForm, payment_status: status, commission_rate: status === 'Cancelled Project' ? 10 : addForm.commission_rate === 10 && status !== 'Cancelled Project' ? 20 : addForm.commission_rate });
+                                        }}
                                     >
                                         <option value="Fully Paid">Fully Paid</option>
                                         <option value="Cancelled Project">Cancelled Project</option>
