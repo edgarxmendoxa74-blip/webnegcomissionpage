@@ -101,7 +101,7 @@ const Dashboard = () => {
       ]);
 
       const closedLeads = leads?.filter(l => l.status === 'closed') || [];
-      const totalBalance = leads?.reduce((acc, lead) => {
+      const totalBalance = (leads as any[] | null)?.reduce((acc, lead: any) => {
         const balance = lead.payment_status === 'Cancelled Project'
           ? (Number(lead.down_payment) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 10) / 100)
           : Number(lead.deal_value) - (Number(lead.down_payment) || 0);
