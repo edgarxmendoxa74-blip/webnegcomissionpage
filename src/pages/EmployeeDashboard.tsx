@@ -11,7 +11,9 @@ import {
     QrCode,
     Phone,
     Wallet,
+    EyeOff,
     User,
+    Mail,
     Briefcase,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,6 +43,7 @@ interface ProfileData {
     role: string;
     photo_url: string;
     qr_code_url: string;
+    contact_email?: string;
 }
 
 export const EmployeeDashboard: React.FC = () => {
@@ -82,6 +85,7 @@ export const EmployeeDashboard: React.FC = () => {
         role: '',
         photo_url: '',
         qr_code_url: '',
+        contact_email: '',
     });
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
@@ -101,6 +105,7 @@ export const EmployeeDashboard: React.FC = () => {
                 role: profile.role || 'Employee',
                 photo_url: profile.photo_url || '',
                 qr_code_url: profile.qr_code_url || '',
+                contact_email: profile.contact_email || '',
             });
         }
     }, [profile]);
@@ -260,6 +265,7 @@ export const EmployeeDashboard: React.FC = () => {
                     gcash_number: profileForm.gcash_number,
                     photo_url,
                     qr_code_url,
+                    contact_email: profileForm.contact_email,
                 })
                 .eq('id', profile.id);
 
@@ -651,6 +657,22 @@ export const EmployeeDashboard: React.FC = () => {
                                                             disabled
                                                             className="w-full pl-12 pr-6 py-4 bg-zinc-100 border border-zinc-100 rounded-2xl outline-none font-bold text-sm text-zinc-400 cursor-not-allowed"
                                                             value={profileForm.email}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Professional Email</span>
+                                                    <div className="relative">
+                                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300"><Mail className="w-4 h-4" /></div>
+                                                        <input
+                                                            title="Professional Email"
+                                                            placeholder="email@example.com"
+                                                            type="email"
+                                                            disabled={!isEditingProfile}
+                                                            className={`w-full pl-12 pr-6 py-4 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-transparent border-transparent text-zinc-600 cursor-default'}`}
+                                                            value={profileForm.contact_email}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, contact_email: e.target.value })}
                                                         />
                                                     </div>
                                                 </div>

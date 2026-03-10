@@ -39,6 +39,7 @@ interface Worker {
     gcash_number: string;
     qr_code_url: string;
     photo_url: string;
+    contact_email?: string;
     commission_percentage: number;
     active: boolean;
     created_at: string;
@@ -64,6 +65,7 @@ export const SettingsPage: React.FC = () => {
         phone: '',
         role: 'Agent',
         gcash_number: '',
+        contact_email: '',
         commission_percentage: 10,
         active: true
     });
@@ -183,7 +185,7 @@ export const SettingsPage: React.FC = () => {
     };
 
     const resetWorkerForm = () => {
-        setWorkerFormData({ name: '', email: '', phone: '', role: 'Agent', gcash_number: '', commission_percentage: 10, active: true });
+        setWorkerFormData({ name: '', email: '', contact_email: '', phone: '', role: 'Agent', gcash_number: '', commission_percentage: 10, active: true });
         setWorkerPhotoFile(null);
         setWorkerQrFile(null);
     };
@@ -498,7 +500,22 @@ export const SettingsPage: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">GCash Number</span>
+                                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Professional Email</span>
+                                                <div className="relative">
+                                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300"><Mail className="w-4 h-4" /></div>
+                                                    <input
+                                                        title="Professional Email"
+                                                        placeholder="email@example.com"
+                                                        type="email"
+                                                        className="w-full pl-12 pr-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                                        value={workerFormData.contact_email}
+                                                        onChange={(e) => setWorkerFormData({ ...workerFormData, contact_email: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Cell Number</span>
                                                 <div className="relative">
                                                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300">
                                                         <Wallet className="w-4 h-4" />
