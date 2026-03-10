@@ -7,6 +7,7 @@ import {
     Eye,
     EyeOff,
     Trash2,
+    Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -47,6 +48,7 @@ export const LeadsTracker: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden, setShowHidden] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Form States
     const [formData, setFormData] = useState({
@@ -212,7 +214,11 @@ export const LeadsTracker: React.FC = () => {
         document.body.removeChild(link);
     };
 
-    const filteredLeads = leads.filter(l => showHidden ? true : !l.is_hidden);
+    const filteredLeads = leads.filter(l => {
+        const matchesSearch = l.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesHidden = showHidden ? true : !l.is_hidden;
+        return matchesSearch && matchesHidden;
+    });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -223,6 +229,16 @@ export const LeadsTracker: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <div className="relative group w-72">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search client name..."
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                     <button
                         onClick={() => setShowHidden(!showHidden)}
                         className={cn(
@@ -265,9 +281,20 @@ export const LeadsTracker: React.FC = () => {
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={5} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
+                                        <td colSpan={9} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                     </tr>
                                 ))
+                            ) : filteredLeads.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-8 py-20 text-center">
+                                        <p className="text-zinc-400 font-bold text-sm">
+                                            {searchQuery ? "No matching clients found" : "No records found"}
+                                        </p>
+                                        <p className="text-zinc-300 text-xs mt-1">
+                                            {searchQuery ? "Try searching for a different name." : "Your database is currently empty."}
+                                        </p>
+                                    </td>
+                                </tr>
                             ) : filteredLeads.map((lead) => (
                                 <tr key={lead.id} className={cn(
                                     "group transition-colors",
