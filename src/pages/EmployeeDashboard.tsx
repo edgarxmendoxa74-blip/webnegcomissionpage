@@ -17,8 +17,14 @@ import {
     Briefcase,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface Lead {
     id: string;
@@ -401,7 +407,13 @@ export const EmployeeDashboard: React.FC = () => {
                                                         </td>
                                                     </tr>
                                                 ) : leads.map((lead) => (
-                                                    <tr key={lead.id} className="group hover:bg-zinc-50/50 transition-colors">
+                                                    <tr key={lead.id} className={cn(
+                                                        "group transition-colors",
+                                                        lead.payment_status === 'Fully Paid' ? "bg-yellow-50/50 hover:bg-yellow-100/50" :
+                                                            lead.payment_status === 'Downpayment Only' ? "bg-blue-50/50 hover:bg-blue-100/50" :
+                                                                lead.payment_status === 'Cancelled Project' ? "bg-red-50/50 hover:bg-red-100/50" :
+                                                                    "hover:bg-zinc-50/50"
+                                                    )}>
                                                         <td className="px-6 py-4">
                                                             <span className="font-bold text-black text-xs uppercase tracking-widest">
                                                                 {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })}

@@ -268,7 +268,11 @@ export const LeadsTracker: React.FC = () => {
                                 ))
                             ) : filteredLeads.map((lead) => (
                                 <tr key={lead.id} className={cn(
-                                    "group hover:bg-zinc-50/50 transition-colors",
+                                    "group transition-colors",
+                                    lead.payment_status === 'Fully Paid' ? "bg-yellow-50/50 hover:bg-yellow-100/50" :
+                                        lead.payment_status === 'Downpayment Only' ? "bg-blue-50/50 hover:bg-blue-100/50" :
+                                            lead.payment_status === 'Cancelled Project' ? "bg-red-50/50 hover:bg-red-100/50" :
+                                                "hover:bg-zinc-50/50",
                                     lead.is_hidden && "opacity-40 grayscale"
                                 )}>
                                     <td className="px-8 py-5">
