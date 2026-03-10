@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, UserPlus, Eye, EyeOff, CheckCircle, PartyPopper } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
     const [portal, setPortal] = useState<'selection' | 'owner' | 'employee'>('selection');
@@ -13,6 +13,7 @@ export const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -59,6 +60,8 @@ export const LoginPage: React.FC = () => {
                 is_owner: isFirstUser
             });
             if (profileError) throw profileError;
+
+            setShowSuccessModal(true);
         } catch (err: any) {
             setError(err.message || 'Failed to register');
         } finally {
@@ -255,6 +258,77 @@ export const LoginPage: React.FC = () => {
                     </div>
                 </div>
             </motion.div>
+
+            <AnimatePresence>
+                {showSuccessModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-0">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                setIsRegistering(false);
+                            }}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-sm bg-white rounded-[3rem] p-10 text-center shadow-2xl overflow-hidden"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-2 bg-black" />
+
+                            <div className="mb-8 relative">
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", damping: 12, delay: 0.2 }}
+                                    className="w-24 h-24 bg-green-50 rounded-[2.5rem] flex items-center justify-center mx-auto"
+                                >
+                                    <CheckCircle className="w-12 h-12 text-green-500" />
+                                </motion.div>
+                                <motion.div
+                                    animate={{
+                                        rotate: [0, -10, 10, -10, 10, 0],
+                                        y: [0, -5, 0]
+                                    }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        repeatDelay: 1
+                                    }}
+                                    className="absolute -top-2 -right-2 w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center shadow-lg"
+                                >
+                                    <PartyPopper className="w-6 h-6" />
+                                </motion.div>
+                            </div>
+
+                            <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic mb-4">
+                                Congratulations!
+                            </h2>
+                            <p className="text-zinc-500 text-sm font-bold leading-relaxed mb-8">
+                                Congrats your employee now here in <span className="text-black font-black uppercase">WebNegosyo</span>. Welcome to the team!
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setShowSuccessModal(false);
+                                    setIsRegistering(false);
+                                    setUsername('');
+                                    setPassword('');
+                                    setName('');
+                                    setGcash('');
+                                }}
+                                className="w-full h-14 bg-black text-white rounded-[1.2rem] font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-xl hover:shadow-black/20 transition-all active:scale-95"
+                            >
+                                Proceed to Login
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
