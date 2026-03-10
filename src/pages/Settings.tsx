@@ -7,14 +7,14 @@ import {
     X,
     CheckCircle2,
     Trash2,
-    Edit2,
     QrCode,
     Mail,
     Phone,
     Wallet,
     Briefcase,
     Eye,
-    EyeOff
+    EyeOff,
+    User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -76,13 +76,13 @@ export const SettingsPage: React.FC = () => {
     }, []);
 
     const fetchAppSettings = async () => {
-        const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).single();
+        const { data } = await supabase.from('app_settings').select('*').eq('id', 1).single();
         if (data) setAppSettings(data);
     };
 
     const fetchWorkers = async () => {
         setLoadingWorkers(true);
-        const { data, error } = await supabase.from('workers').select('*').order('created_at', { ascending: false });
+        const { data } = await supabase.from('workers').select('*').order('created_at', { ascending: false });
         if (data) setWorkers(data);
         setLoadingWorkers(false);
     };
@@ -186,20 +186,6 @@ export const SettingsPage: React.FC = () => {
         setWorkerFormData({ name: '', email: '', phone: '', role: 'Agent', gcash_number: '', commission_percentage: 10, active: true });
         setWorkerPhotoFile(null);
         setWorkerQrFile(null);
-    };
-
-    const openEditWorker = (worker: Worker) => {
-        setEditingWorker(worker);
-        setWorkerFormData({
-            name: worker.name,
-            email: worker.email,
-            phone: worker.phone || '',
-            role: worker.role || 'Agent',
-            gcash_number: worker.gcash_number || '',
-            commission_percentage: worker.commission_percentage,
-            active: worker.active
-        });
-        setShowAddModal(true);
     };
 
     return (

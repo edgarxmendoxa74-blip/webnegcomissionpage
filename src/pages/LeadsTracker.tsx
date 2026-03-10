@@ -3,7 +3,6 @@ import {
     CheckCircle2,
     XCircle,
     Clock,
-    Tag,
     Download,
     Eye,
     EyeOff,
@@ -43,7 +42,7 @@ interface Worker {
 export const LeadsTracker: React.FC = () => {
     const { profile, isOwner } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
-    const [workers, setWorkers] = useState<Worker[]>([]);
+    const [, setWorkers] = useState<Worker[]>([]);
     const [loading, setLoading] = useState(true);
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden, setShowHidden] = useState(false);

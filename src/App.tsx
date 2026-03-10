@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  AlertCircle,
   TrendingUp,
   Layers,
   DollarSign
@@ -17,7 +16,7 @@ import { EmployeeDashboard } from './pages/EmployeeDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
-  const { user, profile, loading, isOwner } = useAuth();
+  const { user, loading, isOwner } = useAuth();
   const [activeTab, setActiveTab] = React.useState('Master List');
 
   if (loading) {
@@ -40,7 +39,7 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Sales':
-        return <Dashboard setActiveTab={setActiveTab} />;
+        return <Dashboard />;
       case 'Manage Team':
         return <WorkersPage />;
       case 'Receipts':
@@ -79,7 +78,7 @@ function AppContent() {
   );
 }
 
-const Dashboard = ({ setActiveTab }: { setActiveTab: (tab: string) => void }) => {
+const Dashboard = () => {
   const { profile, isOwner } = useAuth();
   const [stats, setStats] = React.useState({
     closed: 0,

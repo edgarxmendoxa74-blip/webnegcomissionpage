@@ -3,12 +3,8 @@ import {
     Search,
     Calendar,
     CheckCircle2,
-    Filter,
-    ChevronDown,
-    ArrowUpDown,
     Download
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
