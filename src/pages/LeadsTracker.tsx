@@ -53,6 +53,16 @@ export const LeadsTracker: React.FC = () => {
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [checkedLeads, setCheckedLeads] = useState<Set<string>>(new Set());
+
+    const toggleCheck = (id: string) => {
+        setCheckedLeads(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     // Form States
     const [formData, setFormData] = useState({
@@ -286,8 +296,8 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">✓</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -412,6 +422,23 @@ export const LeadsTracker: React.FC = () => {
                                             ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}
                                         </div>
                                     </td>
+                                    <td className="px-4 py-2.5 text-center">
+                                        <button
+                                            onClick={() => toggleCheck(lead.id)}
+                                            className={cn(
+                                                "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
+                                                checkedLeads.has(lead.id)
+                                                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30"
+                                                    : lead.payment_status
+                                                        ? "border-white/40 hover:border-white/70"
+                                                        : "border-zinc-300 hover:border-zinc-500"
+                                            )}
+                                        >
+                                            {checkedLeads.has(lead.id) && (
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    </td>
                                     <td className="px-4 py-2.5 text-right flex items-center justify-end gap-2">
                                         {lead.status === 'pending' && (
                                             <button
@@ -467,6 +494,7 @@ export const LeadsTracker: React.FC = () => {
                                             return sum + (Number(commission) || 0);
                                         }, 0).toLocaleString()}
                                     </td>
+                                    <td></td>
                                     <td></td>
                                 </tr>
                             )}

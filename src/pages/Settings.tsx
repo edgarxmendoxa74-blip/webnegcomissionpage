@@ -678,60 +678,60 @@ export const SettingsPage: React.FC = () => {
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date/Month</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Info</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package Value</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date/Month</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Info</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-zinc-50">
                                                 {loadingDeals ? (
                                                     <tr className="animate-pulse">
-                                                        <td colSpan={6} className="px-8 py-20 text-center text-zinc-300 font-black uppercase tracking-widest text-xs">Loading deals...</td>
+                                                        <td colSpan={10} className="px-8 py-20 text-center text-zinc-300 font-black uppercase tracking-widest text-xs">Loading deals...</td>
                                                     </tr>
                                                 ) : allDeals.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={6} className="px-8 py-20 text-center text-zinc-400 font-medium">No deals found.</td>
+                                                        <td colSpan={10} className="px-8 py-20 text-center text-zinc-400 font-medium">No deals found.</td>
                                                     </tr>
                                                 ) : allDeals.map(deal => (
-                                                    <tr key={deal.id} className="group hover:bg-zinc-50/50 transition-colors">
-                                                        <td className="px-8 py-6">
-                                                            <div className="font-bold text-black text-xs uppercase tracking-widest">{deal.month || new Date(deal.created_at).toLocaleString('default', { month: 'short' })}</div>
-                                                            <div className="text-[10px] text-zinc-400 font-black tabular-nums">{new Date(deal.created_at).toLocaleDateString()}</div>
+                                                    <tr key={deal.id} className={cn(
+                                                        "group transition-all duration-300",
+                                                        deal.payment_status === 'Fully Paid' ? "bg-green-600 text-white" :
+                                                            deal.payment_status === 'Downpayment Only' ? "bg-zinc-600 text-white" :
+                                                                deal.payment_status === 'Cancelled Project' ? "bg-red-600 text-white" :
+                                                                    "hover:bg-zinc-50/50"
+                                                    )}>
+                                                        <td className="px-6 py-4">
+                                                            <div className={cn("font-bold text-xs uppercase tracking-widest", deal.payment_status ? "text-white" : "text-black")}>{deal.month || new Date(deal.created_at).toLocaleString('default', { month: 'short' })}</div>
+                                                            <div className={cn("text-[10px] font-black tabular-nums", deal.payment_status ? "text-white/60" : "text-zinc-400")}>{new Date(deal.created_at).toLocaleDateString()}</div>
                                                         </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="font-bold text-black text-sm">{deal.client_name}</div>
-                                                            <div className="text-[10px] text-zinc-400 font-medium">{deal.contact_info}</div>
+                                                        <td className="px-6 py-4">
+                                                            <div className={cn("font-bold text-sm", deal.payment_status ? "text-white" : "text-black")}>{deal.client_name}</div>
+                                                            <div className={cn("text-[10px] font-medium", deal.payment_status ? "text-white/60" : "text-zinc-400")}>{deal.contact_info}</div>
                                                         </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="text-xs font-bold text-black">{deal.worker?.name || 'Unknown'}</div>
+                                                        <td className="px-6 py-4">
+                                                            <div className={cn("text-xs font-bold", deal.payment_status ? "text-white" : "text-black")}>{deal.worker?.name || 'Unknown'}</div>
                                                         </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="text-xs font-bold text-black">{deal.webdev?.name || 'Unassigned'}</div>
+                                                        <td className="px-6 py-4">
+                                                            <div className={cn("text-xs font-bold", deal.payment_status ? "text-white" : "text-black")}>{deal.webdev?.name || 'Unassigned'}</div>
                                                         </td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            <div className="text-sm font-black text-black tabular-nums">₱{Number(deal.deal_value).toLocaleString()}</div>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-black")}>₱{Number(deal.deal_value).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            <div className="text-sm font-black text-blue-600 tabular-nums">₱{Number(deal.tip || 0).toLocaleString()}</div>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-amber-600")}>₱{Number(deal.down_payment || 0).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-8 py-6 text-center">
-                                                            <span className={cn(
-                                                                "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border",
-                                                                deal.payment_status === 'Fully Paid' ? "bg-green-50 text-green-600 border-green-100" :
-                                                                    deal.payment_status === 'Downpayment Only' ? "bg-blue-50 text-blue-600 border-blue-100" :
-                                                                        deal.payment_status === 'Cancelled Project' ? "bg-zinc-100 text-zinc-500 border-zinc-200" :
-                                                                            "bg-red-50 text-red-500 border-red-100"
-                                                            )}>
-                                                                {deal.payment_status || 'Downpayment Only'}
-                                                            </span>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-blue-600")}>₱{Number(deal.tip || 0).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            <div className="text-sm font-black text-red-600 tabular-nums">
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-red-600")}>
                                                                 ₱{Number(
                                                                     deal.payment_status === 'Cancelled Project'
                                                                         ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
@@ -741,22 +741,31 @@ export const SettingsPage: React.FC = () => {
                                                                 ).toLocaleString()}
                                                             </div>
                                                         </td>
-
-                                                        <td className="px-8 py-6 text-right">
-                                                            <div className="text-sm font-black text-green-600 tabular-nums">
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className={cn(
+                                                                "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border",
+                                                                deal.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
+                                                                    deal.payment_status === 'Downpayment Only' ? "bg-white/20 text-white border-white/30" :
+                                                                        deal.payment_status === 'Cancelled Project' ? "bg-white/20 text-white border-white/30" :
+                                                                            "bg-zinc-50 text-zinc-500 border-zinc-100"
+                                                            )}>
+                                                                {deal.payment_status || 'Downpayment Only'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-green-600")}>
                                                                 ₱{Number((deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project') ? (deal.down_payment * 0.1) : (deal.deal_value * (deal.commission_rate || 20) / 100)).toLocaleString()}
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                ))}
+                                                ))})
                                                 {allDeals.length > 0 && (
                                                     <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
-                                                        <td colSpan={5} className="px-8 py-8 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
-                                                        <td className="px-8 py-8 text-right text-lg text-blue-600 tabular-nums">
+                                                        <td colSpan={6} className="px-6 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td className="px-6 py-6 text-right text-base text-blue-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => sum + (Number(deal.tip) || 0), 0).toLocaleString()}
                                                         </td>
-                                                        <td className="px-8 py-8"></td>
-                                                        <td className="px-8 py-8 text-right text-lg text-red-600 tabular-nums">
+                                                        <td className="px-6 py-6 text-right text-base text-red-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => {
                                                                 const balance = deal.payment_status === 'Cancelled Project'
                                                                     ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
@@ -766,7 +775,8 @@ export const SettingsPage: React.FC = () => {
                                                                 return sum + (Number(balance) || 0);
                                                             }, 0).toLocaleString()}
                                                         </td>
-                                                        <td className="px-8 py-8 text-right text-lg text-green-600 tabular-nums">
+                                                        <td className="px-6 py-6"></td>
+                                                        <td className="px-6 py-6 text-right text-base text-green-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => {
                                                                 const commission = (deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project')
                                                                     ? (deal.down_payment * 0.1)
