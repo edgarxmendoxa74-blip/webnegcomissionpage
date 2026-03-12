@@ -99,11 +99,6 @@ export const ReceiptsPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                 {/* Generator Form */}
                 <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
-                    <div>
-                        <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black">Receipt Generator</h2>
-                        <p className="text-zinc-400 text-sm font-medium mt-1">Create instant payout receipts for your team.</p>
-                    </div>
-
                     <div className="space-y-6">
                         <div className="space-y-2">
                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select Team Member</span>

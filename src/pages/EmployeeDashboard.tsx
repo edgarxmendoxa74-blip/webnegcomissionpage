@@ -64,7 +64,7 @@ export const EmployeeDashboard: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeSection, setActiveSection] = useState<'deals' | 'profile'>('deals');
+    const [activeSection, setActiveSection] = useState<'deals' | 'profile' | 'terms'>('deals');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [workers, setWorkers] = useState<{ id: string, name: string }[]>([]);
@@ -162,6 +162,22 @@ export const EmployeeDashboard: React.FC = () => {
             console.error('Error fetching leads:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const updatePaymentStatus = async (id: string, newStatus: string) => {
+        try {
+            const { error } = await supabase
+                .from('leads')
+                .update({
+                    payment_status: newStatus,
+                    ...(newStatus === 'Cancelled Project' ? { commission_rate: 10 } : {})
+                })
+                .eq('id', id);
+            if (error) throw error;
+            fetchLeads();
+        } catch (err) {
+            console.error('Error updating payment status:', err);
         }
     };
 
@@ -278,7 +294,7 @@ export const EmployeeDashboard: React.FC = () => {
     };
 
     const handleDeleteLead = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this record?')) return;
+        if (!confirm('are you sure you want to delete it?')) return;
         try {
             const { error } = await supabase.from('leads').delete().eq('id', id);
             if (error) throw error;
@@ -395,6 +411,13 @@ export const EmployeeDashboard: React.FC = () => {
                     >
                         Edit Profile
                     </button>
+                    <button
+                        onClick={() => setActiveSection('terms')}
+                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === 'terms' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                            }`}
+                    >
+                        Terms & Conditions
+                    </button>
                 </div>
             </div>
 
@@ -406,8 +429,8 @@ export const EmployeeDashboard: React.FC = () => {
                             <div className="space-y-6">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div>
-                                        <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic">Client Deals</h2>
-                                        <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Your closed deals and project collections</p>
+                                        <h2 className="text-2xl font-black tracking-tighter text-black uppercase italic">Client Deals</h2>
+                                        <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Your closed deals and project collections</p>
                                         <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl">
                                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                             <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
@@ -442,17 +465,17 @@ export const EmployeeDashboard: React.FC = () => {
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Month</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Date</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Client Name</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
-                                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Actions</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Month</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Date</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Client Name</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
+                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-zinc-50">
@@ -478,88 +501,92 @@ export const EmployeeDashboard: React.FC = () => {
                                                     </tr>
                                                 ) : filteredLeads.map((lead) => (
                                                     <tr key={lead.id} className={cn(
-                                                        "group transition-colors",
-                                                        lead.payment_status === 'Fully Paid' ? "bg-yellow-50/50 hover:bg-yellow-100/50" :
-                                                            lead.payment_status === 'Downpayment Only' ? "bg-blue-50/50 hover:bg-blue-100/50" :
-                                                                lead.payment_status === 'Cancelled Project' ? "bg-red-50/50 hover:bg-red-100/50" :
+                                                        "group transition-all duration-300",
+                                                        lead.payment_status === 'Fully Paid' ? "bg-green-600 text-white shadow-lg scale-[1.01] z-10" :
+                                                            lead.payment_status === 'Downpayment Only' ? "bg-zinc-600 text-white shadow-lg scale-[1.01] z-10" :
+                                                                lead.payment_status === 'Cancelled Project' ? "bg-red-600 text-white shadow-lg scale-[1.01] z-10" :
                                                                     "hover:bg-zinc-50/50"
                                                     )}>
-                                                        <td className="px-6 py-4">
-                                                            <span className="font-bold text-black text-xs uppercase tracking-widest">
+                                                        <td className="px-4 py-3">
+                                                            <span className={cn("font-bold text-[10px] uppercase tracking-widest", !lead.payment_status || lead.payment_status === 'Downpayment Only' ? "text-zinc-200" : "text-white")}>
                                                                 {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-xs text-zinc-400 font-bold tabular-nums">
+                                                        <td className="px-4 py-3">
+                                                            <span className={cn("text-[10px] font-bold tabular-nums", !lead.payment_status ? "text-zinc-400" : "text-zinc-200")}>
                                                                 {new Date(lead.created_at).toLocaleDateString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-3">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="text"
                                                                     title="Client Name"
                                                                     placeholder="Client name"
-                                                                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:border-black transition-all"
+                                                                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-black transition-all text-black"
                                                                     value={editForm.client_name}
                                                                     onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
                                                                 />
                                                             ) : (
-                                                                <span className="font-bold text-black text-sm">{lead.client_name}</span>
+                                                                <span className="font-bold text-xs text-inherit">{lead.client_name}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-[10px] font-black text-black uppercase tracking-widest">
+                                                        <td className="px-4 py-3">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-inherit">
                                                                 {lead.webdev?.name || 'Unassigned'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
                                                                     title="Package Value"
                                                                     placeholder="0"
-                                                                    className="w-28 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:border-black transition-all text-right"
+                                                                    className="w-24 px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-black transition-all text-right text-black"
                                                                     value={editForm.deal_value || ''}
                                                                     onChange={(e) => setEditForm({ ...editForm, deal_value: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className="text-sm font-black text-black tabular-nums">₱{Number(lead.deal_value).toLocaleString()}</span>
+                                                                <span className="text-xs font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
                                                                     title="Down Payment"
                                                                     placeholder="0"
-                                                                    className="w-28 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:border-black transition-all text-right"
+                                                                    className="w-24 px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-black transition-all text-right text-black"
                                                                     value={editForm.down_payment || ''}
                                                                     onChange={(e) => setEditForm({ ...editForm, down_payment: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className="text-sm font-black text-amber-600 tabular-nums">₱{Number(lead.down_payment).toLocaleString()}</span>
+                                                                <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-amber-600" : "text-white")}>
+                                                                    ₱{Number(lead.down_payment).toLocaleString()}
+                                                                </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
                                                                     title="Tip"
                                                                     placeholder="0"
-                                                                    className="w-28 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold outline-none focus:border-black transition-all text-right"
+                                                                    className="w-24 px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-black transition-all text-right text-black"
                                                                     value={editForm.tip || ''}
                                                                     onChange={(e) => setEditForm({ ...editForm, tip: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className="text-sm font-black text-blue-600 tabular-nums">₱{Number(lead.tip || 0).toLocaleString()}</span>
+                                                                <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-blue-600" : "text-white")}>
+                                                                    ₱{Number(lead.tip || 0).toLocaleString()}
+                                                                </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-3">
                                                             {editingId === lead.id ? (
                                                                 <select
                                                                     title="Payment Status"
-                                                                    className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-black transition-all"
+                                                                    className="px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-[9px] font-black uppercase tracking-widest outline-none focus:border-black transition-all text-black"
                                                                     value={editForm.payment_status}
                                                                     onChange={(e) => setEditForm({ ...editForm, payment_status: e.target.value })}
                                                                 >
@@ -568,29 +595,47 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     <option value="Cancelled Project">Cancelled Project</option>
                                                                 </select>
                                                             ) : (
-                                                                <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border ${lead.payment_status === 'Fully Paid'
-                                                                    ? 'bg-green-50 text-green-600 border-green-100'
-                                                                    : lead.payment_status === 'Downpayment Only'
-                                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                                        : lead.payment_status === 'Cancelled Project'
-                                                                            ? 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                                                                            : 'bg-red-50 text-red-500 border-red-100'
-                                                                    }`}>
-                                                                    {lead.payment_status || 'Downpayment Only'}
-                                                                </span>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <span className={cn(
+                                                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border w-fit shadow-sm transition-all",
+                                                                        lead.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
+                                                                            lead.payment_status === 'Downpayment Only' ? "bg-white/20 text-white border-white/30" :
+                                                                                lead.payment_status === 'Cancelled Project' ? "bg-white/20 text-white border-white/30" :
+                                                                                    "bg-zinc-100 text-zinc-500 border-zinc-100"
+                                                                    )}>
+                                                                        {lead.payment_status || 'Downpayment Only'}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                        <button
+                                                                            onClick={() => updatePaymentStatus(lead.id, 'Fully Paid')}
+                                                                            title="Highlight Green (Completed)"
+                                                                            className="w-4 h-4 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => updatePaymentStatus(lead.id, 'Cancelled Project')}
+                                                                            title="Highlight Red (Cancelled)"
+                                                                            className="w-4 h-4 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => updatePaymentStatus(lead.id, 'Downpayment Only')}
+                                                                            title="Highlight Gray (Downpayment)"
+                                                                            className="w-4 h-4 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                        />
+                                                                    </div>
+                                                                </div>
                                                             )}
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <span className={`text-sm font-black tabular-nums ${getBalance(lead) <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? (getBalance(lead) <= 0 ? 'text-green-600' : 'text-red-600') : "text-white")}>
                                                                 ₱{Math.abs(getBalance(lead)).toLocaleString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <span className="text-sm font-black text-green-600 tabular-nums">
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-green-600" : "text-white")}>
                                                                 ₱{Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)).toLocaleString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             <div className="flex items-center justify-end gap-1">
                                                                 {editingId === lead.id ? (
                                                                     <>
@@ -614,14 +659,20 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     <>
                                                                         <button
                                                                             onClick={() => startEditing(lead)}
-                                                                            className="p-2 bg-zinc-50 text-zinc-400 rounded-xl hover:bg-black hover:text-white transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                                                                            className={cn(
+                                                                                "p-2 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                lead.payment_status ? "bg-white/20 text-white hover:bg-white/40" : "bg-zinc-50 text-zinc-400 hover:bg-black hover:text-white"
+                                                                            )}
                                                                             title="Edit"
                                                                         >
                                                                             <Edit2 className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleDeleteLead(lead.id)}
-                                                                            className="p-2 bg-zinc-50 text-zinc-400 rounded-xl hover:bg-red-500 hover:text-white transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                                                                            className={cn(
+                                                                                "p-2 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                lead.payment_status ? "bg-white/20 text-white hover:bg-red-500" : "bg-zinc-50 text-zinc-400 hover:bg-red-500 hover:text-white"
+                                                                            )}
                                                                             title="Delete"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
@@ -634,15 +685,20 @@ export const EmployeeDashboard: React.FC = () => {
                                                 ))}
                                                 {filteredLeads.length > 0 && (
                                                     <tr className="bg-zinc-50/50 font-black border-t border-zinc-100">
-                                                        <td colSpan={7} className="px-6 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
-                                                        <td className="px-6 py-6 text-right text-lg text-red-600 tabular-nums">
-                                                            ₱{filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0).toLocaleString()}
-                                                        </td>
-                                                        <td className="px-6 py-6 text-right text-lg text-blue-600 tabular-nums">
+                                                        <td colSpan={6} className="px-4 py-4 text-right text-[9px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td className="px-4 py-4 text-right text-base text-blue-600 tabular-nums">
                                                             ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
                                                         </td>
-                                                        <td className="px-6 py-6 text-right text-lg text-green-600 tabular-nums">
-                                                            ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0).toLocaleString()}
+                                                        <td className="px-4 py-4"></td>
+                                                        <td className="px-4 py-4 text-right text-base text-red-600 tabular-nums">
+                                                            {filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0) !== 0 ? (
+                                                                <>₱{filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0).toLocaleString()}</>
+                                                            ) : null}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right text-base text-green-600 tabular-nums">
+                                                            {filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0) !== 0 ? (
+                                                                <>₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0).toLocaleString()}</>
+                                                            ) : null}
                                                         </td>
                                                         <td></td>
                                                     </tr>
@@ -653,7 +709,7 @@ export const EmployeeDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </motion.div>
-                    ) : (
+                    ) : activeSection === 'profile' ? (
                         <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                             {/* PROFILE SECTION */}
                             <div className="space-y-8">
@@ -834,6 +890,72 @@ export const EmployeeDashboard: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div key="terms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                            {/* TERMS & CONDITIONS SECTION */}
+                            <div className="max-w-4xl mx-auto space-y-12">
+                                <div>
+                                    <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic">Terms & Conditions</h2>
+                                    <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Professional Protocol & Employment Standards</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm space-y-6">
+                                        <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center">
+                                            <Wallet className="w-6 h-6 text-black" />
+                                        </div>
+                                        <h3 className="font-black text-xs uppercase tracking-widest text-black">Commission & Payouts</h3>
+                                        <ul className="space-y-4">
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Bi-Weekly Release:</span> Commissions for all WebNegosyo employees are strictly released every 2 weeks.
+                                                </p>
+                                            </li>
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Completed Projects:</span> A standard <span className="text-green-600 font-black">20% commission</span> is earned for every fully paid project.
+                                                </p>
+                                            </li>
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Cancelled Projects:</span> For cancelled projects, a reduced <span className="text-red-600 font-black">10% commission</span> is applied based on the downpayment received.
+                                                </p>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm space-y-6">
+                                        <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center">
+                                            <Briefcase className="w-6 h-6 text-black" />
+                                        </div>
+                                        <h3 className="font-black text-xs uppercase tracking-widest text-black">Workplace Ethics</h3>
+                                        <ul className="space-y-4">
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Record Accuracy:</span> All client details and deal values must be recorded accurately. Falsification of records is grounds for immediate termination.
+                                                </p>
+                                            </li>
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Client Confidentiality:</span> Protecting client contact information and project details is of utmost importance.
+                                                </p>
+                                            </li>
+                                            <li className="flex gap-4 items-start">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
+                                                <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Professionalism:</span> Employees are expected to maintain professional communication standards at all times when representing WebNegosyo.
+                                                </p>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>

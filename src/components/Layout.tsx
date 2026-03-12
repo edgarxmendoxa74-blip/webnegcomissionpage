@@ -200,7 +200,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                             <Menu className="w-6 h-6" />
                         </button>
                         <div>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mb-1">Current Section</p>
                             <h1 className="text-3xl font-black tracking-tighter text-black uppercase italic">{activeTab}</h1>
                         </div>
                     </div>

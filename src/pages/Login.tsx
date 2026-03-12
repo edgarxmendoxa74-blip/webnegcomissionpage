@@ -20,6 +20,13 @@ export const LoginPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
+            // Enforce owner credentials for Administrative Entrance
+            if (portal === 'owner') {
+                if (username.trim().toLowerCase() !== 'edgar' || password !== 'EdgarWeb2026!') {
+                    throw new Error('Invalid administrative credentials. Access restricted.');
+                }
+            }
+
             // Internally use pseudo-email for Supabase Auth
             const internalEmail = `${username.trim().toLowerCase()}@webnegosyo.internal`;
             const { error } = await supabase.auth.signInWithPassword({
@@ -41,6 +48,13 @@ export const LoginPage: React.FC = () => {
         try {
             const { count } = await supabase.from('workers').select('*', { count: 'exact', head: true });
             const isFirstUser = count === 0;
+
+            // Enforce owner credentials for the first user (Owner)
+            if (isFirstUser) {
+                if (username.trim().toLowerCase() !== 'edgar' || password !== 'EdgarWeb2026!') {
+                    throw new Error('Initial Administrative account must use the designated Owner credentials.');
+                }
+            }
 
             const internalEmail = `${username.trim().toLowerCase()}@webnegosyo.internal`;
             const { data: authData, error: authError } = await supabase.auth.signUp({

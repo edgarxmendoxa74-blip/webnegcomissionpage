@@ -683,6 +683,7 @@ export const SettingsPage: React.FC = () => {
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package Value</th>
+                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
@@ -716,6 +717,9 @@ export const SettingsPage: React.FC = () => {
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="text-sm font-black text-black tabular-nums">₱{Number(deal.deal_value).toLocaleString()}</div>
                                                         </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="text-sm font-black text-blue-600 tabular-nums">₱{Number(deal.tip || 0).toLocaleString()}</div>
+                                                        </td>
                                                         <td className="px-8 py-6 text-center">
                                                             <span className={cn(
                                                                 "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border",
@@ -747,7 +751,11 @@ export const SettingsPage: React.FC = () => {
                                                 ))}
                                                 {allDeals.length > 0 && (
                                                     <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
-                                                        <td colSpan={6} className="px-8 py-8 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td colSpan={5} className="px-8 py-8 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                                        <td className="px-8 py-8 text-right text-lg text-blue-600 tabular-nums">
+                                                            ₱{allDeals.reduce((sum, deal) => sum + (Number(deal.tip) || 0), 0).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-8 py-8"></td>
                                                         <td className="px-8 py-8 text-right text-lg text-red-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => {
                                                                 const balance = deal.payment_status === 'Cancelled Project'

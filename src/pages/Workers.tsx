@@ -59,6 +59,20 @@ export const WorkersPage: React.FC = () => {
         }
     };
 
+    const toggleActiveStatus = async (id: string, currentStatus: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('workers')
+                .update({ active: !currentStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchWorkers();
+        } catch (err) {
+            console.error('Error toggling worker status:', err);
+        }
+    };
+
     const filteredWorkers = workers.filter(w =>
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -116,15 +130,20 @@ export const WorkersPage: React.FC = () => {
                                         </div>
                                         <div>
                                             <h3 className="font-black text-xl tracking-tight text-black leading-none mb-1">{worker.name}</h3>
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center gap-3 mb-2">
                                                 <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em]">{worker.role || 'Employee'}</p>
                                                 <span className="w-1 h-1 rounded-full bg-zinc-200" />
-                                                <p className={cn(
-                                                    "text-[10px] font-black uppercase tracking-[0.2em]",
-                                                    worker.active ? "text-green-500" : "text-red-500"
-                                                )}>
+                                                <button
+                                                    onClick={() => toggleActiveStatus(worker.id, worker.active)}
+                                                    className={cn(
+                                                        "text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border transition-all active:scale-95",
+                                                        worker.active
+                                                            ? "bg-green-50 text-green-600 border-green-100 hover:bg-green-100"
+                                                            : "bg-red-50 text-red-500 border-red-100 hover:bg-red-100"
+                                                    )}
+                                                >
                                                     {worker.active ? 'Active' : 'Inactive'}
-                                                </p>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
