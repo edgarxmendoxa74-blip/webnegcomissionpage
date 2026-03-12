@@ -178,19 +178,6 @@ export const LeadsTracker: React.FC = () => {
         }
     };
 
-    const togglePaymentStatus = async (lead: Lead) => {
-        const nextStatus = lead.payment_status === 'Fully Paid' ? 'Downpayment Only' : 'Fully Paid';
-        try {
-            const { error } = await supabase
-                .from('leads')
-                .update({ payment_status: nextStatus })
-                .eq('id', lead.id);
-            if (error) throw error;
-            fetchData();
-        } catch (err) {
-            console.error('Error toggling payment status:', err);
-        }
-    };
 
     const handleDeleteLead = async (id: string) => {
         if (!confirm('Are you sure you want to permanently delete this record?')) return;
