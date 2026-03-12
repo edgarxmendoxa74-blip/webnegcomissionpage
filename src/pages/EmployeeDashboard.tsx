@@ -171,7 +171,7 @@ export const EmployeeDashboard: React.FC = () => {
                 .from('leads')
                 .update({
                     payment_status: newStatus,
-                    ...(newStatus === 'Cancelled Project' ? { commission_rate: 10 } : {})
+                    commission_rate: (newStatus === 'Cancelled Project' || newStatus === 'Downpayment Only') ? 10 : 20
                 })
                 .eq('id', id);
             if (error) throw error;
@@ -197,9 +197,8 @@ export const EmployeeDashboard: React.FC = () => {
     };
 
     const getBalance = (lead: Lead) => {
-        if (lead.payment_status === 'Cancelled Project') {
-            const commissionRate = lead.commission_rate || 10;
-            return Number(lead.down_payment) - (Number(lead.deal_value) * commissionRate / 100);
+        if (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only') {
+            return Number(lead.down_payment) - (Number(lead.down_payment) * 0.1);
         }
         if (lead.payment_status === 'Fully Paid') {
             const commissionRate = lead.commission_rate || 20;
@@ -222,7 +221,7 @@ export const EmployeeDashboard: React.FC = () => {
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
                         : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
-                    commission_rate: editForm.payment_status === 'Cancelled Project' ? 10 : undefined,
+                    commission_rate: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only') ? 10 : 20,
                     status: 'closed',
                     closed_at: new Date().toISOString(),
                 })
@@ -263,7 +262,7 @@ export const EmployeeDashboard: React.FC = () => {
                 worker_id: profile?.id,
                 webdev_id: addForm.webdev_id || profile?.assigned_webdev_id || null,
                 month: addForm.month,
-                commission_rate: addForm.commission_rate,
+                commission_rate: (addForm.payment_status === 'Cancelled Project' || addForm.payment_status === 'Downpayment Only') ? 10 : addForm.commission_rate,
                 closed_at: createdAt,
                 created_at: createdAt
             });
@@ -1089,23 +1088,27 @@ export const EmployeeDashboard: React.FC = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2 text-red-500">Balance/Natira (₱)</span>
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2 text-red-500">
+                                            {(addForm.payment_status === 'Downpayment Only' || addForm.payment_status === 'Cancelled Project')
+                                                ? 'Remaining (Net Share)'
+                                                : 'Balance/Natira (₱)'}
+                                        </span>
                                         <div className="w-full px-6 py-4 bg-red-50 border border-red-100 rounded-2xl font-black text-sm text-red-600 tabular-nums">
-                                            ₱{Number(addForm.deal_value - addForm.down_payment).toLocaleString()}
+                                            ₱{Number(
+                                                (addForm.payment_status === 'Downpayment Only' || addForm.payment_status === 'Cancelled Project')
+                                                    ? (addForm.down_payment - (addForm.down_payment * 0.1))
+                                                    : (addForm.deal_value - addForm.down_payment)
+                                            ).toLocaleString()}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="flex items-center justify-between px-2">
-                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block text-green-600">Comission ({addForm.commission_rate}%)</span>
-                                            <label className="flex items-center gap-1.5 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-3 h-3 accent-black"
-                                                    checked={addForm.commission_rate === 10}
-                                                    onChange={(e) => setAddForm({ ...addForm, commission_rate: e.target.checked ? 10 : 20 })}
-                                                />
-                                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">10% Rate</span>
-                                            </label>
+                                        <div className="flex flex-col px-2">
+                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block text-green-600">
+                                                Comission
+                                            </span>
+                                            <p className="text-[9px] font-bold text-zinc-400 mt-1 leading-relaxed">
+                                                20% for fully paid projects; 10% for cancelled or down payment only deals.
+                                            </p>
                                         </div>
                                         <div className="w-full px-6 py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-sm text-green-600 tabular-nums">
                                             ₱{Number(
@@ -1125,7 +1128,7 @@ export const EmployeeDashboard: React.FC = () => {
                                         value={addForm.payment_status}
                                         onChange={(e) => {
                                             const status = e.target.value;
-                                            setAddForm({ ...addForm, payment_status: status, commission_rate: status === 'Cancelled Project' ? 10 : addForm.commission_rate });
+                                            setAddForm({ ...addForm, payment_status: status, commission_rate: (status === 'Cancelled Project' || status === 'Downpayment Only') ? 10 : 20 });
                                         }}
                                     >
                                         <option value="Fully Paid">Fully Paid</option>

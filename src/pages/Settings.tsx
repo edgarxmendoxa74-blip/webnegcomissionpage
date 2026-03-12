@@ -733,8 +733,8 @@ export const SettingsPage: React.FC = () => {
                                                         <td className="px-6 py-4 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-red-600")}>
                                                                 ₱{Number(
-                                                                    deal.payment_status === 'Cancelled Project'
-                                                                        ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
+                                                                    (deal.payment_status === 'Cancelled Project' || deal.payment_status === 'Downpayment Only')
+                                                                        ? deal.down_payment - (deal.down_payment * 0.1)
                                                                         : deal.payment_status === 'Fully Paid'
                                                                             ? deal.deal_value - (deal.deal_value * (deal.commission_rate || 20) / 100)
                                                                             : deal.deal_value - deal.down_payment
@@ -767,8 +767,8 @@ export const SettingsPage: React.FC = () => {
                                                         </td>
                                                         <td className="px-6 py-6 text-right text-base text-red-600 tabular-nums">
                                                             ₱{allDeals.reduce((sum, deal) => {
-                                                                const balance = deal.payment_status === 'Cancelled Project'
-                                                                    ? deal.down_payment - (deal.deal_value * (deal.commission_rate || 10) / 100)
+                                                                const balance = (deal.payment_status === 'Cancelled Project' || deal.payment_status === 'Downpayment Only')
+                                                                    ? deal.down_payment - (deal.down_payment * 0.1)
                                                                     : deal.payment_status === 'Fully Paid'
                                                                         ? deal.deal_value - (deal.deal_value * (deal.commission_rate || 20) / 100)
                                                                         : deal.deal_value - deal.down_payment;

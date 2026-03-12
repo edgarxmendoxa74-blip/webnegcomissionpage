@@ -183,7 +183,7 @@ export const LeadsTracker: React.FC = () => {
                 .from('leads')
                 .update({
                     payment_status: newStatus,
-                    ...(newStatus === 'Cancelled Project' ? { commission_rate: 10 } : {})
+                    commission_rate: (newStatus === 'Cancelled Project' || newStatus === 'Downpayment Only') ? 10 : 20
                 })
                 .eq('id', id);
             if (error) throw error;
@@ -363,8 +363,8 @@ export const LeadsTracker: React.FC = () => {
                                     <td className="px-4 py-2.5 text-right">
                                         <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
                                             ₱{Number(
-                                                lead.payment_status === 'Cancelled Project'
-                                                    ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 10) / 100)
+                                                (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
+                                                    ? lead.down_payment - (lead.down_payment * 0.1)
                                                     : lead.payment_status === 'Fully Paid'
                                                         ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
                                                         : lead.deal_value - lead.down_payment
@@ -476,8 +476,8 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
                                     <td className="px-4 py-4 text-right text-base text-red-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => {
-                                            const balance = lead.payment_status === 'Cancelled Project'
-                                                ? lead.down_payment - (lead.deal_value * (lead.commission_rate || 10) / 100)
+                                            const balance = (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
+                                                ? lead.down_payment - (lead.down_payment * 0.1)
                                                 : lead.payment_status === 'Fully Paid'
                                                     ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
                                                     : lead.deal_value - lead.down_payment;

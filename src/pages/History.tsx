@@ -143,7 +143,11 @@ export const HistoryPage: React.FC = () => {
                                     <td colSpan={8} className="px-8 py-20 text-center text-zinc-300 font-bold uppercase tracking-widest text-xs">No records found</td>
                                 </tr>
                             ) : filteredLeads.map((lead) => {
-                                const balance = lead.deal_value - (lead.down_payment || 0);
+                                const balance = (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
+                                    ? lead.down_payment - (lead.down_payment * 0.1)
+                                    : lead.payment_status === 'Fully Paid'
+                                        ? lead.deal_value - (lead.deal_value * 0.2) // Defaulting to 20% commission
+                                        : lead.deal_value - (lead.down_payment || 0);
                                 return (
                                     <tr key={lead.id} className="group hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-8 py-5">
