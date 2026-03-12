@@ -685,7 +685,6 @@ export const SettingsPage: React.FC = () => {
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package Value</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
-                                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
                                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                                 </tr>
                                             </thead>
@@ -742,9 +741,19 @@ export const SettingsPage: React.FC = () => {
                                                                 ).toLocaleString()}
                                                             </div>
                                                         </td>
+                                                        <td className="px-8 py-6">
+                                                            <span className={cn(
+                                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm",
+                                                                deal.is_audited === 'Audited'
+                                                                    ? "bg-yellow-400 text-black border-yellow-500"
+                                                                    : "bg-blue-400 text-white border-blue-500"
+                                                            )}>
+                                                                {deal.is_audited || 'Not Yet'}
+                                                            </span>
+                                                        </td>
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="text-sm font-black text-green-600 tabular-nums">
-                                                                ₱{Number(deal.deal_value * (deal.payment_status === 'Cancelled Project' ? 0.1 : (deal.commission_rate || 20) / 100)).toLocaleString()}
+                                                                ₱{Number((deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project') ? (deal.down_payment * 0.1) : (deal.deal_value * (deal.commission_rate || 20) / 100)).toLocaleString()}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -767,7 +776,12 @@ export const SettingsPage: React.FC = () => {
                                                             }, 0).toLocaleString()}
                                                         </td>
                                                         <td className="px-8 py-8 text-right text-lg text-green-600 tabular-nums">
-                                                            ₱{allDeals.reduce((sum, deal) => sum + (Number(deal.deal_value * (deal.payment_status === 'Cancelled Project' ? 0.1 : (deal.commission_rate || 20) / 100)) || 0), 0).toLocaleString()}
+                                                            ₱{allDeals.reduce((sum, deal) => {
+                                                                const commission = (deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project')
+                                                                    ? (deal.down_payment * 0.1)
+                                                                    : (deal.deal_value * (deal.commission_rate || 20) / 100);
+                                                                return sum + (Number(commission) || 0);
+                                                            }, 0).toLocaleString()}
                                                         </td>
                                                     </tr>
                                                 )}

@@ -35,6 +35,7 @@ interface Lead {
     webdev?: { name: string };
     is_hidden: boolean;
     commission_rate?: number;
+    is_audited: 'Audited' | 'Not Yet';
     created_at: string;
 }
 
@@ -130,8 +131,13 @@ export const LeadsTracker: React.FC = () => {
             if (leadError) throw leadError;
 
             // 2. Calculate commission
-            const commissionRate = formData.payment_status === 'Cancelled Project' ? 10 : (closingLead.commission_rate || closingLead.worker?.commission_percentage || 20);
-            const commissionAmount = (dealValue * commissionRate) / 100;
+            let commissionAmount;
+            if (formData.payment_status === 'Downpayment Only' || formData.payment_status === 'Cancelled Project') {
+                commissionAmount = (formData.down_payment * 0.1);
+            } else {
+                const commissionRate = (closingLead.commission_rate || closingLead.worker?.commission_percentage || 20);
+                commissionAmount = (dealValue * commissionRate) / 100;
+            }
 
             // 3. Insert commission record
             const { error: commError } = await supabase
@@ -178,6 +184,35 @@ export const LeadsTracker: React.FC = () => {
         }
     };
 
+    const updateAuditedStatus = async (id: string, newStatus: string) => {
+        const currentLead = leads.find(l => l.id === id);
+        if (currentLead?.is_audited === newStatus) return;
+
+        // Optimistic UI Update - Snap to state immediately
+        const oldLeads = [...leads];
+        setLeads(current => current.map(l =>
+            l.id === id ? { ...l, is_audited: newStatus as any } : l
+        ));
+
+        try {
+            const { error } = await supabase
+                .from('leads')
+                .update({ is_audited: newStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+            // No need to fetch data here, optimistic UI handles it.
+            // Supabase real-time (if added later) or manual refresh will keep it synced.
+        } catch (err: any) {
+            setLeads(oldLeads); // Rollback only on actual failure
+            console.error('CRITICAL: Error updating audited status:', err);
+            const msg = err.message || 'Unknown error';
+            const hint = err.hint ? `\nHint: ${err.hint}` : '';
+            const details = err.details ? `\nDetails: ${err.details}` : '';
+            alert(`Failed to save status: ${msg}${hint}${details}\n\nTroubleshooting:\n1. If it says 'Permission Denied', you need to be set as the OWNER in the database.\n2. Ensure the 'is_audited' column exists.`);
+        }
+    };
+
 
     const handleDeleteLead = async (id: string) => {
         if (!confirm('Are you sure you want to permanently delete this record?')) return;
@@ -204,7 +239,7 @@ export const LeadsTracker: React.FC = () => {
     };
 
     const exportToCSV = () => {
-        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
+        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission', 'Audited'];
         const rows = leads.map(l => {
             const date = new Date(l.created_at);
             return [
@@ -215,7 +250,8 @@ export const LeadsTracker: React.FC = () => {
                 l.down_payment,
                 Number(l.deal_value - l.down_payment).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number(l.deal_value * (l.payment_status === 'Cancelled Project' ? 0.1 : (l.commission_rate || 20) / 100)).toFixed(2)
+                Number((l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project') ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100)).toFixed(2),
+                l.is_audited || 'Not Yet'
             ];
         });
 
@@ -254,20 +290,10 @@ export const LeadsTracker: React.FC = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button
-                    onClick={() => setShowHidden(!showHidden)}
-                    className={cn(
-                        "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold tracking-tight transition-all active:scale-95 text-xs uppercase",
-                        showHidden ? "bg-black text-white" : "bg-white border border-zinc-100 text-zinc-400 hover:text-black"
-                    )}
-                >
-                    {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    {showHidden ? 'Showing Hidden' : 'Show Hidden Items'}
-                </button>
 
                 <button
                     onClick={exportToCSV}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border border-zinc-100 text-black rounded-2xl hover:bg-zinc-50 transition-all active:scale-95 font-bold tracking-tight text-xs uppercase"
+                    className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-xs uppercase shadow-lg shadow-orange-500/20"
                 >
                     <Download className="w-4 h-4" />
                     Download CSV
@@ -289,6 +315,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Audited</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
@@ -408,9 +435,32 @@ export const LeadsTracker: React.FC = () => {
                                             )}
                                         </div>
                                     </td>
+                                    <td className="px-4 py-2.5">
+                                        <button
+                                            onClick={() => updateAuditedStatus(lead.id, lead.is_audited === 'Audited' ? 'Not Yet' : 'Audited')}
+                                            className={cn(
+                                                "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 active:scale-95 shadow-sm",
+                                                (lead.is_audited === 'Audited')
+                                                    ? "bg-yellow-400 text-black shadow-yellow-400/20 hover:shadow-yellow-400/40 ring-1 ring-yellow-500/10"
+                                                    : "bg-blue-600 text-white shadow-blue-600/20 hover:shadow-blue-600/40 ring-1 ring-blue-700/10"
+                                            )}
+                                        >
+                                            {lead.is_audited === 'Audited' ? (
+                                                <>
+                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    <span>Audited</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
+                                                    <span>Not Yet</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </td>
                                     <td className="px-4 py-2.5 text-right">
                                         <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
-                                            ₱{Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : (lead.commission_rate || 20) / 100)).toLocaleString()}
+                                            ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}
                                         </div>
                                     </td>
                                     <td className="px-4 py-2.5 text-right flex items-center justify-end gap-2">
@@ -459,8 +509,14 @@ export const LeadsTracker: React.FC = () => {
                                         }, 0).toLocaleString()}
                                     </td>
                                     <td></td>
+                                    <td></td>
                                     <td className="px-4 py-4 text-right text-base text-green-600 tabular-nums">
-                                        ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * (lead.payment_status === 'Cancelled Project' ? 0.1 : (lead.commission_rate || 20) / 100)) || 0), 0).toLocaleString()}
+                                        ₱{filteredLeads.reduce((sum, lead) => {
+                                            const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+                                                ? (lead.down_payment * 0.1)
+                                                : (lead.deal_value * (lead.commission_rate || 20) / 100);
+                                            return sum + (Number(commission) || 0);
+                                        }, 0).toLocaleString()}
                                     </td>
                                     <td></td>
                                 </tr>

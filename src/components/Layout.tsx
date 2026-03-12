@@ -115,7 +115,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                     <div className="mb-4 min-h-[4rem] flex flex-col items-center justify-center">
                         {!logoError && (
                             <img
-                                src={logoUrl || "/logo.png"}
+                                src={logoUrl || "/vite.svg"}
                                 alt="WebNegosyo"
                                 className="w-16 h-16 object-contain grayscale hover:grayscale-0 transition-all duration-500"
                                 onError={() => setLogoError(true)}

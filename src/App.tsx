@@ -88,44 +88,94 @@ const Dashboard = () => {
     cancelled: 0
   });
 
+  const [performanceFlow, setPerformanceFlow] = React.useState<number[]>(new Array(12).fill(0));
+  const [fullyPaidPercentage, setFullyPaidPercentage] = React.useState(0);
+
+  const fetchStats = async () => {
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+    const query = supabase.from('leads')
+      .select('deal_value, down_payment, status, payment_status, worker_id, commission_rate, closed_at, month');
+
+    if (!isOwner && profile?.id) {
+      query.eq('worker_id', profile.id);
+    }
+
+    // Filter by current month for "Monthly" stats
+    query.eq('month', currentMonth);
+
+    const [{ data: leads }, { data: workers }] = await Promise.all([
+      query,
+      supabase.from('workers').select('id').eq('active', true)
+    ]);
+
+    const closedLeads = leads?.filter(l => l.status === 'closed') || [];
+    const totalBalance = (leads as any[] | null)?.reduce((acc, lead: any) => {
+      const balance = lead.payment_status === 'Cancelled Project'
+        ? (Number(lead.down_payment) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 10) / 100)
+        : lead.payment_status === 'Fully Paid'
+          ? (Number(lead.deal_value) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 20) / 100)
+          : (Number(lead.deal_value) || 0) - (Number(lead.down_payment) || 0);
+      return acc + balance;
+    }, 0) || 0;
+
+    const fullyPaidCount = leads?.filter(l => l.payment_status === 'Fully Paid').length || 0;
+    const downpaymentOnlyCount = leads?.filter(l => l.payment_status === 'Downpayment Only' || l.payment_status === 'Not Paid' || !l.payment_status).length || 0;
+    const cancelledCount = leads?.filter(l => l.payment_status === 'Cancelled Project').length || 0;
+
+    setStats({
+      closed: closedLeads.length,
+      totalBalance,
+      workers: workers?.length || 0,
+      fullyPaid: fullyPaidCount,
+      downpaymentOnly: downpaymentOnlyCount,
+      cancelled: cancelledCount
+    });
+
+    const totalProjects = fullyPaidCount + downpaymentOnlyCount;
+    setFullyPaidPercentage(totalProjects > 0 ? (fullyPaidCount / totalProjects) * 100 : 0);
+
+    // Dynamic Performance Flow (Last 12 days)
+    const today = new Date();
+    const days = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date();
+      d.setDate(today.getDate() - (11 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    const flowData = days.map(dateStr => {
+      return closedLeads.filter(l => l.closed_at?.startsWith(dateStr)).length;
+    });
+
+    // Normalize hieght for bars (max 100%)
+    const maxDeals = Math.max(...flowData, 1);
+    setPerformanceFlow(flowData.map(count => (count / maxDeals) * 100));
+  };
+
   React.useEffect(() => {
-    const fetchStats = async () => {
-      const query = supabase.from('leads').select('deal_value, down_payment, status, payment_status, worker_id, commission_rate');
-      if (!isOwner && profile?.id) {
-        query.eq('worker_id', profile.id);
-      }
-
-      const [{ data: leads }, { data: workers }] = await Promise.all([
-        query,
-        supabase.from('workers').select('id').eq('active', true)
-      ]);
-
-      const closedLeads = leads?.filter(l => l.status === 'closed') || [];
-      const totalBalance = (leads as any[] | null)?.reduce((acc, lead: any) => {
-        const balance = lead.payment_status === 'Cancelled Project'
-          ? (Number(lead.down_payment) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 10) / 100)
-          : Number(lead.deal_value) - (Number(lead.down_payment) || 0);
-        return acc + balance;
-      }, 0) || 0;
-
-      const fullyPaidCount = leads?.filter(l => l.payment_status === 'Fully Paid').length || 0;
-      const downpaymentOnlyCount = leads?.filter(l => l.payment_status === 'Downpayment Only' || l.payment_status === 'Not Paid' || !l.payment_status).length || 0;
-      const cancelledCount = leads?.filter(l => l.payment_status === 'Cancelled Project').length || 0;
-
-      setStats({
-        closed: closedLeads.length,
-        totalBalance,
-        workers: workers?.length || 0,
-        fullyPaid: fullyPaidCount,
-        downpaymentOnly: downpaymentOnlyCount,
-        cancelled: cancelledCount
-      });
-    };
     fetchStats();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads'
+        },
+        () => {
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const totalProjects = stats.fullyPaid + stats.downpaymentOnly;
-  const fullyPaidPercentage = totalProjects > 0 ? (stats.fullyPaid / totalProjects) * 100 : 0;
   const strokeDasharray = `${fullyPaidPercentage} ${100 - fullyPaidPercentage}`;
 
   return (
@@ -134,16 +184,18 @@ const Dashboard = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.3em] mb-2">Financial Performance</p>
-          <h2 className="text-5xl font-black tracking-tighter text-black uppercase italic italic">March 2026</h2>
+          <h2 className="text-5xl font-black tracking-tighter text-black uppercase italic italic">
+            {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </h2>
         </div>
         <div className="flex gap-3">
           <div className="px-6 py-3 bg-white border border-zinc-100 rounded-2xl shadow-sm">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Month</span>
-            <span className="font-bold text-black text-sm">March</span>
+            <span className="font-bold text-black text-sm">{new Date().toLocaleString('default', { month: 'long' })}</span>
           </div>
           <div className="px-6 py-3 bg-white border border-zinc-100 rounded-2xl shadow-sm">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Year</span>
-            <span className="font-bold text-black text-sm">2026</span>
+            <span className="font-bold text-black text-sm">{new Date().getFullYear()}</span>
           </div>
         </div>
       </div>
@@ -159,7 +211,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span>Growth +12.5%</span>
+            <span>Updates in Real-time</span>
           </div>
         </div>
 
@@ -169,7 +221,7 @@ const Dashboard = () => {
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Deals Closed</p>
           <p className="text-5xl font-black tracking-tighter text-black tabular-nums">{stats.closed}</p>
-          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Monthly Target: 50</div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Live Status: Active</div>
         </div>
 
 
@@ -265,21 +317,21 @@ const Dashboard = () => {
           </div>
 
           <div className="h-32 flex items-end gap-2 px-4">
-            {[40, 70, 45, 90, 65, 80, 50, 85, 95, 60, 75, 55].map((h, i) => (
+            {performanceFlow.map((h, i) => (
               <motion.div
                 key={i}
                 initial={{ height: 0 }}
                 animate={{ height: `${h}%` }}
                 transition={{ delay: i * 0.05, duration: 1 }}
                 className="flex-1 bg-zinc-100 rounded-t-lg hover:bg-black transition-colors"
-                title={`Day ${i + 1}: ${h}%`}
+                title={`Day ${i + 1}`}
               />
             ))}
           </div>
 
           <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-zinc-300 mt-6 pt-6 border-t border-zinc-50">
-            <span>Mar 01</span>
-            <span>Mar 09</span>
+            <span>{new Date(new Date().setDate(new Date().getDate() - 11)).toLocaleDateString('default', { month: 'short', day: '2-digit' })}</span>
+            <span>{new Date(new Date().setDate(new Date().getDate() - 5)).toLocaleDateString('default', { month: 'short', day: '2-digit' })}</span>
             <span>Today</span>
           </div>
         </div>

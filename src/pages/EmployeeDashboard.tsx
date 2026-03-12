@@ -632,7 +632,11 @@ export const EmployeeDashboard: React.FC = () => {
                                                         </td>
                                                         <td className="px-4 py-3 text-right">
                                                             <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-green-600" : "text-white")}>
-                                                                ₱{Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)).toLocaleString()}
+                                                                ₱{Number(
+                                                                    (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+                                                                        ? (lead.down_payment * 0.1)
+                                                                        : (lead.deal_value * ((lead.commission_rate || 20) / 100))
+                                                                ).toLocaleString()}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-right">
@@ -696,8 +700,18 @@ export const EmployeeDashboard: React.FC = () => {
                                                             ) : null}
                                                         </td>
                                                         <td className="px-4 py-4 text-right text-base text-green-600 tabular-nums">
-                                                            {filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0) !== 0 ? (
-                                                                <>₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.deal_value * ((lead.commission_rate || (lead.payment_status === 'Cancelled Project' ? 10 : 20)) / 100)) || 0), 0).toLocaleString()}</>
+                                                            {filteredLeads.reduce((sum, lead) => {
+                                                                const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+                                                                    ? (Number(lead.down_payment) * 0.1)
+                                                                    : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+                                                                return sum + (Number(commission) || 0);
+                                                            }, 0) !== 0 ? (
+                                                                <>₱{filteredLeads.reduce((sum, lead) => {
+                                                                    const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+                                                                        ? (Number(lead.down_payment) * 0.1)
+                                                                        : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+                                                                    return sum + (Number(commission) || 0);
+                                                                }, 0).toLocaleString()}</>
                                                             ) : null}
                                                         </td>
                                                         <td></td>
@@ -1094,7 +1108,11 @@ export const EmployeeDashboard: React.FC = () => {
                                             </label>
                                         </div>
                                         <div className="w-full px-6 py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-sm text-green-600 tabular-nums">
-                                            ₱{Number(addForm.deal_value * (addForm.commission_rate / 100)).toLocaleString()}
+                                            ₱{Number(
+                                                (addForm.payment_status === 'Downpayment Only' || addForm.payment_status === 'Cancelled Project')
+                                                    ? (addForm.down_payment * 0.1)
+                                                    : (addForm.deal_value * (addForm.commission_rate / 100))
+                                            ).toLocaleString()}
                                         </div>
                                     </div>
                                 </div>

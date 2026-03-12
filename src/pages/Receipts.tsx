@@ -189,7 +189,7 @@ export const ReceiptsPage: React.FC = () => {
                                 <div className="flex flex-col gap-3 min-h-[3rem]">
                                     {!logoError && (
                                         <img
-                                            src={logoUrl || "/logo.png"}
+                                            src={logoUrl || "/vite.svg"}
                                             alt="WebNegosyo Logo"
                                             className="w-12 h-12 object-contain"
                                             onError={() => setLogoError(true)}
