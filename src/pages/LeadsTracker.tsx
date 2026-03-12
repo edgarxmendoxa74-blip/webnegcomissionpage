@@ -52,7 +52,7 @@ export const LeadsTracker: React.FC = () => {
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [loading, setLoading] = useState(true);
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
-    const [showHidden, setShowHidden] = useState(false);
+    const [showHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Form States

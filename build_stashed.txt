@@ -1,0 +1,5 @@
+﻿
+> webnegosyo-management-2-0@0.0.0 build
+> tsc -b && vite build
+
+src/pages/LeadsTracker.tsx(55,24): error TS6133: 'setShowHidden' is declared but its value is never read.

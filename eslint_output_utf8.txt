@@ -1,0 +1,29 @@
+﻿
+C:\Users\Administrator\webnegosyo management 2.0\src\App.tsx
+  112:36  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  112:70  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  176:6   warning  React Hook React.useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Administrator\webnegosyo management 2.0\src\contexts\AuthContext.tsx
+   7:14  error  Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  17:44  error  Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  76:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Administrator\webnegosyo management 2.0\src\pages\EmployeeDashboard.tsx
+  130:8  warning  React Hook useEffect has a missing dependency: 'fetchLeads'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Administrator\webnegosyo management 2.0\src\pages\LeadsTracker.tsx
+   74:8    warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  194:60   error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  206:23   error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  579:119  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+
+C:\Users\Administrator\webnegosyo management 2.0\src\pages\Login.tsx
+  30:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Administrator\webnegosyo management 2.0\src\pages\Settings.tsx
+  62:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 14 problems (11 errors, 3 warnings)
+
