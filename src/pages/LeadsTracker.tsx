@@ -35,7 +35,6 @@ interface Lead {
     webdev?: { name: string };
     is_hidden: boolean;
     commission_rate?: number;
-    is_audited: 'Audited' | 'Not Yet';
     created_at: string;
 }
 
@@ -184,34 +183,7 @@ export const LeadsTracker: React.FC = () => {
         }
     };
 
-    const updateAuditedStatus = async (id: string, newStatus: string) => {
-        const currentLead = leads.find(l => l.id === id);
-        if (currentLead?.is_audited === newStatus) return;
 
-        // Optimistic UI Update - Snap to state immediately
-        const oldLeads = [...leads];
-        setLeads(current => current.map(l =>
-            l.id === id ? { ...l, is_audited: newStatus as any } : l
-        ));
-
-        try {
-            const { error } = await supabase
-                .from('leads')
-                .update({ is_audited: newStatus })
-                .eq('id', id);
-
-            if (error) throw error;
-            // No need to fetch data here, optimistic UI handles it.
-            // Supabase real-time (if added later) or manual refresh will keep it synced.
-        } catch (err: any) {
-            setLeads(oldLeads); // Rollback only on actual failure
-            console.error('CRITICAL: Error updating audited status:', err);
-            const msg = err.message || 'Unknown error';
-            const hint = err.hint ? `\nHint: ${err.hint}` : '';
-            const details = err.details ? `\nDetails: ${err.details}` : '';
-            alert(`Failed to save status: ${msg}${hint}${details}\n\nTroubleshooting:\n1. If it says 'Permission Denied', you need to be set as the OWNER in the database.\n2. Ensure the 'is_audited' column exists.`);
-        }
-    };
 
 
     const handleDeleteLead = async (id: string) => {
@@ -239,7 +211,7 @@ export const LeadsTracker: React.FC = () => {
     };
 
     const exportToCSV = () => {
-        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission', 'Audited'];
+        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
         const rows = leads.map(l => {
             const date = new Date(l.created_at);
             return [
@@ -250,8 +222,7 @@ export const LeadsTracker: React.FC = () => {
                 l.down_payment,
                 Number(l.deal_value - l.down_payment).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number((l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project') ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100)).toFixed(2),
-                l.is_audited || 'Not Yet'
+                Number((l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project') ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100)).toFixed(2)
             ];
         });
 
@@ -315,7 +286,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Audited</th>
+
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
@@ -435,29 +406,7 @@ export const LeadsTracker: React.FC = () => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5">
-                                        <button
-                                            onClick={() => updateAuditedStatus(lead.id, lead.is_audited === 'Audited' ? 'Not Yet' : 'Audited')}
-                                            className={cn(
-                                                "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 active:scale-95 shadow-sm",
-                                                (lead.is_audited === 'Audited')
-                                                    ? "bg-yellow-400 text-black shadow-yellow-400/20 hover:shadow-yellow-400/40 ring-1 ring-yellow-500/10"
-                                                    : "bg-blue-600 text-white shadow-blue-600/20 hover:shadow-blue-600/40 ring-1 ring-blue-700/10"
-                                            )}
-                                        >
-                                            {lead.is_audited === 'Audited' ? (
-                                                <>
-                                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                                    <span>Audited</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                                                    <span>Not Yet</span>
-                                                </>
-                                            )}
-                                        </button>
-                                    </td>
+
                                     <td className="px-4 py-2.5 text-right">
                                         <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
                                             ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}

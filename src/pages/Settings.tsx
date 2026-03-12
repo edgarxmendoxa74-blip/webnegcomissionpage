@@ -741,16 +741,7 @@ export const SettingsPage: React.FC = () => {
                                                                 ).toLocaleString()}
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-6">
-                                                            <span className={cn(
-                                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm",
-                                                                deal.is_audited === 'Audited'
-                                                                    ? "bg-yellow-400 text-black border-yellow-500"
-                                                                    : "bg-blue-400 text-white border-blue-500"
-                                                            )}>
-                                                                {deal.is_audited || 'Not Yet'}
-                                                            </span>
-                                                        </td>
+
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="text-sm font-black text-green-600 tabular-nums">
                                                                 ₱{Number((deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project') ? (deal.down_payment * 0.1) : (deal.deal_value * (deal.commission_rate || 20) / 100)).toLocaleString()}
