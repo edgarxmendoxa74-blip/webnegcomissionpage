@@ -1,11 +1,7 @@
 import React from 'react';
 import {
   TrendingUp,
-  Layers,
-  Edit2,
-  CheckCircle2,
-  X,
-  RefreshCw
+  Layers
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
@@ -99,7 +95,6 @@ const Dashboard = () => {
   const [fullyPaidPercentage, setFullyPaidPercentage] = React.useState(0);
 
   const fetchStats = async () => {
-    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
     const query = supabase.from('leads')
       .select('deal_value, down_payment, status, payment_status, worker_id, commission_rate, closed_at, month');
 
@@ -107,10 +102,9 @@ const Dashboard = () => {
       query.eq('worker_id', profile.id);
     }
 
-    const [{ data: leads }, { data: workers }, { data: appSettings }] = await Promise.all([
+    const [{ data: leads }, { data: workers }] = await Promise.all([
       query,
-      supabase.from('workers').select('id').eq('active', true),
-      supabase.from('app_settings').select('manual_revenue').eq('id', 1).single()
+      supabase.from('workers').select('id').eq('active', true)
     ]);
 
     const closedLeads = leads?.filter(l => l.status === 'closed') || [];
@@ -185,18 +179,6 @@ const Dashboard = () => {
           event: '*',
           schema: 'public',
           table: 'leads'
-        },
-        () => {
-          fetchStats();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'app_settings',
-          filter: 'id=eq.1'
         },
         () => {
           fetchStats();
