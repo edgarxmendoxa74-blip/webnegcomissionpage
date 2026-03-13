@@ -15,6 +15,7 @@ import {
     Mail,
     Briefcase,
     Search,
+    Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -127,6 +128,26 @@ export const EmployeeDashboard: React.FC = () => {
                 assigned_webdev_id: profile.assigned_webdev_id || '',
             });
         }
+
+        // Subscribe to real-time changes exactly like LeadsTracker does
+        const channel = supabase
+            .channel('schema-db-changes-employee-leads')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'leads'
+                },
+                () => {
+                    fetchLeads();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [profile]);
 
     const fetchLogo = async () => {
@@ -197,12 +218,14 @@ export const EmployeeDashboard: React.FC = () => {
     };
 
     const getBalance = (lead: Lead) => {
-        if (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only') {
-            return Number(lead.down_payment) - (Number(lead.down_payment) * 0.1);
+        const isCancelledOrDP = lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project';
+        const commission = isCancelledOrDP ? (Number(lead.down_payment) * 0.1) : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+
+        if (isCancelledOrDP) {
+            return Number(lead.down_payment) - commission;
         }
         if (lead.payment_status === 'Fully Paid') {
-            const commissionRate = lead.commission_rate || 20;
-            return Number(lead.deal_value) - (Number(lead.deal_value) * commissionRate / 100);
+            return Number(lead.deal_value) - commission;
         }
         return Number(lead.deal_value) - Number(lead.down_payment);
     };
@@ -300,6 +323,45 @@ export const EmployeeDashboard: React.FC = () => {
             fetchLeads();
         } catch (err) {
             console.error('Error deleting lead:', err);
+        }
+    };
+
+    const handleDownloadCSV = () => {
+        const headers = [
+            'Month', 'Date', 'Client Name', 'Webdev', 'Package Avail',
+            'Down Payment', 'Tip', 'Payment Status', 'Balance', 'Commission'
+        ];
+
+        const csvData = filteredLeads.map(lead => {
+            const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+                ? (Number(lead.down_payment) * 0.1)
+                : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+
+            return [
+                lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' }),
+                new Date(lead.created_at).toLocaleDateString(),
+                `"${lead.client_name}"`,
+                `"${lead.webdev?.name || 'Unassigned'}"`,
+                lead.deal_value,
+                lead.down_payment,
+                lead.tip || 0,
+                lead.payment_status || 'Downpayment Only',
+                getBalance(lead),
+                commission
+            ].join(',');
+        });
+
+        const csvString = [headers.join(','), ...csvData].join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'client_deals.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
 
@@ -447,6 +509,18 @@ export const EmployeeDashboard: React.FC = () => {
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                             />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5 w-full md:w-auto">
+                                            <button
+                                                onClick={handleDownloadCSV}
+                                                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-zinc-100 text-zinc-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-200 transition-all active:scale-95"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Download CSV
+                                            </button>
+                                            <div className="text-[8px] font-black text-zinc-400 text-center uppercase tracking-widest leading-tight mt-1">
+                                                Please download only after 2 weeks
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => setShowAddModal(true)}

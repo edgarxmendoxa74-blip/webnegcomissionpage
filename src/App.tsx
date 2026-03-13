@@ -1,7 +1,11 @@
 import React from 'react';
 import {
   TrendingUp,
-  Layers
+  Layers,
+  Edit2,
+  CheckCircle2,
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
@@ -82,6 +86,9 @@ const Dashboard = () => {
   const [stats, setStats] = React.useState({
     closed: 0,
     totalBalance: 0,
+    rawBalanceSum: 0,
+    totalCommission: 0,
+    manualRevenue: null as number | null,
     workers: 0,
     fullyPaid: 0,
     downpaymentOnly: 0,
@@ -100,23 +107,35 @@ const Dashboard = () => {
       query.eq('worker_id', profile.id);
     }
 
-    // Filter by current month for "Monthly" stats
-    query.eq('month', currentMonth);
-
-    const [{ data: leads }, { data: workers }] = await Promise.all([
+    const [{ data: leads }, { data: workers }, { data: appSettings }] = await Promise.all([
       query,
-      supabase.from('workers').select('id').eq('active', true)
+      supabase.from('workers').select('id').eq('active', true),
+      supabase.from('app_settings').select('manual_revenue').eq('id', 1).single()
     ]);
 
     const closedLeads = leads?.filter(l => l.status === 'closed') || [];
-    const totalBalance = (leads as any[] | null)?.reduce((acc, lead: any) => {
-      const balance = lead.payment_status === 'Cancelled Project'
-        ? (Number(lead.down_payment) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 10) / 100)
+    const rawBalanceSum = (leads as any[] | null)?.reduce((acc, lead: any) => {
+      const isCancelledOrDP = lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project';
+      const commission = isCancelledOrDP ? ((Number(lead.down_payment) || 0) * 0.1) : ((Number(lead.deal_value) || 0) * (lead.commission_rate || 20) / 100);
+
+      const balance = isCancelledOrDP
+        ? (Number(lead.down_payment) || 0) - commission
         : lead.payment_status === 'Fully Paid'
-          ? (Number(lead.deal_value) || 0) - (Number(lead.deal_value) * (lead.commission_rate || 20) / 100)
+          ? (Number(lead.deal_value) || 0) - commission
           : (Number(lead.deal_value) || 0) - (Number(lead.down_payment) || 0);
+
       return acc + balance;
     }, 0) || 0;
+
+    const totalCommission = (leads as any[] | null)?.reduce((acc, lead: any) => {
+      const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+        ? ((Number(lead.down_payment) || 0) * 0.1)
+        : ((Number(lead.deal_value) || 0) * (lead.commission_rate || 20) / 100);
+      return acc + commission;
+    }, 0) || 0;
+
+    // Use the exact automatic calculation
+    const totalBalanceToDisplay = rawBalanceSum;
 
     const fullyPaidCount = leads?.filter(l => l.payment_status === 'Fully Paid').length || 0;
     const downpaymentOnlyCount = leads?.filter(l => l.payment_status === 'Downpayment Only' || l.payment_status === 'Not Paid' || !l.payment_status).length || 0;
@@ -124,7 +143,10 @@ const Dashboard = () => {
 
     setStats({
       closed: closedLeads.length,
-      totalBalance,
+      totalBalance: totalBalanceToDisplay,
+      rawBalanceSum: rawBalanceSum,
+      totalCommission: totalCommission,
+      manualRevenue: null, // Removed manual revenue logic entirely
       workers: workers?.length || 0,
       fullyPaid: fullyPaidCount,
       downpaymentOnly: downpaymentOnlyCount,
@@ -168,6 +190,18 @@ const Dashboard = () => {
           fetchStats();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_settings',
+          filter: 'id=eq.1'
+        },
+        () => {
+          fetchStats();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -204,12 +238,19 @@ const Dashboard = () => {
         {/* Main Stats */}
         <div className="bg-black text-white p-10 rounded-[3rem] shadow-2xl space-y-6 relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Monthly Revenue</p>
-          <div>
-            <span className="text-sm font-bold opacity-50 block mb-1">Total Balance</span>
-            <p className="text-3xl font-black tracking-tighter tabular-nums">₱{stats.totalBalance.toLocaleString()}</p>
+
+          <div className="flex items-center justify-between z-10 relative">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Total Revenue</p>
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+
+          <div className="z-10 relative">
+            <span className="text-sm font-bold opacity-50 block mb-1">Total Balance</span>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black tracking-tighter tabular-nums">₱{stats.totalBalance.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 z-10 relative mt-2">
             <div className="w-2 h-2 rounded-full bg-green-500" />
             <span>Updates in Real-time</span>
           </div>

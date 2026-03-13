@@ -80,6 +80,26 @@ export const LeadsTracker: React.FC = () => {
 
     useEffect(() => {
         fetchData();
+
+        // Subscribe to real-time changes
+        const channel = supabase
+            .channel('schema-db-changes-leads')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'leads'
+                },
+                () => {
+                    fetchData();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     // Auto-assign webdev based on worker
@@ -224,15 +244,24 @@ export const LeadsTracker: React.FC = () => {
         const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
         const rows = leads.map(l => {
             const date = new Date(l.created_at);
+            const isCancelledOrDP = l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project';
+            const commission = isCancelledOrDP ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100);
+
+            const totalBalance = isCancelledOrDP
+                ? l.down_payment - commission
+                : l.payment_status === 'Fully Paid'
+                    ? l.deal_value - commission
+                    : l.deal_value - l.down_payment;
+
             return [
                 date.toLocaleString('default', { month: 'long' }),
                 date.toLocaleDateString(),
                 l.client_name,
                 l.deal_value,
                 l.down_payment,
-                Number(l.deal_value - l.down_payment).toFixed(2),
+                Number(totalBalance).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number((l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project') ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100)).toFixed(2)
+                Number(commission).toFixed(2)
             ];
         });
 
@@ -272,13 +301,18 @@ export const LeadsTracker: React.FC = () => {
                     />
                 </div>
 
-                <button
-                    onClick={exportToCSV}
-                    className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-xs uppercase shadow-lg shadow-orange-500/20"
-                >
-                    <Download className="w-4 h-4" />
-                    Download CSV
-                </button>
+                <div className="flex flex-col gap-1.5 w-auto">
+                    <button
+                        onClick={exportToCSV}
+                        className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-xs uppercase shadow-lg shadow-orange-500/20"
+                    >
+                        <Download className="w-4 h-4" />
+                        Download CSV
+                    </button>
+                    <div className="text-[8px] font-black text-zinc-400 text-center uppercase tracking-widest leading-tight mt-1">
+                        Please download only after 2 weeks
+                    </div>
+                </div>
             </div>
 
             {/* Leads Table */}
@@ -381,6 +415,7 @@ export const LeadsTracker: React.FC = () => {
                                                             lead.status === 'failed' ? "text-red-600" : "text-amber-600"
                                                     )
                                                 )}>
+
                                                     {lead.status === 'failed' ? 'Cancelled' : lead.status}
                                                 </span>
                                             </div>
