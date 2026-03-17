@@ -123,7 +123,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                         )}
                     </div>
                     <div>
-                        <h2 className="font-extrabold text-2xl tracking-tight text-black flex items-center gap-1">
+                        <h2 className="font-extrabold text-xl tracking-tight text-black flex items-center gap-1">
                             WEB<span className="font-light text-zinc-400">NEGOSYO</span>
                         </h2>
                         <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-1">Management Suite</p>
@@ -191,28 +191,29 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
             {/* Main Content */}
             <main className="flex-1 min-w-0 overflow-auto bg-[#fafafa]">
-                <header className="h-24 px-12 flex items-center justify-between sticky top-0 bg-white/60 backdrop-blur-2xl z-30 border-b border-zinc-100/50">
-                    <div className="flex items-center gap-6">
+                <header className="h-20 lg:h-24 px-6 lg:px-12 flex items-center justify-between sticky top-0 bg-white/60 backdrop-blur-2xl z-30 border-b border-zinc-100/50">
+                    <div className="flex items-center gap-4 lg:gap-6">
                         <button
-                            className="lg:hidden p-3 hover:bg-zinc-100 rounded-full transition-colors"
+                            className="lg:hidden p-2.5 hover:bg-zinc-100 rounded-full transition-colors"
                             onClick={() => setIsOpen(true)}
                         >
-                            <Menu className="w-6 h-6" />
+                            <Menu className="w-5 h-5 lg:w-6 lg:h-6" />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tighter text-black uppercase italic">{activeTab}</h1>
+                            <h1 className="text-xl lg:text-3xl font-black tracking-tighter text-black uppercase italic">{activeTab}</h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 font-medium active:scale-95">
+                        <button className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 font-medium active:scale-95 text-xs lg:text-sm">
                             <PlusCircle className="w-4 h-4" />
-                            <span>Add Record</span>
+                            <span className="hidden sm:inline">Add Record</span>
+                            <span className="sm:hidden">Add</span>
                         </button>
                     </div>
                 </header>
 
-                <div className="p-8">
+                <div className="p-4 lg:p-8">
                     {children}
                 </div>
             </main>

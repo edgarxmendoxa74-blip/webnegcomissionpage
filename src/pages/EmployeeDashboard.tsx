@@ -414,25 +414,25 @@ export const EmployeeDashboard: React.FC = () => {
         <div className="min-h-screen bg-[#fafafa]">
             {/* Top Header Bar */}
             <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-zinc-100">
-                <div className="max-w-7xl mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="max-w-7xl mx-auto px-6 md:px-12 h-16 lg:h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3 lg:gap-4">
                         <img
                             src={logoUrl || "/logo.png"}
                             alt="Logo"
-                            className="w-10 h-10 object-contain"
+                            className="w-8 h-8 lg:w-10 lg:h-10 object-contain"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                         <div>
-                            <h1 className="text-xl font-black tracking-tight text-black">
+                            <h1 className="text-sm lg:text-base font-black tracking-tight text-black">
                                 WEB<span className="font-light text-zinc-400">NEGOSYO</span>
                             </h1>
-                            <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em]">Employee Portal</p>
+                            <p className="text-[7px] lg:text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em]">Employee Portal</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-3 bg-zinc-50 rounded-2xl px-5 py-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center font-black text-xs overflow-hidden">
+                    <div className="flex items-center gap-3 lg:gap-4">
+                        <div className="hidden sm:flex items-center gap-2 lg:gap-3 bg-zinc-50 rounded-xl lg:rounded-2xl px-3 lg:px-5 py-2 lg:py-2.5">
+                            <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl bg-black text-white flex items-center justify-center font-black text-[10px] lg:text-xs overflow-hidden">
                                 {profile?.photo_url ? (
                                     <img src={profile.photo_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
@@ -440,44 +440,44 @@ export const EmployeeDashboard: React.FC = () => {
                                 )}
                             </div>
                             <div>
-                                <p className="text-xs font-black text-black">{profile?.name || 'Employee'}</p>
-                                <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{profile?.role || 'Employee'}</p>
+                                <p className="text-[10px] lg:text-xs font-black text-black">{profile?.name || 'Employee'}</p>
+                                <p className="text-[7px] lg:text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{profile?.role || 'Employee'}</p>
                             </div>
                         </div>
                         <button
                             onClick={signOut}
-                            className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                            className="p-2 lg:p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg lg:rounded-xl transition-all"
                             title="Logout"
                         >
-                            <LogOut className="w-5 h-5" />
+                            <LogOut className="w-4 h-4 lg:w-5 lg:h-5" />
                         </button>
                     </div>
                 </div>
             </header>
 
             {/* Tab Switcher */}
-            <div className="max-w-7xl mx-auto px-6 md:px-12 pt-8">
-                <div className="flex gap-2 bg-white border border-zinc-100 rounded-2xl p-1.5 w-fit shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 md:px-12 pt-6 lg:pt-8 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-1.5 lg:gap-2 bg-white border border-zinc-100 rounded-xl lg:rounded-2xl p-1 lg:p-1.5 w-fit shadow-sm">
                     <button
                         onClick={() => setActiveSection('deals')}
-                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === 'deals' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'deals' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
                             }`}
                     >
                         My Deals
                     </button>
                     <button
                         onClick={() => setActiveSection('profile')}
-                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === 'profile' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'profile' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
                             }`}
                     >
                         Edit Profile
                     </button>
                     <button
                         onClick={() => setActiveSection('terms')}
-                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === 'terms' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'terms' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
                             }`}
                     >
-                        Terms & Conditions
+                        Terms
                     </button>
                 </div>
             </div>
@@ -532,9 +532,17 @@ export const EmployeeDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Deals Table */}
-                                <div className="bg-white border border-zinc-100 rounded-[2rem] overflow-hidden shadow-sm">
-                                    <div className="overflow-x-auto">
+                                {/* Deals Table with Scroll Hint */}
+                                <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden shadow-sm relative group">
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/5 backdrop-blur-sm text-black/20 p-2 rounded-full lg:hidden pointer-events-none animate-pulse">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[8px] font-black uppercase tracking-widest">Scroll</span>
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto scrollbar-hide">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">

@@ -74,8 +74,8 @@ export const LoginPage: React.FC = () => {
             <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
                 <div className="w-full max-w-4xl">
                     <div className="text-center mb-16">
-                        <h1 className="text-6xl font-black tracking-tighter text-black uppercase italic mb-4">WebNegosyo</h1>
-                        <p className="text-zinc-400 text-xs font-black uppercase tracking-[0.4em]">Management for Commissions</p>
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-black uppercase italic mb-4">WebNegosyo</h1>
+                        <p className="text-zinc-400 text-[9px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.4em]">Management for Commissions</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -108,6 +108,12 @@ export const LoginPage: React.FC = () => {
                                 Personal client management, track commissions, and log project progress.
                             </p>
                         </motion.button>
+                    </div>
+
+                    <div className="mt-20 text-center">
+                        <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">
+                            © All Rights Reserved WebNegosyo 2026
+                        </p>
                     </div>
                 </div>
             </div>
@@ -256,6 +262,12 @@ export const LoginPage: React.FC = () => {
                             {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
                         </button>
                     </div>
+                </div>
+
+                <div className="mt-12 text-center pb-8">
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                        © All Rights Reserved WebNegosyo 2026
+                    </p>
                 </div>
             </motion.div>
 

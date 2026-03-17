@@ -289,8 +289,8 @@ export const LeadsTracker: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center gap-3">
-                <div className="relative group w-72">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6">
+                <div className="relative group w-full md:w-72">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
                     <input
                         type="text"
@@ -301,23 +301,33 @@ export const LeadsTracker: React.FC = () => {
                     />
                 </div>
 
-                <div className="flex flex-col gap-1.5 w-auto">
-                    <button
-                        onClick={exportToCSV}
-                        className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-xs uppercase shadow-lg shadow-orange-500/20"
-                    >
-                        <Download className="w-4 h-4" />
-                        Download CSV
-                    </button>
-                    <div className="text-[8px] font-black text-zinc-400 text-center uppercase tracking-widest leading-tight mt-1">
-                        Please download only after 2 weeks
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex flex-col gap-1 w-full md:w-auto">
+                        <button
+                            onClick={exportToCSV}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase shadow-lg shadow-orange-500/20"
+                        >
+                            <Download className="w-4 h-4" />
+                            Download CSV
+                        </button>
+                        <div className="text-[7px] lg:text-[8px] font-black text-zinc-400 text-center uppercase tracking-widest leading-tight mt-0.5">
+                            Download every 2 weeks
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Leads Table */}
-            <div className="bg-white border border-zinc-100 rounded-[2rem] overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
+            {/* Table Container with Horizontal Scroll Hint */}
+            <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden shadow-sm relative group">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/5 backdrop-blur-sm text-black/20 p-2 rounded-full lg:hidden pointer-events-none animate-pulse">
+                    <div className="flex items-center gap-1">
+                        <span className="text-[8px] font-black uppercase tracking-widest">Scroll</span>
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+                <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-zinc-50/50 border-b border-zinc-100">
