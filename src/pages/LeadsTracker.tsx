@@ -331,18 +331,18 @@ export const LeadsTracker: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">✓</th>
-                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">✓</th>
+                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
@@ -372,40 +372,40 @@ export const LeadsTracker: React.FC = () => {
                                                 "hover:bg-zinc-50/50",
                                     lead.is_hidden && "opacity-40 grayscale"
                                 )}>
-                                    <td className="px-4 py-2.5">
-                                        <div className={cn("font-bold text-[10px] uppercase tracking-widest", lead.payment_status ? "text-zinc-200" : "text-black")}>
+                                    <td className="px-3 py-2">
+                                        <div className={cn("font-bold text-[9px] uppercase tracking-widest", lead.payment_status ? "text-zinc-200" : "text-black")}>
                                             {new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5">
-                                        <div className={cn("text-[10px] font-black tabular-nums", lead.payment_status ? "text-zinc-300" : "text-zinc-400")}>
+                                    <td className="px-3 py-2">
+                                        <div className={cn("text-[9px] font-black tabular-nums", lead.payment_status ? "text-zinc-300" : "text-zinc-400")}>
                                             {new Date(lead.created_at).toLocaleDateString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5">
-                                        <div className="font-bold text-xs text-inherit">{lead.client_name}</div>
-                                        <div className={cn("text-[9px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
+                                    <td className="px-3 py-2">
+                                        <div className="font-bold text-[11px] text-inherit">{lead.client_name}</div>
+                                        <div className={cn("text-[8px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
                                             {lead.contact_info}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5">
-                                        <div className="font-bold text-[10px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
+                                    <td className="px-3 py-2">
+                                        <div className="font-bold text-[9px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <div className="text-xs font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</div>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className="text-[11px] font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</div>
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-amber-600")}>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-amber-600")}>
                                             ₱{Number(lead.down_payment).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-blue-600")}>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-blue-600")}>
                                             ₱{Number(lead.tip || 0).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
                                             ₱{Number(
                                                 (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
                                                     ? lead.down_payment - (lead.down_payment * 0.1)
@@ -415,9 +415,9 @@ export const LeadsTracker: React.FC = () => {
                                             ).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5">
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wide">
+                                    <td className="px-3 py-2">
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wide">
                                                 {getStatusIcon(lead.status)}
                                                 <span className={cn(
                                                     lead.payment_status ? "text-white" : (
@@ -430,9 +430,9 @@ export const LeadsTracker: React.FC = () => {
                                                 </span>
                                             </div>
                                             {lead.status === 'closed' && (
-                                                <div className="flex flex-col gap-1.5">
+                                                <div className="flex flex-col gap-1">
                                                     <span className={cn(
-                                                        "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border self-start transition-all shadow-sm",
+                                                        "text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border self-start transition-all shadow-sm",
                                                         lead.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
                                                             lead.payment_status === 'Downpayment Only' ? "bg-white/20 text-white border-white/30" :
                                                                 lead.payment_status === 'Cancelled Project' ? "bg-white/20 text-white border-white/30" :
@@ -444,17 +444,17 @@ export const LeadsTracker: React.FC = () => {
                                                         <button
                                                             onClick={() => updatePaymentStatus(lead.id, 'Fully Paid')}
                                                             title="Highlight Green (Completed)"
-                                                            className="w-3.5 h-3.5 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-sm"
+                                                            className="w-3 h-3 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-sm"
                                                         />
                                                         <button
                                                             onClick={() => updatePaymentStatus(lead.id, 'Cancelled Project')}
                                                             title="Highlight Red (Cancelled)"
-                                                            className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-sm"
+                                                            className="w-3 h-3 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-sm"
                                                         />
                                                         <button
                                                             onClick={() => updatePaymentStatus(lead.id, 'Downpayment Only')}
                                                             title="Highlight Gray (Downpayment)"
-                                                            className="w-3.5 h-3.5 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-sm"
+                                                            className="w-3 h-3 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-sm"
                                                         />
                                                     </div>
                                                 </div>
@@ -462,16 +462,16 @@ export const LeadsTracker: React.FC = () => {
                                         </div>
                                     </td>
 
-                                    <td className="px-4 py-2.5 text-right">
-                                        <div className={cn("text-xs font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
                                             ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2.5 text-center">
+                                    <td className="px-3 py-2 text-center">
                                         <button
                                             onClick={() => toggleCheck(lead.id)}
                                             className={cn(
-                                                "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
+                                                "w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
                                                 checkedLeads.has(lead.id)
                                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30"
                                                     : lead.payment_status
@@ -480,34 +480,34 @@ export const LeadsTracker: React.FC = () => {
                                             )}
                                         >
                                             {checkedLeads.has(lead.id) && (
-                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <CheckCircle2 className="w-3" />
                                             )}
                                         </button>
                                     </td>
-                                    <td className="px-4 py-2.5 text-right flex items-center justify-end gap-2">
+                                    <td className="px-3 py-2 text-right flex items-center justify-end gap-1.5">
                                         {lead.status === 'pending' && (
                                             <button
                                                 onClick={() => setClosingLead(lead)}
-                                                className="px-4 py-1.5 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full hover:bg-zinc-800 transition-all shadow-lg shadow-black/5 active:scale-95"
+                                                className="px-3 py-1 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-full hover:bg-zinc-800 transition-all shadow-lg shadow-black/5 active:scale-95"
                                             >
-                                                Close Deal
+                                                Close
                                             </button>
                                         )}
 
-                                        <div className="flex items-center gap-1 ml-4 border-l border-zinc-100 pl-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-1 ml-2 border-l border-zinc-100 pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => toggleHideLead(lead)}
                                                 title={lead.is_hidden ? "Unhide" : "Hide Record"}
-                                                className={cn("p-1.5 rounded-lg transition-colors", lead.payment_status ? "hover:bg-white/20 text-white" : "hover:bg-zinc-100 text-zinc-400 hover:text-black")}
+                                                className={cn("p-1 rounded-lg transition-colors", lead.payment_status ? "hover:bg-white/20 text-white" : "hover:bg-zinc-100 text-zinc-400 hover:text-black")}
                                             >
-                                                {lead.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                                {lead.is_hidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteLead(lead.id)}
                                                 title="Delete Record"
-                                                className={cn("p-1.5 rounded-lg transition-colors", lead.payment_status ? "hover:bg-red-500 text-white" : "hover:bg-red-50 text-zinc-400 hover:text-red-500")}
+                                                className={cn("p-1 rounded-lg transition-colors", lead.payment_status ? "hover:bg-red-500 text-white" : "hover:bg-red-50 text-zinc-400 hover:text-red-500")}
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-3 h-3" />
                                             </button>
                                         </div>
                                     </td>

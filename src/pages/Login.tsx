@@ -83,9 +83,9 @@ export const LoginPage: React.FC = () => {
                             whileHover={{ y: -10, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('owner')}
-                            className="bg-black p-12 rounded-[3.5rem] text-left group transition-all shadow-2xl shadow-black/20"
+                            className="bg-black p-12 rounded-[3.5rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
                         >
-                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-white group-hover:text-black transition-colors">
+                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-white group-hover:text-black transition-colors">
                                 <Lock className="w-8 h-8 text-white group-hover:text-black" />
                             </div>
                             <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">Owner Entrance</h3>
@@ -98,9 +98,9 @@ export const LoginPage: React.FC = () => {
                             whileHover={{ y: -10, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('employee')}
-                            className="bg-white border border-zinc-100 p-12 rounded-[3.5rem] text-left group transition-all shadow-xl shadow-black/5"
+                            className="bg-white border border-zinc-100 p-12 rounded-[3.5rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
                         >
-                            <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-black transition-colors">
+                            <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-black transition-colors">
                                 <User className="w-8 h-8 text-black group-hover:text-white" />
                             </div>
                             <h3 className="text-3xl font-black text-black uppercase italic tracking-tighter mb-2">Employee Portal</h3>

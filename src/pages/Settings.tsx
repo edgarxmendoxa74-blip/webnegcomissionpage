@@ -330,10 +330,10 @@ export const SettingsPage: React.FC = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Identity</th>
-                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Contact Info</th>
-                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Payment (GCash)</th>
-                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Identity</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Contact Info</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Payment (GCash)</th>
+                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-50">
@@ -347,13 +347,13 @@ export const SettingsPage: React.FC = () => {
                                     </tr>
                                 ) : workers.map(worker => (
                                     <tr key={worker.id} className="group hover:bg-zinc-50/50 transition-colors">
-                                        <td className="px-8 py-6">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-zinc-100 overflow-hidden flex items-center justify-center shrink-0">
+                                                <div className="w-10 h-10 rounded-2xl bg-zinc-100 overflow-hidden flex items-center justify-center shrink-0">
                                                     {worker.photo_url ? (
                                                         <img src={worker.photo_url} className="w-full h-full object-cover" alt="" />
                                                     ) : (
-                                                        <span className="text-zinc-400 font-black">{worker.name.charAt(0)}</span>
+                                                        <span className="text-zinc-400 font-black text-xs">{worker.name.charAt(0)}</span>
                                                     )}
                                                 </div>
                                                 <div>
@@ -362,25 +362,31 @@ export const SettingsPage: React.FC = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
+                                        <td className="px-4 py-3">
                                             <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-xs font-medium text-zinc-700">
-                                                    <Mail className="w-3 h-3 text-zinc-300" />
-                                                    {worker.email}
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-700">
+                                                    <Mail className="w-3 h-3 text-zinc-400" />
+                                                    <span className="truncate">{worker.email}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
-                                                    <Phone className="w-3 h-3 text-zinc-300" />
+                                                {worker.contact_email && (
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                                        <Mail className="w-3 h-3" />
+                                                        <span>{worker.contact_email}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500">
+                                                    <Phone className="w-3 h-3 text-zinc-400" />
                                                     {worker.phone || 'No phone'}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-2 text-[10px] font-black text-black uppercase tracking-widest">
                                                 <div className="w-2 h-2 rounded-full bg-green-500" />
                                                 {worker.gcash_number || 'NOT SET'}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 text-right">
+                                        <td className="px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => {
@@ -678,16 +684,16 @@ export const SettingsPage: React.FC = () => {
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date/Month</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Info</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date/Month</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Info</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Agent</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Status</th>
+                                                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-zinc-50">
@@ -707,30 +713,30 @@ export const SettingsPage: React.FC = () => {
                                                                 deal.payment_status === 'Cancelled Project' ? "bg-red-600 text-white" :
                                                                     "hover:bg-zinc-50/50"
                                                     )}>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-2">
                                                             <div className={cn("font-bold text-xs uppercase tracking-widest", deal.payment_status ? "text-white" : "text-black")}>{deal.month || new Date(deal.created_at).toLocaleString('default', { month: 'short' })}</div>
                                                             <div className={cn("text-[10px] font-black tabular-nums", deal.payment_status ? "text-white/60" : "text-zinc-400")}>{new Date(deal.created_at).toLocaleDateString()}</div>
                                                         </td>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-2">
                                                             <div className={cn("font-bold text-sm", deal.payment_status ? "text-white" : "text-black")}>{deal.client_name}</div>
                                                             <div className={cn("text-[10px] font-medium", deal.payment_status ? "text-white/60" : "text-zinc-400")}>{deal.contact_info}</div>
                                                         </td>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-2">
                                                             <div className={cn("text-xs font-bold", deal.payment_status ? "text-white" : "text-black")}>{deal.worker?.name || 'Unknown'}</div>
                                                         </td>
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-4 py-2">
                                                             <div className={cn("text-xs font-bold", deal.payment_status ? "text-white" : "text-black")}>{deal.webdev?.name || 'Unassigned'}</div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-2 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-black")}>₱{Number(deal.deal_value).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-2 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-amber-600")}>₱{Number(deal.down_payment || 0).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-2 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-blue-600")}>₱{Number(deal.tip || 0).toLocaleString()}</div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-2 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-red-600")}>
                                                                 ₱{Number(
                                                                     (deal.payment_status === 'Cancelled Project' || deal.payment_status === 'Downpayment Only')
@@ -741,7 +747,7 @@ export const SettingsPage: React.FC = () => {
                                                                 ).toLocaleString()}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-center">
+                                                        <td className="px-4 py-2 text-center">
                                                             <span className={cn(
                                                                 "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border",
                                                                 deal.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
@@ -752,13 +758,13 @@ export const SettingsPage: React.FC = () => {
                                                                 {deal.payment_status || 'Downpayment Only'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-4 py-2 text-right">
                                                             <div className={cn("text-sm font-black tabular-nums", deal.payment_status ? "text-white" : "text-green-600")}>
                                                                 ₱{Number((deal.payment_status === 'Downpayment Only' || deal.payment_status === 'Cancelled Project') ? (deal.down_payment * 0.1) : (deal.deal_value * (deal.commission_rate || 20) / 100)).toLocaleString()}
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                ))})
+                                                ))}
                                                 {allDeals.length > 0 && (
                                                     <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
                                                         <td colSpan={6} className="px-6 py-6 text-right text-[10px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>

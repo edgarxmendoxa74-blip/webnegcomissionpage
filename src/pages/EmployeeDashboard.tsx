@@ -546,17 +546,17 @@ export const EmployeeDashboard: React.FC = () => {
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Month</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Date</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Client Name</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
-                                                    <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Actions</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Month</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Date</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Client Name</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package Avail</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Fully Paid</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-green-600 text-right">Commission</th>
+                                                    <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-zinc-50">
@@ -588,17 +588,17 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 lead.payment_status === 'Cancelled Project' ? "bg-red-600 text-white shadow-lg scale-[1.01] z-10" :
                                                                     "hover:bg-zinc-50/50"
                                                     )}>
-                                                        <td className="px-4 py-3">
-                                                            <span className={cn("font-bold text-[10px] uppercase tracking-widest", !lead.payment_status || lead.payment_status === 'Downpayment Only' ? "text-zinc-200" : "text-white")}>
+                                                        <td className="px-3 py-2">
+                                                            <span className={cn("font-bold text-[9px] uppercase tracking-widest", !lead.payment_status || lead.payment_status === 'Downpayment Only' ? "text-zinc-200" : "text-white")}>
                                                                 {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className={cn("text-[10px] font-bold tabular-nums", !lead.payment_status ? "text-zinc-400" : "text-zinc-200")}>
+                                                        <td className="px-3 py-2">
+                                                            <span className={cn("text-[9px] font-bold tabular-nums", !lead.payment_status ? "text-zinc-400" : "text-zinc-200")}>
                                                                 {new Date(lead.created_at).toLocaleDateString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-3 py-2">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="text"
@@ -609,15 +609,15 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
                                                                 />
                                                             ) : (
-                                                                <span className="font-bold text-xs text-inherit">{lead.client_name}</span>
+                                                                <span className="font-bold text-[11px] text-inherit">{lead.client_name}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-3 py-2">
                                                             <span className="text-[9px] font-black uppercase tracking-widest text-inherit">
                                                                 {lead.webdev?.name || 'Unassigned'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-3 py-2 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
@@ -628,10 +628,10 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     onChange={(e) => setEditForm({ ...editForm, deal_value: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className="text-xs font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</span>
+                                                                <span className="text-[11px] font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-3 py-2 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
@@ -642,12 +642,12 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     onChange={(e) => setEditForm({ ...editForm, down_payment: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-amber-600" : "text-white")}>
+                                                                <span className={cn("text-[11px] font-black tabular-nums", !lead.payment_status ? "text-amber-600" : "text-white")}>
                                                                     ₱{Number(lead.down_payment).toLocaleString()}
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-3 py-2 text-right">
                                                             {editingId === lead.id ? (
                                                                 <input
                                                                     type="number"
@@ -658,12 +658,12 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     onChange={(e) => setEditForm({ ...editForm, tip: Number(e.target.value) })}
                                                                 />
                                                             ) : (
-                                                                <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-blue-600" : "text-white")}>
+                                                                <span className={cn("text-[11px] font-black tabular-nums", !lead.payment_status ? "text-blue-600" : "text-white")}>
                                                                     ₱{Number(lead.tip || 0).toLocaleString()}
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-3 py-2">
                                                             {editingId === lead.id ? (
                                                                 <select
                                                                     title="Payment Status"
@@ -676,9 +676,9 @@ export const EmployeeDashboard: React.FC = () => {
                                                                     <option value="Cancelled Project">Cancelled Project</option>
                                                                 </select>
                                                             ) : (
-                                                                <div className="flex flex-col gap-1.5">
+                                                                <div className="flex flex-col gap-1">
                                                                     <span className={cn(
-                                                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border w-fit shadow-sm transition-all",
+                                                                        "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg border w-fit shadow-sm transition-all",
                                                                         lead.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
                                                                             lead.payment_status === 'Downpayment Only' ? "bg-white/20 text-white border-white/30" :
                                                                                 lead.payment_status === 'Cancelled Project' ? "bg-white/20 text-white border-white/30" :
@@ -690,29 +690,29 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         <button
                                                                             onClick={() => updatePaymentStatus(lead.id, 'Fully Paid')}
                                                                             title="Highlight Green (Completed)"
-                                                                            className="w-4 h-4 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                            className="w-3 h-3 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-lg"
                                                                         />
                                                                         <button
                                                                             onClick={() => updatePaymentStatus(lead.id, 'Cancelled Project')}
                                                                             title="Highlight Red (Cancelled)"
-                                                                            className="w-4 h-4 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                            className="w-3 h-3 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-lg"
                                                                         />
                                                                         <button
                                                                             onClick={() => updatePaymentStatus(lead.id, 'Downpayment Only')}
                                                                             title="Highlight Gray (Downpayment)"
-                                                                            className="w-4 h-4 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-lg"
+                                                                            className="w-3 h-3 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-lg"
                                                                         />
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? (getBalance(lead) <= 0 ? 'text-green-600' : 'text-red-600') : "text-white")}>
+                                                        <td className="px-3 py-2 text-right">
+                                                            <span className={cn("text-[11px] font-black tabular-nums", !lead.payment_status ? (getBalance(lead) <= 0 ? 'text-green-600' : 'text-red-600') : "text-white")}>
                                                                 ₱{Math.abs(getBalance(lead)).toLocaleString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <span className={cn("text-xs font-black tabular-nums", !lead.payment_status ? "text-green-600" : "text-white")}>
+                                                        <td className="px-3 py-2 text-right">
+                                                            <span className={cn("text-[11px] font-black tabular-nums", !lead.payment_status ? "text-green-600" : "text-white")}>
                                                                 ₱{Number(
                                                                     (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
                                                                         ? (lead.down_payment * 0.1)
@@ -720,24 +720,24 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 ).toLocaleString()}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-3 py-2 text-right">
                                                             <div className="flex items-center justify-end gap-1">
                                                                 {editingId === lead.id ? (
                                                                     <>
                                                                         <button
                                                                             onClick={() => saveEdit(lead.id)}
                                                                             disabled={isSaving}
-                                                                            className="p-2 bg-black text-white rounded-xl hover:shadow-lg transition-all active:scale-90 disabled:opacity-50"
+                                                                            className="p-1.5 bg-black text-white rounded-xl hover:shadow-lg transition-all active:scale-90 disabled:opacity-50"
                                                                             title="Save"
                                                                         >
-                                                                            <CheckCircle2 className="w-4 h-4" />
+                                                                            <CheckCircle2 className="w-3.5 h-3.5" />
                                                                         </button>
                                                                         <button
                                                                             onClick={() => setEditingId(null)}
-                                                                            className="p-2 bg-zinc-100 text-zinc-500 rounded-xl hover:bg-zinc-200 transition-all active:scale-90"
+                                                                            className="p-1.5 bg-zinc-100 text-zinc-500 rounded-xl hover:bg-zinc-200 transition-all active:scale-90"
                                                                             title="Cancel"
                                                                         >
-                                                                            <X className="w-4 h-4" />
+                                                                            <X className="w-3.5 h-3.5" />
                                                                         </button>
                                                                     </>
                                                                 ) : (
@@ -745,22 +745,22 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         <button
                                                                             onClick={() => startEditing(lead)}
                                                                             className={cn(
-                                                                                "p-2 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
                                                                                 lead.payment_status ? "bg-white/20 text-white hover:bg-white/40" : "bg-zinc-50 text-zinc-400 hover:bg-black hover:text-white"
                                                                             )}
                                                                             title="Edit"
                                                                         >
-                                                                            <Edit2 className="w-4 h-4" />
+                                                                            <Edit2 className="w-3.5 h-3.5" />
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleDeleteLead(lead.id)}
                                                                             className={cn(
-                                                                                "p-2 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
                                                                                 lead.payment_status ? "bg-white/20 text-white hover:bg-red-500" : "bg-zinc-50 text-zinc-400 hover:bg-red-500 hover:text-white"
                                                                             )}
                                                                             title="Delete"
                                                                         >
-                                                                            <Trash2 className="w-4 h-4" />
+                                                                            <Trash2 className="w-3.5 h-3.5" />
                                                                         </button>
                                                                     </>
                                                                 )}

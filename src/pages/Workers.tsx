@@ -26,6 +26,7 @@ interface Worker {
     gcash_number: string;
     qr_code_url: string;
     photo_url: string;
+    contact_email?: string;
     commission_percentage: number;
     active: boolean;
     created_at: string;
@@ -156,6 +157,11 @@ export const WorkersPage: React.FC = () => {
                                         </div>
                                         <span className="truncate">{worker.email}</span>
                                     </div>
+                                    {worker.contact_email && (
+                                        <div className="flex items-center gap-3 text-[10px] text-zinc-400 font-black uppercase tracking-widest pl-11">
+                                            <span className="truncate">{worker.contact_email}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-3 text-sm text-zinc-500 font-medium">
                                         <div className="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center group-hover:bg-black/5 transition-colors">
                                             <Wallet className="w-4 h-4 text-black" />
@@ -242,8 +248,11 @@ export const WorkersPage: React.FC = () => {
                                                 <Mail className="w-5 h-5 text-zinc-400" />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email Address</p>
+                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Email Addresses</p>
                                                 <p className="font-bold text-sm text-black truncate">{selectedWorker.email}</p>
+                                                {selectedWorker.contact_email && (
+                                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 italic">{selectedWorker.contact_email}</p>
+                                                )}
                                             </div>
                                         </div>
 

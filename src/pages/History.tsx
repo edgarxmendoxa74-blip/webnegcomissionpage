@@ -116,22 +116,22 @@ export const HistoryPage: React.FC = () => {
             </div>
 
             {/* History Table */}
-            <div className="bg-white border border-zinc-100 rounded-[2rem] overflow-hidden shadow-sm">
+            <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-zinc-50/50 border-b border-zinc-100 px-8">
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Completed</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Package</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Down Payment</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Dev Assigned</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
+                            <tr className="bg-zinc-50/50 border-b border-zinc-100 px-4">
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Completed</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Package</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Down Payment</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Dev Assigned</th>
+                                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-50 text-sm">
+                        <tbody className="divide-y divide-zinc-50 text-xs">
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
@@ -150,24 +150,24 @@ export const HistoryPage: React.FC = () => {
                                         : lead.deal_value - (lead.down_payment || 0);
                                 return (
                                     <tr key={lead.id} className="group hover:bg-zinc-50/50 transition-colors">
-                                        <td className="px-8 py-5">
-                                            <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                        <td className="px-4 py-3">
+                                            <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 font-bold text-zinc-400">
+                                        <td className="px-4 py-3 font-bold text-zinc-400">
                                             {new Date(lead.closed_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-8 py-5 font-black text-black uppercase tracking-tight">
+                                        <td className="px-4 py-3 font-black text-black uppercase tracking-tight">
                                             {lead.client_name}
                                         </td>
-                                        <td className="px-8 py-5 font-bold text-black italic">
+                                        <td className="px-4 py-3 font-bold text-black italic">
                                             {formatCurrency(lead.deal_value)}
                                         </td>
-                                        <td className="px-8 py-5 font-bold text-zinc-400">
+                                        <td className="px-4 py-3 font-bold text-zinc-400">
                                             {formatCurrency(lead.down_payment || 0)}
                                         </td>
-                                        <td className="px-8 py-5">
+                                        <td className="px-4 py-3">
                                             <span className={cn(
                                                 "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
                                                 lead.payment_status === 'Fully Paid'
@@ -179,15 +179,15 @@ export const HistoryPage: React.FC = () => {
                                                 {lead.payment_status || 'Downpayment Only'}
                                             </span>
                                         </td>
-                                        <td className="px-8 py-5">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 bg-zinc-100 rounded-md flex items-center justify-center text-[8px] font-black uppercase text-zinc-400">
+                                                <div className="w-5 h-5 bg-zinc-100 rounded-md flex items-center justify-center text-[7px] font-black uppercase text-zinc-400">
                                                     {lead.worker?.name.charAt(0)}
                                                 </div>
                                                 <span className="font-bold text-black">{lead.worker?.name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 text-right font-black text-black">
+                                        <td className="px-4 py-3 text-right font-black text-black">
                                             <span className={balance > 0 ? "text-red-500" : "text-green-500"}>
                                                 {formatCurrency(balance)}
                                             </span>
