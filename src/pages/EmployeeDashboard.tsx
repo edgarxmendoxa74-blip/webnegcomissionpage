@@ -16,6 +16,11 @@ import {
     Briefcase,
     Search,
     Download,
+    Globe,
+    Shield,
+    Database,
+    Key,
+    ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -58,6 +63,23 @@ interface ProfileData {
     assigned_webdev_id?: string;
 }
 
+interface ClientStorage {
+    id: string;
+    worker_id: string;
+    client_name: string;
+    business_name: string;
+    assigned_webdev_id?: string;
+    website_link?: string;
+    admin_link?: string;
+    admin_email?: string;
+    admin_password?: string;
+    supabase_email?: string;
+    supabase_password?: string;
+    database_password?: string;
+    created_at: string;
+    assigned_webdev?: { name: string };
+}
+
 export const EmployeeDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -65,10 +87,15 @@ export const EmployeeDashboard: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeSection, setActiveSection] = useState<'deals' | 'profile' | 'terms'>('deals');
+    const [activeSection, setActiveSection] = useState<'deals' | 'profile' | 'terms' | 'storage'>('deals');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [storageSearchQuery, setStorageSearchQuery] = useState('');
     const [workers, setWorkers] = useState<{ id: string, name: string }[]>([]);
+    const [clientStorage, setClientStorage] = useState<ClientStorage[]>([]);
+    const [showStorageModal, setShowStorageModal] = useState(false);
+    const [isEditingStorage, setIsEditingStorage] = useState(false);
+    const [editingStorageId, setEditingStorageId] = useState<string | null>(null);
 
     // Edit form state
     const [editForm, setEditForm] = useState({
@@ -94,6 +121,19 @@ export const EmployeeDashboard: React.FC = () => {
         webdev_id: '',
     });
 
+    const [storageForm, setStorageForm] = useState({
+        client_name: '',
+        business_name: '',
+        assigned_webdev_id: '',
+        website_link: '',
+        admin_link: '',
+        admin_email: '',
+        admin_password: '',
+        supabase_email: '',
+        supabase_password: '',
+        database_password: '',
+    });
+
     // Profile form state
     const [profileForm, setProfileForm] = useState<ProfileData>({
         name: '',
@@ -115,6 +155,7 @@ export const EmployeeDashboard: React.FC = () => {
         fetchLeads();
         fetchLogo();
         fetchWorkers();
+        fetchClientStorage();
         if (profile) {
             setProfileForm({
                 name: profile.name || '',
@@ -145,8 +186,24 @@ export const EmployeeDashboard: React.FC = () => {
             )
             .subscribe();
 
+        const storageChannel = supabase
+            .channel('schema-db-changes-client-storage')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'client_storage'
+                },
+                () => {
+                    fetchClientStorage();
+                }
+            )
+            .subscribe();
+
         return () => {
             supabase.removeChannel(channel);
+            supabase.removeChannel(storageChannel);
         };
     }, [profile]);
 
@@ -186,6 +243,162 @@ export const EmployeeDashboard: React.FC = () => {
         }
     };
 
+    const fetchClientStorage = async () => {
+        if (!profile?.id) return;
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('client_storage')
+                .select('*, assigned_webdev:workers!assigned_webdev_id(name)')
+                .or(`worker_id.eq.${profile.id},assigned_webdev_id.eq.${profile.id}`)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setClientStorage(data || []);
+        } catch (err) {
+            console.error('Error fetching client storage:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSaveStorage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const dataToSave = {
+                ...storageForm,
+                worker_id: profile?.id,
+                assigned_webdev_id: storageForm.assigned_webdev_id || null,
+            };
+
+            if (isEditingStorage && editingStorageId) {
+                const { error } = await supabase
+                    .from('client_storage')
+                    .update(dataToSave)
+                    .eq('id', editingStorageId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('client_storage')
+                    .insert(dataToSave);
+                if (error) throw error;
+            }
+
+            setShowStorageModal(false);
+            setStorageForm({
+                client_name: '',
+                business_name: '',
+                assigned_webdev_id: '',
+                website_link: '',
+                admin_link: '',
+                admin_email: '',
+                admin_password: '',
+                supabase_email: '',
+                supabase_password: '',
+                database_password: '',
+            });
+            setIsEditingStorage(false);
+            setEditingStorageId(null);
+            fetchClientStorage();
+        } catch (err: any) {
+            alert(`Error saving storage: ${err.message}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteStorage = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this storage record?')) return;
+        try {
+            const { error } = await supabase.from('client_storage').delete().eq('id', id);
+            if (error) throw error;
+            fetchClientStorage();
+        } catch (err) {
+            console.error('Error deleting storage:', err);
+        }
+    };
+
+    const handleDownloadCredentials = (item: ClientStorage) => {
+        const content = `
+CLIENT PROJECT DETAILS
+----------------------------------
+Client Name: ${item.client_name}
+Business Name: ${item.business_name}
+Assigned Webdev: ${item.assigned_webdev?.name || 'Unassigned'}
+
+WEBSITE LINKS
+----------------------------------
+Website Link: ${item.website_link || 'N/A'}
+Admin Link: ${item.admin_link || 'N/A'}
+
+ADMIN LOGIN CREDENTIALS
+----------------------------------
+Email: ${item.admin_email || 'N/A'}
+Password: ${item.admin_password || 'N/A'}
+
+SUPABASE LOGIN CREDENTIALS
+----------------------------------
+Email: ${item.supabase_email || 'N/A'}
+Password: ${item.supabase_password || 'N/A'}
+Database Password: ${item.database_password || 'N/A'}
+
+Generated on: ${new Date().toLocaleString()}
+`.trim();
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+        const link = document.body.appendChild(document.createElement('a'));
+        link.href = URL.createObjectURL(blob);
+        link.download = `${item.client_name}_credentials.txt`;
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDownloadStorageCSV = () => {
+        if (clientStorage.length === 0) return;
+        
+        const headers = [
+            'Client Name',
+            'Business Name',
+            'Assigned WebDev',
+            'Website Link',
+            'Admin Link',
+            'Admin Email',
+            'Admin Password',
+            'Supabase Email',
+            'Supabase Password',
+            'Database Password',
+            'Created At'
+        ];
+        
+        const rows = clientStorage.map(item => [
+            item.client_name,
+            item.business_name,
+            item.assigned_webdev?.name || 'Unassigned',
+            item.website_link || '',
+            item.admin_link || '',
+            item.admin_email || '',
+            item.admin_password || '',
+            item.supabase_email || '',
+            item.supabase_password || '',
+            item.database_password || '',
+            item.created_at
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `WebNegosyo_Client_Storage_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const updatePaymentStatus = async (id: string, newStatus: string) => {
         try {
             const { error } = await supabase
@@ -204,6 +417,11 @@ export const EmployeeDashboard: React.FC = () => {
 
     const filteredLeads = leads.filter(lead =>
         lead.client_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const filteredStorage = clientStorage.filter(item =>
+        item.client_name.toLowerCase().includes(storageSearchQuery.toLowerCase()) ||
+        item.business_name.toLowerCase().includes(storageSearchQuery.toLowerCase())
     );
 
     const startEditing = (lead: Lead) => {
@@ -478,6 +696,13 @@ export const EmployeeDashboard: React.FC = () => {
                             }`}
                     >
                         Terms
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('storage')}
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'storage' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                            }`}
+                    >
+                        Client Storage
                     </button>
                 </div>
             </div>
@@ -989,7 +1214,7 @@ export const EmployeeDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </motion.div>
-                    ) : (
+                    ) : activeSection === 'terms' ? (
                         <motion.div key="terms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                             {/* TERMS & CONDITIONS SECTION */}
                             <div className="max-w-4xl mx-auto space-y-12">
@@ -1055,9 +1280,363 @@ export const EmployeeDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </motion.div>
-                    )}
+                    ) : activeSection === 'storage' ? (
+                        <motion.div
+                            key="storage"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-2xl font-black tracking-tighter text-black uppercase italic">Client Storage</h2>
+                                    <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Manage project links and credentials</p>
+                                </div>
+                                <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                                    <div className="relative group w-full md:w-72">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search client or business..."
+                                            className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-[10px] uppercase tracking-widest transition-all"
+                                            value={storageSearchQuery}
+                                            onChange={(e) => setStorageSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                                        <div className="flex flex-col gap-1.5 w-full sm:w-auto">
+                                            <button
+                                            title="Download Client Storage CSV"
+                                            onClick={handleDownloadStorageCSV}
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 text-white border border-emerald-700 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-900/10 transition-all active:scale-95 shadow-sm"
+                                        >
+                                                <Download className="w-4 h-4" />
+                                                Download CSV
+                                            </button>
+                                            <div className="text-[7.5px] font-black text-zinc-400 text-center uppercase tracking-widest leading-tight mt-1">
+                                                Please download regularly to ensure <br />
+                                                you have a data backup in case of loss.
+                                            </div>
+                                        </div>
+                                    <button
+                                        title="Add New Client Storage"
+                                        onClick={() => {
+                                                setIsEditingStorage(false);
+                                                setStorageForm({
+                                                    client_name: '',
+                                                    business_name: '',
+                                                    assigned_webdev_id: '',
+                                                    website_link: '',
+                                                    admin_link: '',
+                                                    admin_email: '',
+                                                    admin_password: '',
+                                                    supabase_email: '',
+                                                    supabase_password: '',
+                                                    database_password: '',
+                                                });
+                                                setShowStorageModal(true);
+                                            }}
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Add Storage
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white border border-zinc-100 rounded-[2rem] overflow-hidden shadow-sm">
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-zinc-50 bg-zinc-50/50">
+                                                <th className="px-6 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] w-[25%] min-w-[200px]">Client / Business</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] w-[20%] min-w-[150px]">WebDev</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] w-[30%] min-w-[200px]">Project Links</th>
+                                                <th className="px-6 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right w-[25%] min-w-[150px]">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-50">
+                                            {loading ? (
+                                                [1, 2, 3].map(i => (
+                                                    <tr key={i} className="animate-pulse">
+                                                        <td className="px-6 py-6"><div className="h-4 bg-zinc-100 rounded w-2/3" /></td>
+                                                        <td className="px-6 py-6"><div className="h-3 bg-zinc-100 rounded w-1/2" /></td>
+                                                        <td className="px-6 py-6"><div className="h-3 bg-zinc-100 rounded w-full" /></td>
+                                                        <td className="px-6 py-6"><div className="h-4 bg-zinc-100 rounded w-1/4 ml-auto" /></td>
+                                                    </tr>
+                                                ))
+                                            ) : filteredStorage.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="py-20 text-center">
+                                                        <div className="text-zinc-300 mb-4">
+                                                            <Database className="w-12 h-12 mx-auto" />
+                                                        </div>
+                                                        <p className="text-zinc-400 font-bold text-sm uppercase tracking-widest">{storageSearchQuery ? 'No matching storage records found' : 'No client storage records found'}</p>
+                                                        {!storageSearchQuery && (
+                                                            <button
+                                                                onClick={() => setShowStorageModal(true)}
+                                                                className="mt-4 text-black font-black text-[10px] uppercase tracking-widest hover:underline"
+                                                            >
+                                                                Add your first client storage link
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredStorage.map((item) => (
+                                                <tr key={item.id} className="group hover:bg-zinc-50/50 transition-all border-l-4 border-l-transparent hover:border-l-black">
+                                                    <td className="px-6 py-6">
+                                                        <h3 className="text-sm font-black text-black">{item.client_name}</h3>
+                                                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{item.business_name}</p>
+                                                    </td>
+                                                    <td className="px-6 py-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                                                                {item.assigned_webdev?.name || 'Unassigned'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-6">
+                                                        <div className="flex items-center gap-4">
+                                                            {item.website_link && (
+                                                                <a title="Visit Website" href={item.website_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
+                                                                    <Globe className="w-3.5 h-3.5" />
+                                                                    <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Website</span>
+                                                                </a>
+                                                            )}
+                                                            {item.admin_link && (
+                                                                <a title="Visit Admin Portal" href={item.admin_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
+                                                                    <Shield className="w-3.5 h-3.5" />
+                                                                    <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Admin</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-right">
+                                                        <div className="flex items-center justify-end gap-2 opacity-0 lg:opacity-100 group-hover:opacity-100 transition-all">
+                                                            <button
+                                                                title="Download Credentials"
+                                                                onClick={() => handleDownloadCredentials(item)}
+                                                                className="p-2.5 bg-zinc-50 text-zinc-400 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                title="Edit Client Storage"
+                                                                onClick={() => {
+                                                                    setStorageForm({
+                                                                        client_name: item.client_name,
+                                                                        business_name: item.business_name,
+                                                                        assigned_webdev_id: item.assigned_webdev_id || '',
+                                                                        website_link: item.website_link || '',
+                                                                        admin_link: item.admin_link || '',
+                                                                        admin_email: item.admin_email || '',
+                                                                        admin_password: item.admin_password || '',
+                                                                        supabase_email: item.supabase_email || '',
+                                                                        supabase_password: item.supabase_password || '',
+                                                                        database_password: item.database_password || '',
+                                                                    });
+                                                                    setEditingStorageId(item.id);
+                                                                    setIsEditingStorage(true);
+                                                                    setShowStorageModal(true);
+                                                                }}
+                                                                 className="p-2.5 bg-zinc-100 text-zinc-500 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                title="Delete Client Storage"
+                                                                onClick={() => handleDeleteStorage(item.id)}
+                                                                className="p-2.5 bg-zinc-100 text-zinc-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : null}
                 </AnimatePresence>
             </div>
+
+            {/* Client Storage Modal */}
+            <AnimatePresence>
+                {showStorageModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowStorageModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-xl bg-white rounded-[2rem] lg:rounded-[3rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-6 lg:p-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h2 className="text-xl lg:text-2xl font-black tracking-tight text-black uppercase italic">
+                                            {isEditingStorage ? 'Edit Storage' : 'Add Client Storage'}
+                                        </h2>
+                                        <p className="text-zinc-400 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest mt-1">Enter client project links and login credentials</p>
+                                    </div>
+                                    <button onClick={() => setShowStorageModal(false)} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                                        <X className="w-5 h-5 text-zinc-400" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSaveStorage} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Client Name</label>
+                                            <input
+                                                required
+                                                title="Client Name"
+                                                type="text"
+                                                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs transition-all"
+                                                value={storageForm.client_name}
+                                                onChange={(e) => setStorageForm({ ...storageForm, client_name: e.target.value })}
+                                                placeholder="e.g. John Doe"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Business Name</label>
+                                            <input
+                                                required
+                                                title="Business Name"
+                                                type="text"
+                                                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs transition-all"
+                                                value={storageForm.business_name}
+                                                onChange={(e) => setStorageForm({ ...storageForm, business_name: e.target.value })}
+                                                placeholder="e.g. Acme Corp"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Assigned Webdev</label>
+                                            <select
+                                                title="Assigned Webdev"
+                                                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs transition-all"
+                                                value={storageForm.assigned_webdev_id}
+                                                onChange={(e) => setStorageForm({ ...storageForm, assigned_webdev_id: e.target.value })}
+                                            >
+                                                <option value="">Select Webdev</option>
+                                                {workers.map(w => (
+                                                    <option key={w.id} value={w.id}>{w.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
+                                        <div className="col-span-full mb-2">
+                                            <div className="flex items-center gap-2 text-zinc-400">
+                                                <Globe className="w-4 h-4" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Website Links</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Website URL</label>
+                                            <input
+                                                title="Website URL"
+                                                type="url"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[11px] transition-all"
+                                                value={storageForm.website_link}
+                                                onChange={(e) => setStorageForm({ ...storageForm, website_link: e.target.value })}
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest ml-1">Admin URL</label>
+                                            <input
+                                                title="Admin URL"
+                                                type="url"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[11px] transition-all"
+                                                value={storageForm.admin_link}
+                                                onChange={(e) => setStorageForm({ ...storageForm, admin_link: e.target.value })}
+                                                placeholder="https://.../admin"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
+                                        <div className="col-span-full mb-2">
+                                            <div className="flex items-center gap-2 text-zinc-400">
+                                                <Key className="w-4 h-4" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Login Credentials</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[8px] font-black text-zinc-300 uppercase tracking-[0.2em]">Admin Portal</p>
+                                            <input
+                                                title="Admin Email"
+                                                type="text"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all mb-2"
+                                                value={storageForm.admin_email}
+                                                onChange={(e) => setStorageForm({ ...storageForm, admin_email: e.target.value })}
+                                                placeholder="Admin Email"
+                                            />
+                                            <input
+                                                title="Admin Password"
+                                                type="password"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-100 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                value={storageForm.admin_password}
+                                                onChange={(e) => setStorageForm({ ...storageForm, admin_password: e.target.value })}
+                                                placeholder="Admin Password"
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[8px] font-black text-zinc-300 uppercase tracking-[0.2em]">Supabase / DB</p>
+                                            <input
+                                                title="Supabase Email"
+                                                type="text"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                value={storageForm.supabase_email}
+                                                onChange={(e) => setStorageForm({ ...storageForm, supabase_email: e.target.value })}
+                                                placeholder="Supabase Email"
+                                            />
+                                            <input
+                                                title="Supabase Password"
+                                                type="password"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                value={storageForm.supabase_password}
+                                                onChange={(e) => setStorageForm({ ...storageForm, supabase_password: e.target.value })}
+                                                placeholder="Supabase Password"
+                                            />
+                                            <input
+                                                title="Database Password"
+                                                type="text"
+                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                value={storageForm.database_password}
+                                                onChange={(e) => setStorageForm({ ...storageForm, database_password: e.target.value })}
+                                                placeholder="Project / DB Password (Optional)"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        disabled={isSaving}
+                                        type="submit"
+                                        className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                    >
+                                        {isSaving ? 'Processing...' : (isEditingStorage ? 'Update Storage' : 'Save Client Storage')}
+                                    </button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Add Client Modal */}
             <AnimatePresence>
@@ -1072,19 +1651,19 @@ export const EmployeeDashboard: React.FC = () => {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-xl bg-white rounded-[2rem] lg:rounded-[3rem] shadow-2xl overflow-hidden"
                         >
-                            <div className="p-10 border-b border-zinc-50 flex items-center justify-between">
+                            <div className="p-6 lg:p-10 border-b border-zinc-50 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-2xl font-black tracking-tighter uppercase italic text-black">New Client Record</h2>
-                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-1">Complete all details for the client deal</p>
+                                    <h2 className="text-xl lg:text-2xl font-black tracking-tighter uppercase italic text-black">New Client Record</h2>
+                                    <p className="text-[9px] lg:text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-1">Complete all details for the client deal</p>
                                 </div>
                                 <button title="Close" onClick={() => setShowAddModal(false)} className="p-3 hover:bg-zinc-50 rounded-2xl transition-colors">
                                     <X className="w-5 h-5 text-zinc-300" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleAddClient} className="p-10 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <form onSubmit={handleAddClient} className="p-6 lg:p-10 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Month</span>
