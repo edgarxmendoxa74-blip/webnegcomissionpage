@@ -910,7 +910,7 @@ Generated on: ${new Date().toLocaleString()}
                                                                     )}>
                                                                         {lead.payment_status || 'Downpayment Only'}
                                                                     </span>
-                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                    <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                                                                         <button
                                                                             onClick={() => updatePaymentStatus(lead.id, 'Fully Paid')}
                                                                             title="Highlight Green (Completed)"
@@ -969,7 +969,7 @@ Generated on: ${new Date().toLocaleString()}
                                                                         <button
                                                                             onClick={() => startEditing(lead)}
                                                                             className={cn(
-                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 shadow-sm",
                                                                                 lead.payment_status ? "bg-white/20 text-white hover:bg-white/40" : "bg-zinc-50 text-zinc-400 hover:bg-black hover:text-white"
                                                                             )}
                                                                             title="Edit"
@@ -979,7 +979,7 @@ Generated on: ${new Date().toLocaleString()}
                                                                         <button
                                                                             onClick={() => handleDeleteLead(lead.id)}
                                                                             className={cn(
-                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm",
+                                                                                "p-1.5 rounded-xl transition-all active:scale-90 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 shadow-sm",
                                                                                 lead.payment_status ? "bg-white/20 text-white hover:bg-red-500" : "bg-zinc-50 text-zinc-400 hover:bg-red-500 hover:text-white"
                                                                             )}
                                                                             title="Delete"
@@ -1034,7 +1034,7 @@ Generated on: ${new Date().toLocaleString()}
                             <div className="space-y-8">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div>
-                                        <h2 className="text-3xl font-black tracking-tighter text-black uppercase italic">My Profile</h2>
+                                        <h2 className="text-2xl lg:text-3xl font-black tracking-tighter text-black uppercase italic">My Profile</h2>
                                         <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Your personal and payment information</p>
                                     </div>
                                     {!isEditingProfile && (
@@ -1048,7 +1048,7 @@ Generated on: ${new Date().toLocaleString()}
                                     )}
                                 </div>
 
-                                <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm relative">
+                                <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2.5rem] p-5 lg:p-10 shadow-sm relative">
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                                         {/* Photo Uploads */}
                                         <div className="space-y-8">
@@ -1223,7 +1223,7 @@ Generated on: ${new Date().toLocaleString()}
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm space-y-6">
+                                    <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2.5rem] p-6 lg:p-10 shadow-sm space-y-6">
                                         <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center">
                                             <Wallet className="w-6 h-6 text-black" />
                                         </div>
@@ -1250,7 +1250,7 @@ Generated on: ${new Date().toLocaleString()}
                                         </ul>
                                     </div>
 
-                                    <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 shadow-sm space-y-6">
+                                    <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2.5rem] p-6 lg:p-10 shadow-sm space-y-6">
                                         <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center">
                                             <Briefcase className="w-6 h-6 text-black" />
                                         </div>
@@ -1414,7 +1414,7 @@ Generated on: ${new Date().toLocaleString()}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2 opacity-0 lg:opacity-100 group-hover:opacity-100 transition-all">
+                                                        <div className="flex items-center justify-end gap-2 opacity-100 transition-all">
                                                             <button
                                                                 title="Download Credentials"
                                                                 onClick={() => handleDownloadCredentials(item)}
