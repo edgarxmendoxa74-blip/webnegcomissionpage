@@ -20,7 +20,6 @@ import {
     Shield,
     Database,
     Key,
-    ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
