@@ -12,6 +12,7 @@ import { SettingsPage } from './pages/Settings';
 import { LoginPage } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
+import { ClientStorageMaster } from './pages/ClientStorageMaster';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
@@ -45,6 +46,8 @@ function AppContent() {
         return <ReceiptsPage />;
       case 'Master List':
         return <LeadsTracker />;
+      case 'Client Storage':
+        return <ClientStorageMaster />;
       case 'Settings':
         return <SettingsPage />;
       default:

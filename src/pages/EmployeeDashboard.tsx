@@ -20,6 +20,8 @@ import {
     Shield,
     Database,
     Key,
+    Eye,
+    EyeOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -95,6 +97,10 @@ export const EmployeeDashboard: React.FC = () => {
     const [showStorageModal, setShowStorageModal] = useState(false);
     const [isEditingStorage, setIsEditingStorage] = useState(false);
     const [editingStorageId, setEditingStorageId] = useState<string | null>(null);
+    const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+    const [showModalAdminPass, setShowModalAdminPass] = useState(false);
+    const [showModalSupabasePass, setShowModalSupabasePass] = useState(false);
+    const [showModalDbPass, setShowModalDbPass] = useState(false);
 
     // Edit form state
     const [editForm, setEditForm] = useState({
@@ -351,6 +357,8 @@ Generated on: ${new Date().toLocaleString()}
         link.click();
         document.body.removeChild(link);
     };
+
+
 
     const handleDownloadStorageCSV = () => {
         if (clientStorage.length === 0) return;
@@ -683,6 +691,13 @@ Generated on: ${new Date().toLocaleString()}
                         My Deals
                     </button>
                     <button
+                        onClick={() => setActiveSection('storage')}
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'storage' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                            }`}
+                    >
+                        Client Storage
+                    </button>
+                    <button
                         onClick={() => setActiveSection('profile')}
                         className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'profile' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
                             }`}
@@ -695,13 +710,6 @@ Generated on: ${new Date().toLocaleString()}
                             }`}
                     >
                         Terms
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('storage')}
-                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'storage' ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'
-                            }`}
-                    >
-                        Client Storage
                     </button>
                 </div>
             </div>
@@ -1398,30 +1406,45 @@ Generated on: ${new Date().toLocaleString()}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-6">
-                                                        <div className="flex items-center gap-4">
-                                                            {item.website_link && (
-                                                                <a title="Visit Website" href={item.website_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
-                                                                    <Globe className="w-3.5 h-3.5" />
-                                                                    <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Website</span>
-                                                                </a>
-                                                            )}
-                                                            {item.admin_link && (
-                                                                <a title="Visit Admin Portal" href={item.admin_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
-                                                                    <Shield className="w-3.5 h-3.5" />
-                                                                    <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Admin</span>
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                                         <div className="flex items-center gap-4">
+                                                             {item.website_link && (
+                                                                 <a title="Visit Website" href={item.website_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
+                                                                     <Globe className="w-3.5 h-3.5" />
+                                                                     <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Website</span>
+                                                                 </a>
+                                                             )}
+                                                             {item.admin_link && (
+                                                                 <a title="Visit Admin Portal" href={item.admin_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl text-zinc-400 hover:text-black hover:bg-white hover:shadow-sm border border-transparent hover:border-zinc-100 transition-all group/link">
+                                                                     <Shield className="w-3.5 h-3.5" />
+                                                                     <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">Admin</span>
+                                                                 </a>
+                                                             )}
+                                                             {item.admin_password && (
+                                                                 <div className="flex items-center gap-2 bg-zinc-50 rounded-xl px-3 py-2 border border-transparent hover:border-zinc-100 transition-all">
+                                                                     <Key className="w-3.5 h-3.5 text-zinc-400" />
+                                                                     <span className="text-[9px] font-bold text-zinc-600 font-mono">
+                                                                         {showPasswords[item.id] ? item.admin_password : '••••••••'}
+                                                                     </span>
+                                                                     <button
+                                                                         onClick={() => setShowPasswords(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                                                                         className="text-zinc-400 hover:text-black"
+                                                                     >
+                                                                         {showPasswords[item.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                                                     </button>
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </td>
                                                     <td className="px-6 py-6 text-right">
                                                         <div className="flex items-center justify-end gap-2 opacity-100 transition-all">
                                                             <button
-                                                                title="Download Credentials"
+                                                                title="Download Credentials (TXT)"
                                                                 onClick={() => handleDownloadCredentials(item)}
                                                                 className="p-2.5 bg-zinc-50 text-zinc-400 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm"
                                                             >
                                                                 <Download className="w-3.5 h-3.5" />
                                                             </button>
+
                                                             <button
                                                                 title="Edit Client Storage"
                                                                 onClick={() => {
@@ -1585,14 +1608,23 @@ Generated on: ${new Date().toLocaleString()}
                                                 onChange={(e) => setStorageForm({ ...storageForm, admin_email: e.target.value })}
                                                 placeholder="Admin Email"
                                             />
-                                            <input
-                                                title="Admin Password"
-                                                type="password"
-                                                className="w-full px-4 py-3 bg-white border border-zinc-100 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
-                                                value={storageForm.admin_password}
-                                                onChange={(e) => setStorageForm({ ...storageForm, admin_password: e.target.value })}
-                                                placeholder="Admin Password"
-                                            />
+                                            <div className="relative">
+                                                 <input
+                                                     title="Admin Password"
+                                                     type={showModalAdminPass ? "text" : "password"}
+                                                     className="w-full px-4 py-3 bg-white border border-zinc-100 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                     value={storageForm.admin_password}
+                                                     onChange={(e) => setStorageForm({ ...storageForm, admin_password: e.target.value })}
+                                                     placeholder="Admin Password"
+                                                 />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setShowModalAdminPass(!showModalAdminPass)}
+                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black"
+                                                 >
+                                                     {showModalAdminPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                 </button>
+                                             </div>
                                         </div>
                                         <div className="space-y-4">
                                             <p className="text-[8px] font-black text-zinc-300 uppercase tracking-[0.2em]">Supabase / DB</p>
@@ -1604,22 +1636,40 @@ Generated on: ${new Date().toLocaleString()}
                                                 onChange={(e) => setStorageForm({ ...storageForm, supabase_email: e.target.value })}
                                                 placeholder="Supabase Email"
                                             />
-                                            <input
-                                                title="Supabase Password"
-                                                type="password"
-                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
-                                                value={storageForm.supabase_password}
-                                                onChange={(e) => setStorageForm({ ...storageForm, supabase_password: e.target.value })}
-                                                placeholder="Supabase Password"
-                                            />
-                                            <input
-                                                title="Database Password"
-                                                type="text"
-                                                className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
-                                                value={storageForm.database_password}
-                                                onChange={(e) => setStorageForm({ ...storageForm, database_password: e.target.value })}
-                                                placeholder="Project / DB Password (Optional)"
-                                            />
+                                            <div className="relative">
+                                                 <input
+                                                     title="Supabase Password"
+                                                     type={showModalSupabasePass ? "text" : "password"}
+                                                     className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                     value={storageForm.supabase_password}
+                                                     onChange={(e) => setStorageForm({ ...storageForm, supabase_password: e.target.value })}
+                                                     placeholder="Supabase Password"
+                                                 />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setShowModalSupabasePass(!showModalSupabasePass)}
+                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black"
+                                                 >
+                                                     {showModalSupabasePass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                 </button>
+                                             </div>
+                                             <div className="relative">
+                                                 <input
+                                                     title="Database Password"
+                                                     type={showModalDbPass ? "text" : "password"}
+                                                     className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:border-black outline-none font-bold text-[10px] lg:text-[11px] transition-all"
+                                                     value={storageForm.database_password}
+                                                     onChange={(e) => setStorageForm({ ...storageForm, database_password: e.target.value })}
+                                                     placeholder="Project / DB Password (Optional)"
+                                                 />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setShowModalDbPass(!showModalDbPass)}
+                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black"
+                                                 >
+                                                     {showModalDbPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                 </button>
+                                             </div>
                                         </div>
                                     </div>
 

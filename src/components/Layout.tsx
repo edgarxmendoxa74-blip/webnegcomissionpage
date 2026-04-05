@@ -8,6 +8,7 @@ import {
     X,
     PlusCircle,
     TrendingUp,
+    Shield,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -91,6 +92,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
     const navItems = [
         { icon: Target, label: 'Master List' },
+        { icon: Shield, label: 'Client Storage' },
         { icon: Users, label: 'Manage Team' },
         { icon: Banknote, label: 'Receipts' },
         { icon: TrendingUp, label: 'Sales' },
