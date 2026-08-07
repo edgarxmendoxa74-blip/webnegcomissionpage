@@ -112,15 +112,47 @@ export const SettingsPage: React.FC = () => {
         if (!logoFile) return;
         setIsUpdatingLogo(true);
         try {
-            const logo_url = await handleUpload(logoFile, 'profiles', 'app');
-            const { error } = await supabase.from('app_settings').update({ logo_url }).eq('id', 1);
-            if (error) throw error;
+            // Step 1: Upload the new logo file to storage
+            let logo_url: string;
+            try {
+                logo_url = await handleUpload(logoFile, 'profiles', 'app');
+            } catch (uploadErr: any) {
+                console.error('Storage upload failed:', uploadErr);
+                const msg = uploadErr?.message || uploadErr?.error || 'Unknown upload error';
+                alert(`Failed to upload logo to storage: ${msg}\n\nMake sure the "profiles" storage bucket exists and is set to public in your Supabase dashboard.`);
+                return;
+            }
+
+            // Step 2: Try to delete the old logo file from storage (cleanup, non-blocking)
+            if (appSettings.logo_url) {
+                try {
+                    const oldUrl = new URL(appSettings.logo_url);
+                    const pathParts = oldUrl.pathname.split('/storage/v1/object/public/profiles/');
+                    if (pathParts[1]) {
+                        await supabase.storage.from('profiles').remove([decodeURIComponent(pathParts[1])]);
+                    }
+                } catch {
+                    // Old file cleanup is best-effort, don't block on failure
+                }
+            }
+
+            // Step 3: Upsert the app_settings row (handles both insert and update)
+            const { error } = await supabase.from('app_settings').upsert(
+                { id: 1, logo_url, app_name: appSettings.app_name || 'WebNegosyo' },
+                { onConflict: 'id' }
+            );
+            if (error) {
+                console.error('Database update failed:', error);
+                alert(`Logo uploaded but failed to save to database: ${error.message}`);
+                return;
+            }
+
             setAppSettings(prev => ({ ...prev, logo_url }));
             setLogoFile(null);
             alert('Logo updated successfully!');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error updating logo:', err);
-            alert('Failed to update logo.');
+            alert(`Failed to update logo: ${err?.message || 'Unknown error'}`);
         } finally {
             setIsUpdatingLogo(false);
         }
@@ -182,13 +214,24 @@ export const SettingsPage: React.FC = () => {
     };
 
     const handleDeleteWorker = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this person?')) return;
+        if (!confirm('Are you sure you want to delete this person? This will also remove their associated profile and unbind their deals.')) return;
         try {
+            // Unlink from leads table first
+            await supabase.from('leads').update({ worker_id: null }).eq('worker_id', id);
+            await supabase.from('leads').update({ webdev_id: null }).eq('webdev_id', id);
+            
+            // Unlink from client storage table
+            await supabase.from('client_storage').update({ worker_id: null }).eq('worker_id', id);
+            await supabase.from('client_storage').update({ assigned_webdev_id: null }).eq('assigned_webdev_id', id);
+
+            // Delete worker record
             const { error } = await supabase.from('workers').delete().eq('id', id);
             if (error) throw error;
+            
             fetchWorkers();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error deleting worker:', err);
+            alert(`Failed to delete person: ${err?.message || 'Unknown error'}`);
         }
     };
 
@@ -341,11 +384,11 @@ export const SettingsPage: React.FC = () => {
                                     <tr className="animate-pulse">
                                         <td colSpan={4} className="px-8 py-20 text-center text-zinc-300 font-black uppercase tracking-widest text-xs">Loading team records...</td>
                                     </tr>
-                                ) : workers.length === 0 ? (
+                                ) : workers.filter(w => !w.is_owner && w.role?.toLowerCase() !== 'owner').length === 0 ? (
                                     <tr>
                                         <td colSpan={4} className="px-8 py-20 text-center text-zinc-400 font-medium">No team members onboarded yet.</td>
                                     </tr>
-                                ) : workers.map(worker => (
+                                ) : workers.filter(w => !w.is_owner && w.role?.toLowerCase() !== 'owner').map(worker => (
                                     <tr key={worker.id} className="group hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-4">
@@ -387,7 +430,7 @@ export const SettingsPage: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => {
                                                         setSelectedWorkerId(worker.id);

@@ -41,9 +41,9 @@ export const ReceiptsPage: React.FC = () => {
         const fetchWorkers = async () => {
             const { data } = await supabase
                 .from('workers')
-                .select('id, name, role')
+                .select('id, name, role, is_owner')
                 .order('name');
-            if (data) setWorkers(data);
+            if (data) setWorkers(data.filter(w => !w.is_owner && w.role?.toLowerCase() !== 'owner'));
         };
         const fetchLogo = async () => {
             const { data } = await supabase.from('app_settings').select('logo_url').eq('id', 1).single();

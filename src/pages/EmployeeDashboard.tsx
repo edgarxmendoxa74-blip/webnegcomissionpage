@@ -412,7 +412,7 @@ Generated on: ${new Date().toLocaleString()}
                 .from('leads')
                 .update({
                     payment_status: newStatus,
-                    commission_rate: (newStatus === 'Cancelled Project' || newStatus === 'Downpayment Only') ? 10 : 20
+                    commission_rate: (newStatus === 'Cancelled Project' || newStatus === 'Downpayment Only') ? 5 : 10
                 })
                 .eq('id', id);
             if (error) throw error;
@@ -444,7 +444,7 @@ Generated on: ${new Date().toLocaleString()}
 
     const getBalance = (lead: Lead) => {
         const isCancelledOrDP = lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project';
-        const commission = isCancelledOrDP ? (Number(lead.down_payment) * 0.1) : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+        const commission = isCancelledOrDP ? (Number(lead.down_payment) * 0.05) : (Number(lead.deal_value) * ((lead.commission_rate || 10) / 100));
 
         if (isCancelledOrDP) {
             return Number(lead.down_payment) - commission;
@@ -469,7 +469,7 @@ Generated on: ${new Date().toLocaleString()}
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
                         : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
-                    commission_rate: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only') ? 10 : 20,
+                    commission_rate: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only') ? 5 : 10,
                     status: 'closed',
                     closed_at: new Date().toISOString(),
                 })
@@ -510,7 +510,7 @@ Generated on: ${new Date().toLocaleString()}
                 worker_id: profile?.id,
                 webdev_id: addForm.webdev_id || profile?.assigned_webdev_id || null,
                 month: addForm.month,
-                commission_rate: (addForm.payment_status === 'Cancelled Project' || addForm.payment_status === 'Downpayment Only') ? 10 : addForm.commission_rate,
+                commission_rate: (addForm.payment_status === 'Cancelled Project' || addForm.payment_status === 'Downpayment Only') ? 5 : (addForm.commission_rate || 10),
                 closed_at: createdAt,
                 created_at: createdAt
             });
@@ -529,7 +529,7 @@ Generated on: ${new Date().toLocaleString()}
                 down_payment: 0,
                 tip: 0,
                 payment_status: 'Downpayment Only',
-                commission_rate: 20,
+                commission_rate: 10,
                 webdev_id: profile?.assigned_webdev_id || '',
             });
             fetchLeads();
@@ -559,8 +559,8 @@ Generated on: ${new Date().toLocaleString()}
 
         const csvData = filteredLeads.map(lead => {
             const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-                ? (Number(lead.down_payment) * 0.1)
-                : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+                ? (Number(lead.down_payment) * 0.05)
+                : (Number(lead.deal_value) * ((lead.commission_rate || 10) / 100));
 
             return [
                 lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' }),
@@ -947,8 +947,8 @@ Generated on: ${new Date().toLocaleString()}
                                                             <span className={cn("text-[11px] font-black tabular-nums", !lead.payment_status ? "text-green-600" : "text-white")}>
                                                                 ₱{Number(
                                                                     (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-                                                                        ? (lead.down_payment * 0.1)
-                                                                        : (lead.deal_value * ((lead.commission_rate || 20) / 100))
+                                                                        ? (lead.down_payment * 0.05)
+                                                                        : (lead.deal_value * ((lead.commission_rate || 10) / 100))
                                                                 ).toLocaleString()}
                                                             </span>
                                                         </td>
@@ -1015,14 +1015,14 @@ Generated on: ${new Date().toLocaleString()}
                                                         <td className="px-4 py-4 text-right text-base text-green-600 tabular-nums">
                                                             {filteredLeads.reduce((sum, lead) => {
                                                                 const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-                                                                    ? (Number(lead.down_payment) * 0.1)
-                                                                    : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+                                                                    ? (Number(lead.down_payment) * 0.05)
+                                                                    : (Number(lead.deal_value) * ((lead.commission_rate || 10) / 100));
                                                                 return sum + (Number(commission) || 0);
                                                             }, 0) !== 0 ? (
                                                                 <>₱{filteredLeads.reduce((sum, lead) => {
                                                                     const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-                                                                        ? (Number(lead.down_payment) * 0.1)
-                                                                        : (Number(lead.deal_value) * ((lead.commission_rate || 20) / 100));
+                                                                        ? (Number(lead.down_payment) * 0.05)
+                                                                        : (Number(lead.deal_value) * ((lead.commission_rate || 10) / 100));
                                                                     return sum + (Number(commission) || 0);
                                                                 }, 0).toLocaleString()}</>
                                                             ) : null}
@@ -1246,13 +1246,13 @@ Generated on: ${new Date().toLocaleString()}
                                             <li className="flex gap-4 items-start">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
                                                 <p className="text-xs font-medium text-zinc-600 leading-relaxed">
-                                                    <span className="font-bold text-black uppercase tracking-tighter">Completed Projects:</span> A standard <span className="text-green-600 font-black">20% commission</span> is earned for every fully paid project.
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Completed Projects:</span> A standard <span className="text-green-600 font-black">10% commission</span> is earned for every fully paid project.
                                                 </p>
                                             </li>
                                             <li className="flex gap-4 items-start">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 shrink-0" />
                                                 <p className="text-xs font-medium text-zinc-600 leading-relaxed">
-                                                    <span className="font-bold text-black uppercase tracking-tighter">Cancelled Projects:</span> For cancelled projects, a reduced <span className="text-red-600 font-black">10% commission</span> is applied based on the downpayment received.
+                                                    <span className="font-bold text-black uppercase tracking-tighter">Cancelled or Down Payment Deals:</span> A <span className="text-amber-600 font-black">5% commission</span> is applied for cancelled or down payment only deals.
                                                 </p>
                                             </li>
                                         </ul>

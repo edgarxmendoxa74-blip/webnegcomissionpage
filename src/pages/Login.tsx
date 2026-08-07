@@ -79,7 +79,12 @@ export const LoginPage: React.FC = () => {
                 if (error) throw error;
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to sign in');
+            const msg = err?.message || '';
+            if (msg.toLowerCase().includes('rate limit')) {
+                setError('Email rate limit exceeded by Supabase. Please wait 2-5 minutes before trying again, or disable "Confirm Email" in your Supabase Auth settings.');
+            } else {
+                setError(msg || 'Failed to sign in');
+            }
         } finally {
             setLoading(false);
         }
@@ -139,7 +144,12 @@ export const LoginPage: React.FC = () => {
 
             setShowSuccessModal(true);
         } catch (err: any) {
-            setError(err.message || 'Failed to register');
+            const msg = err?.message || '';
+            if (msg.toLowerCase().includes('rate limit')) {
+                setError('Email rate limit exceeded by Supabase. Please wait 2-5 minutes before trying again, or disable "Confirm Email" in your Supabase Auth settings.');
+            } else {
+                setError(msg || 'Failed to register');
+            }
         } finally {
             setLoading(false);
         }
