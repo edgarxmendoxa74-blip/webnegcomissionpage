@@ -43,6 +43,14 @@ export const LoginPage: React.FC = () => {
             const isFirstUser = count === 0;
 
             const internalEmail = `${username.trim().toLowerCase()}@webnegosyo.internal`;
+            
+            // Check if a worker profile with this email already exists (pre-seeded/created by admin)
+            const { data: existingWorker } = await supabase
+                .from('workers')
+                .select('*')
+                .eq('email', internalEmail)
+                .maybeSingle();
+
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: internalEmail,
                 password
@@ -51,14 +59,31 @@ export const LoginPage: React.FC = () => {
             if (authError) throw authError;
             if (!authData.user) throw new Error('Failed to create user');
 
-            const { error: profileError } = await supabase.from('workers').insert({
-                name,
-                email: internalEmail, // Store the pseudo-email for consistent lookups
-                gcash_number: gcash,
-                user_id: authData.user.id,
-                role: isFirstUser ? 'Owner' : 'Agent',
-                is_owner: isFirstUser
-            });
+            let profileError;
+            if (existingWorker) {
+                // Link the newly registered user to their existing worker profile
+                const { error } = await supabase
+                    .from('workers')
+                    .update({
+                        user_id: authData.user.id,
+                        gcash_number: gcash || existingWorker.gcash_number,
+                        name: name || existingWorker.name
+                    })
+                    .eq('id', existingWorker.id);
+                profileError = error;
+            } else {
+                // Create a brand new worker profile
+                const { error } = await supabase.from('workers').insert({
+                    name,
+                    email: internalEmail,
+                    gcash_number: gcash,
+                    user_id: authData.user.id,
+                    role: isFirstUser ? 'Owner' : 'Agent',
+                    is_owner: isFirstUser
+                });
+                profileError = error;
+            }
+            
             if (profileError) throw profileError;
 
             setShowSuccessModal(true);
