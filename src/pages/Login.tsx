@@ -20,13 +20,64 @@ export const LoginPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            // Internally use pseudo-email for Supabase Auth
-            const internalEmail = `${username.trim().toLowerCase()}@webnegosyo.internal`;
-            const { error } = await supabase.auth.signInWithPassword({
-                email: internalEmail,
-                password
-            });
-            if (error) throw error;
+            if (portal === 'owner') {
+                const ownerEmail = 'owner@webnegosyo.com';
+                
+                // Try to sign in the owner
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: ownerEmail,
+                    password
+                });
+
+                if (signInError) {
+                    // Check if an owner already exists in the workers table
+                    const { data: owners, error: checkError } = await supabase
+                        .from('workers')
+                        .select('id')
+                        .eq('is_owner', true)
+                        .limit(1);
+
+                    if (!checkError && (!owners || owners.length === 0)) {
+                        // If no owner exists, auto-register this password as the new owner account!
+                        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                            email: ownerEmail,
+                            password
+                        });
+
+                        if (signUpError) throw signUpError;
+                        if (!signUpData.user) throw new Error('Failed to create owner user');
+
+                        const { error: profileError } = await supabase.from('workers').insert({
+                            name: 'Owner',
+                            email: ownerEmail,
+                            user_id: signUpData.user.id,
+                            role: 'Owner',
+                            is_owner: true,
+                            active: true
+                        });
+
+                        if (profileError) throw profileError;
+
+                        // Sign in to establish the session
+                        const { error: finalSignInError } = await supabase.auth.signInWithPassword({
+                            email: ownerEmail,
+                            password
+                        });
+                        if (finalSignInError) throw finalSignInError;
+                    } else {
+                        // Owner exists, but password was incorrect
+                        throw new Error('Incorrect Owner Password');
+                    }
+                }
+            } else {
+                // Employee login
+                const internalEmail = `${username.trim().toLowerCase()}@webnegosyo.internal`;
+                const { error } = await supabase.auth.signInWithPassword({
+                    email: internalEmail,
+                    password
+                });
+                if (error) throw error;
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to sign in');
         } finally {
@@ -218,22 +269,24 @@ export const LoginPage: React.FC = () => {
                             </>
                         )}
 
-                        <div className="space-y-2">
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Account Username</span>
-                            <div className="relative">
-                                <div className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300">
-                                    <User className="w-5 h-5" />
+                        {portal !== 'owner' && (
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Account Username</span>
+                                <div className="relative">
+                                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300">
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full h-14 pl-14 pr-6 bg-zinc-50 border border-zinc-100 rounded-[1.2rem] focus:border-black outline-none font-bold text-sm transition-all text-black"
+                                        placeholder="e.g. admin_juan"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                    />
                                 </div>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full h-14 pl-14 pr-6 bg-zinc-50 border border-zinc-100 rounded-[1.2rem] focus:border-black outline-none font-bold text-sm transition-all text-black"
-                                    placeholder="e.g. admin_juan"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                />
                             </div>
-                        </div>
+                        )}
 
                         <div className="space-y-2">
                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Secure Password</span>
@@ -279,14 +332,16 @@ export const LoginPage: React.FC = () => {
                         </button>
                     </form>
 
-                    <div className="mt-10 text-center">
-                        <button
-                            onClick={() => setIsRegistering(!isRegistering)}
-                            className="text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:text-black transition-colors"
-                        >
-                            {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
-                        </button>
-                    </div>
+                    {portal !== 'owner' && (
+                        <div className="mt-10 text-center">
+                            <button
+                                onClick={() => setIsRegistering(!isRegistering)}
+                                className="text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:text-black transition-colors"
+                            >
+                                {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-12 text-center pb-8">
