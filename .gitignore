@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets and local-only files
+.env
+.env.*
+!.env.example
+tmp/
+
+# Scratch/debug files
+eslint_errors.txt
+eslint_output.txt
+eslint_output_utf8.txt
+tsc_output.txt
+build_stashed.txt
+old_login.txt
+check_users.js
+register_and_check.js
+remove_bot.js

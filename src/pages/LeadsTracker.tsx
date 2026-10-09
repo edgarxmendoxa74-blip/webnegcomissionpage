@@ -14,6 +14,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { MasterAuditPanel } from '../components/MasterAuditPanel';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -53,6 +54,7 @@ export const LeadsTracker: React.FC = () => {
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [view, setView] = useState<'leads' | 'audit'>('leads');
     const [checkedLeads, setCheckedLeads] = useState<Set<string>>(new Set());
 
     const toggleCheck = (id: string) => {
@@ -197,25 +199,6 @@ export const LeadsTracker: React.FC = () => {
         }
     };
 
-    const updatePaymentStatus = async (id: string, newStatus: string) => {
-        try {
-            const { error } = await supabase
-                .from('leads')
-                .update({
-                    payment_status: newStatus,
-                    commission_rate: (newStatus === 'Cancelled Project' || newStatus === 'Downpayment Only') ? 10 : 20
-                })
-                .eq('id', id);
-            if (error) throw error;
-            fetchData();
-        } catch (err) {
-            console.error('Error updating payment status:', err);
-        }
-    };
-
-
-
-
     const handleDeleteLead = async (id: string) => {
         if (!confirm('Are you sure you want to permanently delete this record?')) return;
         try {
@@ -288,14 +271,30 @@ export const LeadsTracker: React.FC = () => {
     });
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-4 animate-in fade-in duration-500">
+            <div className="flex gap-1.5 bg-white border border-zinc-100 rounded-xl p-1 w-fit shadow-sm">
+                {([['leads', 'Leads'], ['audit', 'Audit']] as const).map(([key, label]) => (
+                    <button
+                        key={key}
+                        onClick={() => setView(key)}
+                        className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === key ? 'bg-ink text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {view === 'audit' ? (
+                <MasterAuditPanel />
+            ) : (
+            <>
             <div className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6">
                 <div className="relative group w-full md:w-72">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
                     <input
                         type="text"
                         placeholder="Search client name..."
-                        className="w-full pl-12 pr-4 py-3 bg-white border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm"
+                        className="w-full pl-10 pr-3 py-2 bg-white border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -305,7 +304,7 @@ export const LeadsTracker: React.FC = () => {
                     <div className="flex flex-col gap-1 w-full md:w-auto">
                         <button
                             onClick={exportToCSV}
-                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase shadow-lg shadow-orange-500/20"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase shadow-lg shadow-orange-500/20"
                         >
                             <Download className="w-4 h-4" />
                             Download CSV
@@ -318,10 +317,10 @@ export const LeadsTracker: React.FC = () => {
             </div>
 
             {/* Table Container with Horizontal Scroll Hint */}
-            <div className="bg-white border border-zinc-100 rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden shadow-sm relative group">
+            <div className="bg-white border border-zinc-100 rounded-xl lg:rounded-2xl overflow-hidden shadow-sm relative group">
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/5 backdrop-blur-sm text-black/20 p-2 rounded-full lg:hidden pointer-events-none animate-pulse">
                     <div className="flex items-center gap-1">
-                        <span className="text-[8px] font-black uppercase tracking-widest">Scroll</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Scroll</span>
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                         </svg>
@@ -331,18 +330,18 @@ export const LeadsTracker: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">✓</th>
-                                <th className="px-3 py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Done</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
@@ -366,46 +365,46 @@ export const LeadsTracker: React.FC = () => {
                             ) : filteredLeads.map((lead) => (
                                 <tr key={lead.id} className={cn(
                                     "group transition-all duration-300",
-                                    lead.payment_status === 'Fully Paid' ? "bg-green-600 text-white shadow-lg scale-[1.01] z-10" :
-                                        lead.payment_status === 'Downpayment Only' ? "bg-zinc-600 text-white shadow-lg scale-[1.01] z-10" :
-                                            lead.payment_status === 'Cancelled Project' ? "bg-red-600 text-white shadow-lg scale-[1.01] z-10" :
+                                    lead.payment_status === 'Fully Paid' ? "bg-green-600 text-white shadow-lg" :
+                                        lead.payment_status === 'Downpayment Only' ? "bg-zinc-600 text-white shadow-lg" :
+                                            lead.payment_status === 'Cancelled Project' ? "bg-red-600 text-white shadow-lg" :
                                                 "hover:bg-zinc-50/50",
                                     lead.is_hidden && "opacity-40 grayscale"
                                 )}>
-                                    <td className="px-3 py-2">
-                                        <div className={cn("font-bold text-[9px] uppercase tracking-widest", lead.payment_status ? "text-zinc-200" : "text-black")}>
+                                    <td className="px-2 py-1">
+                                        <div className={cn("font-bold text-[8px] uppercase tracking-widest", lead.payment_status ? "text-zinc-200" : "text-black")}>
                                             {new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2">
-                                        <div className={cn("text-[9px] font-black tabular-nums", lead.payment_status ? "text-zinc-300" : "text-zinc-400")}>
+                                    <td className="px-2 py-1">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-zinc-300" : "text-zinc-400")}>
                                             {new Date(lead.created_at).toLocaleDateString()}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2">
-                                        <div className="font-bold text-[11px] text-inherit">{lead.client_name}</div>
-                                        <div className={cn("text-[8px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
+                                    <td className="px-2 py-1">
+                                        <div className="font-bold text-[9px] text-inherit">{lead.client_name}</div>
+                                        <div className={cn("text-[7px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
                                             {lead.contact_info}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2">
-                                        <div className="font-bold text-[9px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
+                                    <td className="px-2 py-1">
+                                        <div className="font-bold text-[8px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
                                     </td>
-                                    <td className="px-3 py-2 text-right">
-                                        <div className="text-[11px] font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</div>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className="text-[8px] font-black tabular-nums text-inherit">₱{Number(lead.deal_value).toLocaleString()}</div>
                                     </td>
-                                    <td className="px-3 py-2 text-right">
-                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-amber-600")}>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-amber-600")}>
                                             ₱{Number(lead.down_payment).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2 text-right">
-                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-blue-600")}>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-blue-600")}>
                                             ₱{Number(lead.tip || 0).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2 text-right">
-                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
                                             ₱{Number(
                                                 (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
                                                     ? lead.down_payment - (lead.down_payment * 0.1)
@@ -415,9 +414,9 @@ export const LeadsTracker: React.FC = () => {
                                             ).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2">
+                                    <td className="px-2 py-1">
                                         <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wide">
+                                            <div className="flex items-center gap-1.5 text-[7px] font-black uppercase tracking-wide">
                                                 {getStatusIcon(lead.status)}
                                                 <span className={cn(
                                                     lead.payment_status ? "text-white" : (
@@ -432,7 +431,7 @@ export const LeadsTracker: React.FC = () => {
                                             {lead.status === 'closed' && (
                                                 <div className="flex flex-col gap-1">
                                                     <span className={cn(
-                                                        "text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border self-start transition-all shadow-sm",
+                                                        "text-[6px] font-black uppercase tracking-widest px-1 py-0.5 rounded-md border self-start transition-all shadow-sm",
                                                         lead.payment_status === 'Fully Paid' ? "bg-white/20 text-white border-white/30" :
                                                             lead.payment_status === 'Downpayment Only' ? "bg-white/20 text-white border-white/30" :
                                                                 lead.payment_status === 'Cancelled Project' ? "bg-white/20 text-white border-white/30" :
@@ -440,38 +439,21 @@ export const LeadsTracker: React.FC = () => {
                                                     )}>
                                                         {lead.payment_status || 'Downpayment Only'}
                                                     </span>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                        <button
-                                                            onClick={() => updatePaymentStatus(lead.id, 'Fully Paid')}
-                                                            title="Highlight Green (Completed)"
-                                                            className="w-3 h-3 rounded-full bg-green-500 border border-white hover:scale-125 transition-transform shadow-sm"
-                                                        />
-                                                        <button
-                                                            onClick={() => updatePaymentStatus(lead.id, 'Cancelled Project')}
-                                                            title="Highlight Red (Cancelled)"
-                                                            className="w-3 h-3 rounded-full bg-red-500 border border-white hover:scale-125 transition-transform shadow-sm"
-                                                        />
-                                                        <button
-                                                            onClick={() => updatePaymentStatus(lead.id, 'Downpayment Only')}
-                                                            title="Highlight Gray (Downpayment)"
-                                                            className="w-3 h-3 rounded-full bg-zinc-400 border border-white hover:scale-125 transition-transform shadow-sm"
-                                                        />
-                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </td>
 
-                                    <td className="px-3 py-2 text-right">
-                                        <div className={cn("text-[11px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
                                             ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-3 py-2 text-center">
+                                    <td className="px-2 py-1 text-center">
                                         <button
                                             onClick={() => toggleCheck(lead.id)}
                                             className={cn(
-                                                "w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
+                                                "w-3 h-3 rounded border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
                                                 checkedLeads.has(lead.id)
                                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30"
                                                     : lead.payment_status
@@ -484,11 +466,11 @@ export const LeadsTracker: React.FC = () => {
                                             )}
                                         </button>
                                     </td>
-                                    <td className="px-3 py-2 text-right flex items-center justify-end gap-1.5">
+                                    <td className="px-2 py-1 text-right flex items-center justify-end gap-1.5">
                                         {lead.status === 'pending' && (
                                             <button
                                                 onClick={() => setClosingLead(lead)}
-                                                className="px-3 py-1 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-full hover:bg-zinc-800 transition-all shadow-lg shadow-black/5 active:scale-95"
+                                                className="px-3 py-1 bg-black text-white text-[7px] font-black uppercase tracking-widest rounded-full hover:bg-zinc-800 transition-all shadow-lg shadow-black/5 active:scale-95"
                                             >
                                                 Close
                                             </button>
@@ -515,11 +497,11 @@ export const LeadsTracker: React.FC = () => {
                             ))}
                             {filteredLeads.length > 0 && (
                                 <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
-                                    <td colSpan={6} className="px-4 py-4 text-right text-[9px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
-                                    <td className="px-4 py-4 text-right text-base text-blue-600 tabular-nums">
+                                    <td colSpan={6} className="px-2 py-2 text-right text-[7px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                    <td className="px-2 py-2 text-right text-[10px] text-blue-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
                                     </td>
-                                    <td className="px-4 py-4 text-right text-base text-red-600 tabular-nums">
+                                    <td className="px-2 py-2 text-right text-[10px] text-red-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => {
                                             const balance = (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
                                                 ? lead.down_payment - (lead.down_payment * 0.1)
@@ -531,7 +513,7 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
                                     <td></td>
                                     <td></td>
-                                    <td className="px-4 py-4 text-right text-base text-green-600 tabular-nums">
+                                    <td className="px-2 py-2 text-right text-[10px] text-green-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => {
                                             const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
                                                 ? (lead.down_payment * 0.1)
@@ -547,6 +529,9 @@ export const LeadsTracker: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            </>
+            )}
 
             {/* Close Deal Modal */}
             <AnimatePresence>

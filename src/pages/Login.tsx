@@ -1,12 +1,48 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, UserPlus, Eye, EyeOff, CheckCircle, PartyPopper } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check } from 'lucide-react';
+import { LogoMark } from '../components/Logo';
+
+const OWNER_EMAIL = 'owner@webnegosyo.com';
+const REMEMBER_KEY = 'webnegosyo.remember';
+
+// Only the username (never the password) is kept in localStorage. The password itself is
+// saved by the browser's own password manager, which is triggered by the autocomplete
+// attributes on the form and by the Credential Management API below.
+const readRemembered = (): { remember: boolean; username: string } => {
+    try {
+        const raw = localStorage.getItem(REMEMBER_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            return { remember: true, username: typeof parsed.username === 'string' ? parsed.username : '' };
+        }
+    } catch { /* storage unavailable */ }
+    return { remember: false, username: '' };
+};
+
+const persistRemembered = (remember: boolean, username: string) => {
+    try {
+        if (remember) localStorage.setItem(REMEMBER_KEY, JSON.stringify({ username }));
+        else localStorage.removeItem(REMEMBER_KEY);
+    } catch { /* storage unavailable */ }
+};
+
+const offerToSavePassword = async (id: string, password: string) => {
+    try {
+        const PasswordCredentialCtor = (window as any).PasswordCredential;
+        if (PasswordCredentialCtor && navigator.credentials?.store) {
+            await navigator.credentials.store(new PasswordCredentialCtor({ id, password, name: id }));
+        }
+    } catch { /* unsupported or declined */ }
+};
 
 export const LoginPage: React.FC = () => {
     const [portal, setPortal] = useState<'selection' | 'owner' | 'employee'>('selection');
     const [isRegistering, setIsRegistering] = useState(false);
-    const [username, setUsername] = useState('');
+    const [remembered] = useState(readRemembered);
+    const [rememberMe, setRememberMe] = useState(remembered.remember);
+    const [username, setUsername] = useState(remembered.username);
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [gcash, setGcash] = useState('');
@@ -21,7 +57,7 @@ export const LoginPage: React.FC = () => {
         setError(null);
         try {
             if (portal === 'owner') {
-                const ownerEmail = 'owner@webnegosyo.com';
+                const ownerEmail = OWNER_EMAIL;
                 
                 // Try to sign in the owner
                 const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -78,6 +114,10 @@ export const LoginPage: React.FC = () => {
                 });
                 if (error) throw error;
             }
+
+            const savedId = portal === 'owner' ? OWNER_EMAIL : username.trim();
+            persistRemembered(rememberMe, portal === 'owner' ? '' : savedId);
+            if (rememberMe) void offerToSavePassword(savedId, password);
         } catch (err: any) {
             const msg = err?.message || '';
             if (msg.toLowerCase().includes('rate limit')) {
@@ -157,19 +197,20 @@ export const LoginPage: React.FC = () => {
 
     if (portal === 'selection') {
         return (
-            <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
+            <div className="min-h-dvh flex items-center justify-center p-6">
                 <div className="w-full max-w-4xl">
-                    <div className="text-center mb-16">
-                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter text-black uppercase italic mb-4">WebNegosyo</h1>
+                    <div className="flex flex-col items-center text-center mb-14">
+                        <LogoMark className="h-28 sm:h-36 w-auto text-ink mb-6" />
+                        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-ink mb-3">WebNegosyo</h1>
                         <p className="text-zinc-400 text-[9px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.4em]">Management for Commissions</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <motion.button
-                            whileHover={{ y: -10, scale: 1.02 }}
+                            whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('owner')}
-                            className="bg-black p-12 rounded-[3.5rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
+                            className="bg-ink p-10 rounded-[3rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
                         >
                             <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-white group-hover:text-black transition-colors">
                                 <Lock className="w-8 h-8 text-white group-hover:text-black" />
@@ -181,10 +222,10 @@ export const LoginPage: React.FC = () => {
                         </motion.button>
 
                         <motion.button
-                            whileHover={{ y: -10, scale: 1.02 }}
+                            whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('employee')}
-                            className="bg-white border border-zinc-100 p-12 rounded-[3.5rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
+                            className="bg-white border border-zinc-200 p-10 rounded-[3rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
                         >
                             <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-black transition-colors">
                                 <User className="w-8 h-8 text-black group-hover:text-white" />
@@ -198,7 +239,7 @@ export const LoginPage: React.FC = () => {
 
                     <div className="mt-20 text-center">
                         <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">
-                            © All Rights Reserved WebNegosyo 2026
+                            All Rights Reserved WebNegosyo 2026
                         </p>
                     </div>
                 </div>
@@ -207,31 +248,29 @@ export const LoginPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
+        <div className="min-h-dvh flex items-center justify-center p-6">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-md"
             >
-                <div className="bg-white border border-zinc-100 rounded-[3rem] p-12 shadow-2xl shadow-black/5 relative">
+                <div className="bg-white border border-zinc-200 rounded-[3rem] p-10 sm:p-12 shadow-2xl shadow-black/5 relative">
                     <button
+                        type="button"
                         title="Back to portal selection"
                         onClick={() => {
                             setPortal('selection');
                             setIsRegistering(false);
                             setError(null);
                         }}
-                        className="absolute top-8 left-8 text-zinc-300 hover:text-black transition-colors p-2"
+                        className="absolute top-8 left-8 text-zinc-300 hover:text-ink transition-colors p-2"
                     >
-                        <AlertCircle className="w-5 h-5 rotate-180" />
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
 
                     <div className="text-center mb-10 pt-4">
-                        <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl ${portal === 'owner' ? 'bg-black' : 'bg-zinc-100'}`}>
-                            {isRegistering ? <UserPlus className={`w-10 h-10 ${portal === 'owner' ? 'text-white' : 'text-black'}`} /> :
-                                portal === 'owner' ? <Lock className="w-10 h-10 text-white" /> : <User className="w-10 h-10 text-black" />}
-                        </div>
-                        <h1 className="text-3xl font-black tracking-tighter text-black uppercase italic mb-2">
+                        <LogoMark className="h-20 w-auto text-ink mx-auto mb-6" />
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink mb-2">
                             {isRegistering ? 'Join Team' : portal === 'owner' ? 'Owner Login' : 'Agent Access'}
                         </h1>
                         <p className="text-zinc-400 text-[8px] font-black uppercase tracking-[0.3em]">
@@ -239,7 +278,20 @@ export const LoginPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-6">
+                    <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-6" autoComplete="on">
+                        {portal === 'owner' && (
+                            // Gives the browser's password manager an account id to save the owner password under.
+                            <input
+                                type="text"
+                                name="username"
+                                autoComplete="username"
+                                value={OWNER_EMAIL}
+                                readOnly
+                                tabIndex={-1}
+                                aria-hidden="true"
+                                className="sr-only"
+                            />
+                        )}
                         {isRegistering && (
                             <>
                                 <div className="space-y-2">
@@ -288,6 +340,8 @@ export const LoginPage: React.FC = () => {
                                     </div>
                                     <input
                                         type="text"
+                                        name="username"
+                                        autoComplete="username"
                                         required
                                         className="w-full h-14 pl-14 pr-6 bg-zinc-50 border border-zinc-100 rounded-[1.2rem] focus:border-black outline-none font-bold text-sm transition-all text-black"
                                         placeholder="e.g. admin_juan"
@@ -306,9 +360,11 @@ export const LoginPage: React.FC = () => {
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    autoComplete={isRegistering ? "new-password" : "current-password"}
                                     required
                                     className="w-full h-14 pl-14 pr-12 bg-zinc-50 border border-zinc-100 rounded-[1.2rem] focus:border-black outline-none font-bold text-sm transition-all"
-                                    placeholder="••••••••"
+                                    placeholder="Password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -322,6 +378,23 @@ export const LoginPage: React.FC = () => {
                             </div>
                         </div>
 
+                        {!isRegistering && (
+                            <label className="flex items-center gap-3 px-2 cursor-pointer select-none group">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <span className="w-5 h-5 rounded-md border-2 border-zinc-300 flex items-center justify-center transition-colors peer-checked:bg-ink peer-checked:border-ink peer-focus-visible:ring-2 peer-focus-visible:ring-ink/30 [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100">
+                                    <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                </span>
+                                <span className="text-[10px] font-black text-zinc-400 group-hover:text-ink uppercase tracking-widest transition-colors">
+                                    Remember me &amp; save password
+                                </span>
+                            </label>
+                        )}
+
                         {error && (
                             <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-[10px] font-black uppercase tracking-widest">
                                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -332,7 +405,7 @@ export const LoginPage: React.FC = () => {
                         <button
                             disabled={loading}
                             type="submit"
-                            className="w-full h-16 bg-black text-white rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="w-full h-16 bg-ink text-white rounded-full font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -356,7 +429,7 @@ export const LoginPage: React.FC = () => {
 
                 <div className="mt-12 text-center pb-8">
                     <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
-                        © All Rights Reserved WebNegosyo 2026
+                        All Rights Reserved WebNegosyo 2026
                     </p>
                 </div>
             </motion.div>
@@ -434,3 +507,5 @@ export const LoginPage: React.FC = () => {
         </div>
     );
 };
+
+

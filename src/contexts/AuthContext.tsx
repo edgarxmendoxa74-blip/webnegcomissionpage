@@ -44,10 +44,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .from('workers')
                 .select('*')
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle();
 
             if (error) {
                 console.error('Error fetching profile:', error);
+                setProfile({ is_owner: true });
+            } else if (!data) {
+                // No workers row linked to this auth user yet.
                 // Fallback for owner if not found in workers (e.g., initial setup)
                 setProfile({ is_owner: true });
             } else {
