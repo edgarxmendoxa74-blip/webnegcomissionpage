@@ -140,7 +140,8 @@ export const MasterAuditPanel: React.FC = () => {
                 )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            {/* Status cards only matter once employees' reports exist */}
+            <div className={reports.length === 0 ? 'hidden' : 'grid grid-cols-3 gap-2'}>
                 {STATUSES.map(s => (
                     <button
                         key={s}
@@ -217,7 +218,9 @@ export const MasterAuditPanel: React.FC = () => {
                                             </select>
                                         </>
                                     ) : (
-                                        <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">Report not submitted</span>
+                                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+                                            {g.records.length} client record{g.records.length === 1 ? '' : 's'}
+                                        </span>
                                     )}
                                 </div>
 

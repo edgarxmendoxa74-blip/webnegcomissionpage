@@ -8,13 +8,12 @@ import {
     EyeOff,
     Trash2,
     Search,
+    ArrowLeft,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { MasterAuditPanel } from '../components/MasterAuditPanel';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -54,7 +53,6 @@ export const LeadsTracker: React.FC = () => {
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
     const [showHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [view, setView] = useState<'leads' | 'audit'>('leads');
     const [checkedLeads, setCheckedLeads] = useState<Set<string>>(new Set());
 
     const toggleCheck = (id: string) => {
@@ -270,24 +268,102 @@ export const LeadsTracker: React.FC = () => {
         return matchesSearch && matchesHidden;
     });
 
-    return (
-        <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="flex gap-1.5 bg-white border border-zinc-100 rounded-xl p-1 w-fit shadow-sm">
-                {([['leads', 'Leads'], ['audit', 'Audit']] as const).map(([key, label]) => (
-                    <button
-                        key={key}
-                        onClick={() => setView(key)}
-                        className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === key ? 'bg-ink text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
+    if (closingLead) {
+        return (
+            <div className="max-w-md mx-auto space-y-4 animate-in fade-in duration-500">
+                <button
+                    type="button"
+                    onClick={() => setClosingLead(null)}
+                    className="flex items-center gap-2 px-3 py-2 -ml-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-black hover:bg-white active:scale-95 transition-all"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to leads
+                </button>
+                <div className="bg-white border border-zinc-100 rounded-[2rem] shadow-sm p-6 sm:p-10 text-center">
+            <div className="w-16 h-16 bg-zinc-50 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-8 h-8 text-black" />
+            </div>
+            <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black mb-2">Close Deal</h2>
+            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed">Enter final deal value for <br /><span className="text-black">{closingLead.client_name}</span></p>
+
+            <div className="space-y-4 mb-8">
+                <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
+                    <input
+                        type="number"
+                        autoFocus
+                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
+                        placeholder="Package Value 0.00"
+                        value={formData.deal_value || ''}
+                        onChange={(e) => setFormData({ ...formData, deal_value: Number(e.target.value) })}
+                    />
+                </div>
+                <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
+                    <input
+                        type="number"
+                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
+                        placeholder="Down Payment 0.00"
+                        value={formData.down_payment || ''}
+                        onChange={(e) => setFormData({ ...formData, down_payment: Number(e.target.value) })}
+                    />
+                </div>
+                <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
+                    <input
+                        type="number"
+                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
+                        placeholder="Tip 0.00"
+                        value={formData.tip || ''}
+                        onChange={(e) => setFormData({ ...formData, tip: Number(e.target.value) })}
+                    />
+                </div>
+                <div className="space-y-2 text-left">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Payment Status</span>
+                    <select
+                        title="Payment Status"
+                        className="w-full px-6 py-4 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-xs font-black uppercase tracking-widest focus:border-black transition-all appearance-none"
+                        value={formData.payment_status}
+                        onChange={(e) => setFormData({ ...formData, payment_status: e.target.value as any })}
                     >
-                        {label}
-                    </button>
-                ))}
+                        <option value="Downpayment Only">Downpayment Only</option>
+                        <option value="Fully Paid">Fully Paid</option>
+                        <option value="Cancelled Project">Cancelled Project</option>
+                    </select>
+                </div>
+                <div className="space-y-2 text-left">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Webdev Assigned</span>
+                    <select
+                        title="Webdev Assigned"
+                        className="w-full px-6 py-4 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-xs font-black uppercase tracking-widest focus:border-black transition-all appearance-none"
+                        value={formData.webdev_id}
+                        onChange={(e) => setFormData({ ...formData, webdev_id: e.target.value })}
+                    >
+                        <option value="">Select Webdev</option>
+                        {workers.map(worker => (
+                            <option key={worker.id} value={worker.id}>{worker.name}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            {view === 'audit' ? (
-                <MasterAuditPanel />
-            ) : (
-            <>
+            <div className="flex flex-col gap-3">
+                <button
+                    onClick={() => handleCloseDeal(formData.deal_value)}
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-black text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                    Confirm Deal
+                </button>
+                <button onClick={() => setClosingLead(null)} className="w-full py-3 font-black text-[10px] uppercase tracking-[0.2em] text-zinc-300 hover:text-black transition-colors">Dismiss</button>
+            </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6">
                 <div className="relative group w-full md:w-72">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-black transition-colors" />
@@ -530,96 +606,6 @@ export const LeadsTracker: React.FC = () => {
                 </div>
             </div>
 
-            </>
-            )}
-
-            {/* Close Deal Modal */}
-            <AnimatePresence>
-                {closingLead && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setClosingLead(null)} />
-                        <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-sm bg-white border border-zinc-100 rounded-[2.5rem] shadow-2xl overflow-hidden p-10 text-center">
-                            <div className="w-16 h-16 bg-zinc-50 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle2 className="w-8 h-8 text-black" />
-                            </div>
-                            <h2 className="text-3xl font-black tracking-tighter uppercase italic text-black mb-2">Close Deal</h2>
-                            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed">Enter final deal value for <br /><span className="text-black">{closingLead.client_name}</span></p>
-
-                            <div className="space-y-4 mb-8">
-                                <div className="relative">
-                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
-                                    <input
-                                        type="number"
-                                        autoFocus
-                                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
-                                        placeholder="Package Value 0.00"
-                                        value={formData.deal_value || ''}
-                                        onChange={(e) => setFormData({ ...formData, deal_value: Number(e.target.value) })}
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
-                                    <input
-                                        type="number"
-                                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
-                                        placeholder="Down Payment 0.00"
-                                        value={formData.down_payment || ''}
-                                        onChange={(e) => setFormData({ ...formData, down_payment: Number(e.target.value) })}
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-xl text-zinc-300">₱</span>
-                                    <input
-                                        type="number"
-                                        className="w-full pl-12 pr-6 py-5 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-2xl font-black focus:border-black transition-all text-center tabular-nums"
-                                        placeholder="Tip 0.00"
-                                        value={formData.tip || ''}
-                                        onChange={(e) => setFormData({ ...formData, tip: Number(e.target.value) })}
-                                    />
-                                </div>
-                                <div className="space-y-2 text-left">
-                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Payment Status</span>
-                                    <select
-                                        title="Payment Status"
-                                        className="w-full px-6 py-4 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-xs font-black uppercase tracking-widest focus:border-black transition-all appearance-none"
-                                        value={formData.payment_status}
-                                        onChange={(e) => setFormData({ ...formData, payment_status: e.target.value as any })}
-                                    >
-                                        <option value="Downpayment Only">Downpayment Only</option>
-                                        <option value="Fully Paid">Fully Paid</option>
-                                        <option value="Cancelled Project">Cancelled Project</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2 text-left">
-                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Webdev Assigned</span>
-                                    <select
-                                        title="Webdev Assigned"
-                                        className="w-full px-6 py-4 bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] outline-none text-xs font-black uppercase tracking-widest focus:border-black transition-all appearance-none"
-                                        value={formData.webdev_id}
-                                        onChange={(e) => setFormData({ ...formData, webdev_id: e.target.value })}
-                                    >
-                                        <option value="">Select Webdev</option>
-                                        {workers.map(worker => (
-                                            <option key={worker.id} value={worker.id}>{worker.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={() => handleCloseDeal(formData.deal_value)}
-                                    disabled={isSubmitting}
-                                    className="w-full py-4 bg-black text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50"
-                                >
-                                    Confirm Deal
-                                </button>
-                                <button onClick={() => setClosingLead(null)} className="w-full py-3 font-black text-[10px] uppercase tracking-[0.2em] text-zinc-300 hover:text-black transition-colors">Dismiss</button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div >
     );
 };

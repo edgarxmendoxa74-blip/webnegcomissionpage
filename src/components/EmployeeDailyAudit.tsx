@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ClipboardList, Plus, Trash2, X } from 'lucide-react';
+import { Download, Plus, Save, Trash2, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 
@@ -55,10 +55,7 @@ const sameLocalDay = (iso: string | null | undefined, day: string) => !!iso && t
 export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = ({ workerId, rate }) => {
     const [day, setDay] = useState(() => toInputDate(new Date()));
     const [leads, setLeads] = useState<DayLead[]>([]);
-    const [history, setHistory] = useState<DailyAuditRow[]>([]);
-    const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [records, setRecords] = useState<AuditRecord[]>([]);
     const [showRecordModal, setShowRecordModal] = useState(false);
@@ -67,17 +64,10 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
     const [recStatus, setRecStatus] = useState('');
     const [recSaving, setRecSaving] = useState(false);
     const [recError, setRecError] = useState<string | null>(null);
+    const [report, setReport] = useState<DailyAuditRow | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
-    const loadHistory = async () => {
-        const { data, error } = await supabase
-            .from('daily_audits')
-            .select('*')
-            .eq('worker_id', workerId)
-            .order('audit_date', { ascending: false })
-            .limit(30);
-        if (error) setError(error.message);
-        else setHistory((data as DailyAuditRow[]) || []);
-    };
 
     const loadRecords = async () => {
         const { data, error } = await supabase
@@ -144,10 +134,6 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
     };
 
     useEffect(() => {
-        loadHistory();
-    }, [workerId]);
-
-    useEffect(() => {
         let cancelled = false;
         (async () => {
             setLoading(true);
@@ -168,13 +154,6 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
         return () => { cancelled = true; };
     }, [day, workerId]);
 
-    const existing = history.find(h => h.audit_date === day) || null;
-
-    // Load the saved notes whenever the chosen day (or its saved report) changes
-    useEffect(() => {
-        setNotes(existing?.notes || '');
-    }, [day, existing?.id]);
-
     const summary = useMemo(() => {
         const todays = leads.filter(l => sameLocalDay(l.created_at, day) || sameLocalDay(l.closed_at, day));
         const paid = todays.filter(l => l.payment_status === 'Fully Paid');
@@ -188,36 +167,82 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
         };
     }, [leads, day, rate]);
 
-    const submit = async () => {
-        setSaving(true);
-        setError(null);
-        const { data, error } = await supabase
+    const loadReport = async () => {
+        const { data } = await supabase
             .from('daily_audits')
-            .upsert(
-                {
-                    worker_id: workerId,
-                    audit_date: day,
-                    clients_added: summary.clientsAdded,
-                    deals_closed: summary.dealsClosed,
-                    total_sales: summary.sales,
-                    commission: summary.commission,
-                    notes: notes.trim() || null,
-                    status: 'Submitted',
-                    updated_at: new Date().toISOString(),
-                },
-                { onConflict: 'worker_id,audit_date' }
-            )
-            .select('id');
+            .select('*')
+            .eq('worker_id', workerId)
+            .eq('audit_date', day)
+            .maybeSingle();
+        setReport((data as DailyAuditRow) || null);
+    };
+
+    useEffect(() => {
+        setSavedMsg(null);
+        loadReport();
+    }, [day, workerId]);
+
+    // Writes the day's totals to the owner's Daily Audit. `submit` also (re)marks the report as Submitted.
+    const syncReport = async (submit: boolean) => {
+        const payload: Record<string, unknown> = {
+            worker_id: workerId,
+            audit_date: day,
+            clients_added: summary.clientsAdded,
+            deals_closed: summary.dealsClosed,
+            total_sales: summary.sales,
+            commission: summary.commission,
+            updated_at: new Date().toISOString(),
+        };
+        if (submit) payload.status = 'Submitted';
+        const { error } = await supabase.from('daily_audits').upsert(payload, { onConflict: 'worker_id,audit_date' });
+        if (!error) loadReport();
+        return error;
+    };
+
+    // Keep the owner's copy current without any button press (skipped once the owner has marked it Reviewed).
+    useEffect(() => {
+        if (loading || report?.status === 'Reviewed') return;
+        const hasActivity = summary.clientsAdded > 0 || summary.dealsClosed > 0 || records.length > 0;
+        if (!hasActivity) return;
+        const same = report
+            && report.clients_added === summary.clientsAdded
+            && report.deals_closed === summary.dealsClosed
+            && Number(report.total_sales) === summary.sales
+            && Number(report.commission) === summary.commission;
+        if (!same) syncReport(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, summary, records.length, report]);
+
+    const run = async (submit: boolean) => {
+        setSaving(true);
+        setSavedMsg(null);
+        setError(null);
+        const err = await syncReport(submit);
         setSaving(false);
-        if (error) {
-            setError(error.message);
-            return;
-        }
-        if (!data || data.length === 0) {
-            setError('Not saved — you do not have permission to submit this report.');
-            return;
-        }
-        loadHistory();
+        if (err) setError(err.message);
+        else setSavedMsg(submit ? 'Audit submitted to the owner' : 'Saved');
+    };
+    const handleSave = () => run(false);
+    const handleSubmit = () => run(true);
+
+    const handleExport = () => {
+        const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const rows: unknown[][] = [
+            ['Daily Audit', day],
+            [],
+            ['Clients Added', 'Deals Fully Paid', 'Total Sales', 'Commission'],
+            [summary.clientsAdded, summary.dealsClosed, summary.sales, summary.commission],
+            [],
+            ['Client', 'Phone Number', 'Status'],
+            ...records.map(r => [r.client_name, r.phone_number || '', r.status]),
+        ];
+        const csv = '﻿' + rows.map(r => r.map(esc).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `daily-audit-${day}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -227,7 +252,7 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">End of day</p>
                     <h2 className="text-2xl font-black tracking-tighter text-ink uppercase">Daily Audit</h2>
                     <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">
-                        Submit your day. The owner reviews it in the Master List.
+                        Your records and totals are sent to the owner automatically.
                     </p>
                 </div>
                 <input
@@ -239,6 +264,10 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                     className="px-4 py-3 bg-white border border-zinc-100 rounded-2xl text-[11px] font-black outline-none focus:border-ink"
                 />
             </div>
+
+            {error && (
+                <p className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-black text-red-600 uppercase tracking-widest">{error}</p>
+            )}
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 {[
@@ -260,13 +289,29 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
             <div className="bg-white border border-zinc-100 rounded-[1.5rem] shadow-sm p-5 lg:p-6 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                     <h3 className="text-xs font-black uppercase tracking-widest text-ink">Client Records</h3>
-                    <button
-                        onClick={openRecordModal}
-                        className="flex items-center gap-1.5 px-4 py-2.5 bg-ink text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:shadow-xl hover:shadow-black/20 transition-all active:scale-95"
-                    >
-                        <Plus className="w-3.5 h-3.5" /> Add Record
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-zinc-200 text-ink rounded-xl font-black uppercase tracking-widest text-[9px] hover:border-ink transition-all active:scale-95"
+                        >
+                            <Download className="w-3.5 h-3.5" /> Export
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving || loading}
+                            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-zinc-200 text-ink rounded-xl font-black uppercase tracking-widest text-[9px] hover:border-ink transition-all active:scale-95 disabled:opacity-40"
+                        >
+                            <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                            onClick={openRecordModal}
+                            className="flex items-center gap-1.5 px-4 py-2.5 bg-ink text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:shadow-xl hover:shadow-black/20 transition-all active:scale-95"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Add Record
+                        </button>
+                    </div>
                 </div>
+                {savedMsg && <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">{savedMsg}</p>}
                 {records.length === 0 ? (
                     <p className="py-6 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest">No records for this day</p>
                 ) : (
@@ -289,6 +334,21 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                         ))}
                     </ul>
                 )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {report && (
+                    <span className={`self-start sm:self-auto px-3 py-1.5 rounded-full border font-black uppercase tracking-widest text-[9px] ${AUDIT_STATUS_STYLE[report.status]}`}>
+                        {report.status}
+                    </span>
+                )}
+                <button
+                    onClick={handleSubmit}
+                    disabled={saving || loading || report?.status === 'Reviewed'}
+                    className="sm:ml-auto w-full sm:w-auto px-8 py-3.5 bg-ink text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-40"
+                >
+                    {saving ? 'Submitting...' : report?.status === 'Reviewed' ? 'Reviewed by owner' : 'Submit Audit'}
+                </button>
             </div>
 
             {showRecordModal && createPortal(
@@ -354,42 +414,6 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                     </form>
                 </div>,
                 document.body
-            )}
-
-            {existing ? (existing.notes ? (
-                <div className="bg-white border border-zinc-100 rounded-[1.5rem] shadow-sm p-5 lg:p-6 space-y-3">
-                    {existing.notes && (
-                        <p className="text-xs font-medium text-zinc-600 leading-relaxed bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 whitespace-pre-wrap">
-                            {existing.notes}
-                        </p>
-                    )}
-                </div>
-            ) : null) : (
-                <div className="bg-white border border-zinc-100 rounded-[1.5rem] shadow-sm p-5 lg:p-6 space-y-4">
-                    <div className="space-y-2">
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-1">Notes for the owner</span>
-                        <textarea
-                            rows={3}
-                            placeholder="Anything to report today? Follow-ups, problems, client concerns..."
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-4 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-medium outline-none focus:border-ink transition-all resize-none"
-                        />
-                    </div>
-
-                    {error && (
-                        <p className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-black text-red-600 uppercase tracking-widest">{error}</p>
-                    )}
-
-                    <button
-                        onClick={submit}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-8 py-3.5 bg-ink text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-30"
-                    >
-                        <ClipboardList className="w-4 h-4" />
-                        {saving ? 'Submitting...' : 'Submit Daily Audit'}
-                    </button>
-                </div>
             )}
         </div>
     );

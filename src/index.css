@@ -100,10 +100,28 @@ button, a, [role="button"], label, select, input {
   overscroll-behavior: contain;
 }
 
+/* Phones: every centered modal becomes a full-width bottom sheet that fits the screen. */
 @media (max-width: 639px) {
-  .fixed.inset-0.items-center > .relative[class*="p-10"],
-  .fixed.inset-0.items-center > .relative[class*="p-12"] {
-    padding: 1.5rem;
+  .fixed.inset-0.items-center:not(.modal-center) {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .fixed.inset-0.items-center:not(.modal-center) > .relative,
+  .fixed.inset-0.items-center:not(.modal-center) > form {
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 1.75rem 1.75rem 0 0;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
+
+  .fixed.inset-0.items-center:not(.modal-center) > .relative[class*="p-10"],
+  .fixed.inset-0.items-center:not(.modal-center) > .relative[class*="p-12"],
+  .fixed.inset-0.items-center:not(.modal-center) > .relative[class*="p-8"] {
+    padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
   }
 }
 

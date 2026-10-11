@@ -17,6 +17,9 @@ import {
     Search,
     Download,
     Key,
+    Handshake,
+    ClipboardList,
+    ScrollText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -442,7 +445,35 @@ export const EmployeeDashboard: React.FC = () => {
             </header>
 
             {/* Tab Switcher */}
-            <div className="max-w-7xl mx-auto px-4 md:px-12 pt-6 lg:pt-8 overflow-x-auto scrollbar-hide">
+            {/* Phone: bottom tab bar (same style as the owner side) */}
+            <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-zinc-200 pb-safe" aria-label="Sections">
+                <div className="grid grid-cols-4 px-1 pt-1.5 pb-1.5">
+                    {([
+                        { id: 'deals', label: 'My Deals', icon: Handshake },
+                        { id: 'audit', label: 'Audit', icon: ClipboardList },
+                        { id: 'profile', label: 'Profile', icon: User },
+                        { id: 'terms', label: 'Terms', icon: ScrollText },
+                    ] as const).map(({ id, label, icon: Icon }) => {
+                        const active = activeSection === id;
+                        return (
+                            <button
+                                key={id}
+                                onClick={() => setActiveSection(id)}
+                                aria-current={active ? 'page' : undefined}
+                                className={`flex flex-col items-center gap-1 py-1.5 min-w-0 transition-colors active:scale-95 ${active ? 'text-ink' : 'text-zinc-400'}`}
+                            >
+                                <span className={`px-5 py-1 rounded-full transition-colors ${active ? 'bg-ink text-white' : ''}`}>
+                                    <Icon className="w-5 h-5" />
+                                </span>
+                                <span className="text-[10px] font-extrabold tracking-tight truncate max-w-full px-0.5">{label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </nav>
+
+            {/* Tablet/desktop: pill switcher */}
+            <div className="hidden md:block max-w-7xl mx-auto px-4 md:px-12 pt-6 lg:pt-8 overflow-x-auto scrollbar-hide">
                 <div className="flex gap-1.5 lg:gap-2 bg-white border border-zinc-100 rounded-xl lg:rounded-2xl p-1 lg:p-1.5 w-fit shadow-sm">
                     <button
                         onClick={() => setActiveSection('deals')}
@@ -475,7 +506,7 @@ export const EmployeeDashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-8">
                 <AnimatePresence mode="wait">
                     {activeSection === 'deals' ? (
                         <motion.div key="deals" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
