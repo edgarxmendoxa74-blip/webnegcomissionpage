@@ -182,7 +182,7 @@ export const ReceiptsPage: React.FC = () => {
                         <div
                             ref={receiptRef}
                             className="bg-white rounded-2xl border border-zinc-200 shadow-lg overflow-hidden"
-                            style={{ width: '100%', maxWidth: '340px', margin: '0 auto' }}
+                            style={{ width: '340px', maxWidth: '100%', margin: '0 auto', boxSizing: 'border-box' }}
                         >
                             {/* Header */}
                             <div className="bg-white text-black px-6 pt-6 pb-5 border-b border-dashed border-zinc-300">
@@ -207,9 +207,9 @@ export const ReceiptsPage: React.FC = () => {
                                         <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Receipt No.</p>
                                         <p className="text-xs font-black tracking-wider tabular-nums mt-0.5">{serial}</p>
                                     </div>
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-green-600">Paid</span>
+                                    <div className="flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-green-50 border border-green-200">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                                        <span className="text-[8px] leading-none font-black uppercase tracking-[0.2em] text-green-600" style={{ marginRight: '-0.2em' }}>Paid</span>
                                     </div>
                                 </div>
                             </div>
@@ -224,19 +224,19 @@ export const ReceiptsPage: React.FC = () => {
 
                                 <div className="border-t border-dashed border-zinc-300" />
 
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Payment Date</span>
-                                    <span className="text-[11px] font-bold text-black">{formattedDate}</span>
+                                <div className="flex justify-between items-center gap-3">
+                                    <span className="text-[8px] leading-none font-black uppercase tracking-[0.25em] text-zinc-400">Payment Date</span>
+                                    <span className="text-[11px] leading-none font-bold text-black text-right">{formattedDate}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Description</span>
-                                    <span className="text-[11px] font-bold text-black">Sales commission</span>
+                                <div className="flex justify-between items-center gap-3">
+                                    <span className="text-[8px] leading-none font-black uppercase tracking-[0.25em] text-zinc-400">Description</span>
+                                    <span className="text-[11px] leading-none font-bold text-black text-right">Sales commission</span>
                                 </div>
 
                                 <div className="border-t border-dashed border-zinc-300" />
 
-                                <div className="flex justify-between items-end">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-black">Total Payout</span>
+                                <div className="flex justify-between items-center gap-3">
+                                    <span className="text-[9px] leading-none font-black uppercase tracking-[0.25em] text-black">Total Payout</span>
                                     <span className="text-2xl font-black text-black tracking-tighter tabular-nums leading-none">
                                         ₱{(Number(amount) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
@@ -245,7 +245,7 @@ export const ReceiptsPage: React.FC = () => {
 
                             {/* Footer */}
                             <div className="bg-zinc-50 border-t border-zinc-100 px-6 py-3 text-center">
-                                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-400">Thank you for your hard work</p>
+                                <p className="text-[8px] leading-none font-black uppercase tracking-[0.3em] text-zinc-400" style={{ paddingLeft: '0.3em' }}>Thank you for your hard work</p>
                             </div>
                         </div>
                     </div>
