@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WebNegosyo</string>
+    <string name="title_activity_main">WebNegosyo</string>
+    <string name="package_name">com.webnegosyo.management</string>
+    <string name="custom_url_scheme">com.webnegosyo.management</string>
+</resources>
