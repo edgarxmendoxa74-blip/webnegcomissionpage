@@ -7,7 +7,7 @@ interface LogoMarkProps {
 /** The official WebNegosyo mark (public/logo-mark.png, a transparent PNG cut from the brand logo). */
 export const LogoMark: React.FC<LogoMarkProps> = ({ className }) => (
     <img
-        src="/logo-mark.png"
+        src={`${import.meta.env.BASE_URL}logo-mark.png`}
         alt="WebNegosyo"
         draggable={false}
         className={`select-none ${className ?? ''}`}

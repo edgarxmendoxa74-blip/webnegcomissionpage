@@ -7,15 +7,15 @@ const CACHE_DYNAMIC = `webnegosyo-dynamic-${CACHE_VERSION}`;
 
 // Core app shell files that need to be available offline
 const SHELL_FILES = [
-    '/',
-    '/manifest.webmanifest',
-    '/logo-mark.png',
-    '/logo-full.png',
-    '/favicon.png',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/icons/icon-maskable-512.png',
-    '/icons/apple-touch-icon.png'
+    './',
+    'manifest.webmanifest',
+    'logo-mark.png',
+    'logo-full.png',
+    'favicon.png',
+    'icons/icon-192.png',
+    'icons/icon-512.png',
+    'icons/icon-maskable-512.png',
+    'icons/apple-touch-icon.png'
 ];
 
 // External resources that should never be cached (Supabase, APIs)
@@ -97,7 +97,7 @@ self.addEventListener('fetch', (event) => {
                 .catch(() => {
                     // Offline: try cache, then fall back to app shell
                     return caches.match(request).then((cached) => {
-                        return cached || caches.match('/');
+                        return cached || caches.match('./');
                     });
                 })
         );
