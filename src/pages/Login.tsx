@@ -199,23 +199,23 @@ export const LoginPage: React.FC = () => {
         return (
             <div className="min-h-dvh flex items-center justify-center p-6">
                 <div className="w-full max-w-4xl">
-                    <div className="flex flex-col items-center text-center mb-14">
-                        <LogoMark className="h-28 sm:h-36 w-auto text-ink mb-6" />
+                    <div className="flex flex-col items-center text-center mb-8 sm:mb-14">
+                        <LogoMark className="h-16 sm:h-24 w-auto text-ink mb-4 sm:mb-6" />
                         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-ink mb-3">WebNegosyo</h1>
                         <p className="text-zinc-400 text-[9px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.4em]">Management for Commissions</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                         <motion.button
                             whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('owner')}
-                            className="bg-ink p-10 rounded-[3rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
+                            className="bg-ink p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
                         >
-                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-white group-hover:text-black transition-colors">
-                                <Lock className="w-8 h-8 text-white group-hover:text-black" />
+                            <div className="w-11 h-11 sm:w-16 sm:h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-4 sm:mb-8 mx-auto md:mx-0 group-hover:bg-white group-hover:text-black transition-colors">
+                                <Lock className="w-5 h-5 sm:w-8 sm:h-8 text-white group-hover:text-black" />
                             </div>
-                            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">Owner Entrance</h3>
+                            <h3 className="text-xl sm:text-3xl font-black text-white uppercase italic tracking-tighter mb-1 sm:mb-2">Owner Entrance</h3>
                             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
                                 Administrative controls, team management, and global financial oversight.
                             </p>
@@ -225,19 +225,19 @@ export const LoginPage: React.FC = () => {
                             whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('employee')}
-                            className="bg-white border border-zinc-200 p-10 rounded-[3rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
+                            className="bg-white border border-zinc-200 p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
                         >
-                            <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-8 mx-auto md:mx-0 group-hover:bg-black transition-colors">
-                                <User className="w-8 h-8 text-black group-hover:text-white" />
+                            <div className="w-11 h-11 sm:w-16 sm:h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 sm:mb-8 mx-auto md:mx-0 group-hover:bg-black transition-colors">
+                                <User className="w-5 h-5 sm:w-8 sm:h-8 text-black group-hover:text-white" />
                             </div>
-                            <h3 className="text-3xl font-black text-black uppercase italic tracking-tighter mb-2">Employee Portal</h3>
+                            <h3 className="text-xl sm:text-3xl font-black text-black uppercase italic tracking-tighter mb-1 sm:mb-2">Employee Portal</h3>
                             <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
                                 Personal client management, track commissions, and log project progress.
                             </p>
                         </motion.button>
                     </div>
 
-                    <div className="mt-20 text-center">
+                    <div className="mt-10 sm:mt-20 text-center">
                         <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">
                             All Rights Reserved WebNegosyo 2026
                         </p>
@@ -269,7 +269,7 @@ export const LoginPage: React.FC = () => {
                     </button>
 
                     <div className="text-center mb-10 pt-4">
-                        <LogoMark className="h-20 w-auto text-ink mx-auto mb-3" />
+                        <LogoMark className="h-12 sm:h-16 w-auto text-ink mx-auto mb-2 sm:mb-3" />
                         <p className="text-lg font-extrabold tracking-tight text-ink mb-5">WebNegosyo</p>
                         <h1 className="text-3xl font-extrabold tracking-tight text-ink mb-2">
                             {isRegistering ? 'Join Team' : portal === 'owner' ? 'Owner Login' : 'Agent Access'}

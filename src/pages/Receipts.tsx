@@ -97,16 +97,16 @@ export const ReceiptsPage: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-8 animate-in">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start">
                 {/* Generator Form */}
-                <div className="bg-white border border-zinc-100 rounded-[1.5rem] p-6 shadow-sm space-y-5">
-                    <div className="space-y-4">
-                        <div className="space-y-2">
+                <div className="bg-white border border-zinc-100 rounded-2xl sm:rounded-[1.5rem] p-3.5 sm:p-6 shadow-sm space-y-3 sm:space-y-5">
+                    <div className="space-y-2.5 sm:space-y-4">
+                        <div className="space-y-1 sm:space-y-2">
                             <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Select Team Member</span>
                             <div className="relative">
                                 <select
-                                    className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all appearance-none font-bold"
+                                    className="w-full px-3 py-2 sm:py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all appearance-none font-bold"
                                     value={selectedWorkerId}
                                     onChange={(e) => setSelectedWorkerId(e.target.value)}
                                 >
@@ -119,36 +119,36 @@ export const ReceiptsPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+                            <div className="space-y-1 sm:space-y-2">
                                 <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Role</span>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-bold text-xs"
+                                    className="w-full px-3 py-2 sm:py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-bold text-xs"
                                     placeholder="Position/Role"
                                     value={customRole}
                                     onChange={(e) => setCustomRole(e.target.value)}
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1 sm:space-y-2">
                                 <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Date</span>
                                 <input
                                     type="date"
                                     aria-label="Payment Date"
-                                    className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-bold text-xs"
+                                    className="w-full px-3 py-2 sm:py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-bold text-xs"
                                     value={customDate}
                                     onChange={(e) => setCustomDate(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1 sm:space-y-2">
                             <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Commission Amount (₱)</span>
                             <div className="relative">
                                 <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-zinc-300">₱</span>
                                 <input
                                     type="number"
-                                    className="w-full pl-8 pr-3 py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-black text-base"
+                                    className="w-full pl-8 pr-3 py-2 sm:py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-black text-base"
                                     placeholder="0.00"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
@@ -160,7 +160,7 @@ export const ReceiptsPage: React.FC = () => {
                     <button
                         disabled={!selectedWorkerId || !amount || isDownloading}
                         onClick={handleDownload}
-                        className="w-full py-3 bg-black text-white rounded-xl font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-20 flex items-center justify-center gap-3"
+                        className="w-full py-2.5 sm:py-3 bg-black text-white rounded-xl font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-20 flex items-center justify-center gap-3"
                     >
                         {isDownloading ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -174,10 +174,10 @@ export const ReceiptsPage: React.FC = () => {
                 </div>
 
                 {/* Preview Area */}
-                <div className="space-y-4">
-                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest px-4">Instant Preview</span>
+                <div className="space-y-2 sm:space-y-4">
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest px-2 sm:px-4">Instant Preview</span>
 
-                    <div className="relative">
+                    <div className="relative [zoom:0.8] sm:[zoom:1]">
                         {/* The Actual Receipt for Export */}
                         <div
                             ref={receiptRef}

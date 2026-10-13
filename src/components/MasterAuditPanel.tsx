@@ -243,6 +243,7 @@ export const MasterAuditPanel: React.FC = () => {
                                                     <tr className="border-b border-zinc-100">
                                                         <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
                                                         <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Phone Number</th>
+                                                        <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Socials</th>
                                                         <th className="py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
                                                     </tr>
                                                 </thead>
@@ -251,6 +252,7 @@ export const MasterAuditPanel: React.FC = () => {
                                                         <tr key={rec.id}>
                                                             <td className="py-2 pr-4 text-[11px] font-black text-black">{rec.client_name}</td>
                                                             <td className="py-2 pr-4 text-[11px] font-bold text-zinc-600 tabular-nums">{rec.phone_number || '—'}</td>
+                                                            <td className="py-2 pr-4 text-[11px] font-bold text-zinc-600">{rec.socials || '—'}</td>
                                                             <td className="py-2">
                                                                 <span className="px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-600 text-[8px] font-black uppercase tracking-widest whitespace-nowrap">{rec.status}</span>
                                                             </td>

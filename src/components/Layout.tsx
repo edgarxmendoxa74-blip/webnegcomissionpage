@@ -9,7 +9,7 @@ import {
     Eye,
     ClipboardList,
     Wallet,
-    Ellipsis,
+    Menu,
     LogOut,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -69,7 +69,7 @@ const navItems = [
 ];
 
 // The phone tab bar shows the everyday tabs; everything else lives under "More".
-const primaryLabels = ['Master List', 'Receipts', 'Commission', 'Sales'];
+const primaryLabels = ['Master List', 'Receipts', 'Commission'];
 const primaryItems = navItems.filter((n) => primaryLabels.includes(n.label));
 const moreItems = navItems.filter((n) => !primaryLabels.includes(n.label));
 
@@ -130,6 +130,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center font-black text-black overflow-hidden shrink-0">
                 {profile.photo_url ? (
                     <img src={profile.photo_url} alt="" className="w-full h-full object-cover" />
+                ) : isOwner ? (
+                    <LogoMark className="w-6 h-6 object-contain" />
                 ) : (
                     profile.name?.charAt(0) || 'U'
                 )}
@@ -189,7 +191,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 <header className="h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] lg:h-16 lg:pt-0 px-4 sm:px-6 lg:px-12 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-2xl z-30 border-b border-zinc-200/60">
                     <div className="flex items-center gap-3 min-w-0">
                         <LogoMark className="lg:hidden h-6 w-auto shrink-0" />
-                        <span className="lg:hidden text-sm font-extrabold tracking-tight text-ink shrink-0">WebNegosyo</span>
                         <span className="lg:hidden w-px h-5 bg-zinc-200 shrink-0" />
                         <h1 className="text-sm lg:text-xl font-black tracking-tighter text-black uppercase truncate">{activeTab}</h1>
                     </div>
@@ -199,12 +200,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                         aria-haspopup="dialog"
                         aria-label="More"
                         className={cn(
-                            "lg:hidden flex items-center gap-1.5 h-9 px-3 rounded-full border transition-colors active:scale-95 shrink-0",
+                            "lg:hidden flex items-center justify-center w-9 h-9 rounded-full border transition-colors active:scale-95 shrink-0",
                             moreActive ? "bg-ink text-white border-ink" : "bg-white text-ink border-zinc-200"
                         )}
                     >
-                        <Ellipsis className="w-5 h-5" />
-                        <span className="text-[10px] font-extrabold uppercase tracking-tight">More</span>
+                        <Menu className="w-5 h-5" />
                     </button>
 
                     {isOwner && (
@@ -260,12 +260,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 </div>
             )}
 
-            {/* Mobile "More" bottom sheet */}
+            {/* Mobile "More" popover, anchored under the header button */}
             <AnimatePresence>
                 {moreOpen && (
                     <div className="lg:hidden fixed inset-0 z-[60]">
                         <motion.div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/30"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -274,23 +274,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                         <motion.div
                             role="dialog"
                             aria-label="More"
-                            className="absolute bottom-0 inset-x-0 bg-white rounded-t-[2rem] px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl max-h-[85dvh] overflow-y-auto"
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={{ top: 0, bottom: 0.6 }}
-                            onDragEnd={(_, info) => {
-                                if (info.offset.y > 80 || info.velocity.y > 500) setMoreOpen(false);
-                            }}
+                            className="absolute right-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] w-[min(20rem,calc(100vw-1.5rem))] origin-top-right bg-white rounded-3xl p-4 shadow-2xl border border-zinc-100 max-h-[calc(100dvh-5rem-env(safe-area-inset-top))] overflow-y-auto"
+                            initial={{ opacity: 0, scale: 0.92, y: -8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 380 }}
                         >
-                            <div className="mx-auto w-10 h-1.5 rounded-full bg-zinc-200 mb-4" />
 
                             {profile && <div className="flex items-center gap-3 px-1 mb-4">{profileBadge}</div>}
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-2">
                                 {moreItems.map(({ icon: Icon, label }) => {
                                     const active = activeTab === label;
                                     return (
@@ -335,7 +328,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
             {/* Mobile bottom tab bar */}
             <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-zinc-200 pb-safe" aria-label="Main">
-                <div className="grid grid-cols-4 px-1 pt-1.5 pb-1.5">
+                <div className="grid grid-cols-3 px-1 pt-1.5 pb-1.5">
                     {primaryItems.map(({ icon: Icon, short, label }) => {
                         const active = activeTab === label;
                         return (

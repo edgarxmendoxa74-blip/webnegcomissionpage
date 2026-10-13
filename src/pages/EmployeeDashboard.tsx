@@ -20,6 +20,7 @@ import {
     Handshake,
     ClipboardList,
     ScrollText,
+    Percent,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -62,6 +63,7 @@ interface ProfileData {
     qr_code_url: string;
     contact_email?: string;
     assigned_webdev_id?: string;
+    commission_percentage?: string;
 }
 
 export const EmployeeDashboard: React.FC = () => {
@@ -71,7 +73,8 @@ export const EmployeeDashboard: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeSection, setActiveSection] = useState<'deals' | 'audit' | 'profile' | 'terms'>('deals');
+    const [activeSection, setActiveSection] = useState<'deals' | 'audit' | 'profile'>('deals');
+    const [showTerms, setShowTerms] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
 
@@ -109,7 +112,10 @@ export const EmployeeDashboard: React.FC = () => {
         photo_url: '',
         qr_code_url: '',
         contact_email: '',
+        commission_percentage: '10',
     });
+    const [savedRate, setSavedRate] = useState<number | null>(null);
+    const [rateError, setRateError] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [profileSaving, setProfileSaving] = useState(false);
@@ -129,6 +135,7 @@ export const EmployeeDashboard: React.FC = () => {
                 qr_code_url: profile.qr_code_url || '',
                 contact_email: profile.contact_email || '',
                 assigned_webdev_id: profile.assigned_webdev_id || '',
+                commission_percentage: String(profile.commission_percentage ?? 10),
             });
         }
 
@@ -209,8 +216,8 @@ export const EmployeeDashboard: React.FC = () => {
         });
     };
 
-    // Commission % is set per employee by the owner (Commission page).
-    const workerRate = Number(profile?.commission_percentage ?? 10);
+    // Commission % is entered by the employee themselves (My Profile).
+    const workerRate = savedRate ?? Number(profile?.commission_percentage ?? 10);
 
     // Commission is only earned (and visible) once a project is fully paid.
     const getCommission = (lead: { payment_status?: string; deal_value: number }) =>
@@ -373,6 +380,12 @@ export const EmployeeDashboard: React.FC = () => {
 
     const handleProfileSave = async () => {
         if (!profile?.id) return;
+        const pct = Number(profileForm.commission_percentage);
+        if (profileForm.commission_percentage === '' || isNaN(pct) || pct < 0 || pct > 100) {
+            setRateError('Enter a commission between 0 and 100.');
+            return;
+        }
+        setRateError(null);
         setProfileSaving(true);
         try {
             let photo_url = profileForm.photo_url;
@@ -391,10 +404,12 @@ export const EmployeeDashboard: React.FC = () => {
                     photo_url,
                     qr_code_url,
                     contact_email: profileForm.contact_email,
+                    commission_percentage: pct,
                 })
                 .eq('id', profile.id);
 
             if (error) throw error;
+            setSavedRate(pct);
             setProfileSuccess(true);
             setIsEditingProfile(false);
             setTimeout(() => setProfileSuccess(false), 3000);
@@ -434,6 +449,14 @@ export const EmployeeDashboard: React.FC = () => {
                             </div>
                         </div>
                         <button
+                            onClick={() => setShowTerms(true)}
+                            className="flex items-center gap-2 p-2 lg:px-4 lg:py-2.5 text-zinc-500 hover:text-ink hover:bg-zinc-100 rounded-lg lg:rounded-xl transition-all"
+                            title="Terms & Policies"
+                        >
+                            <ScrollText className="w-4 h-4 lg:w-5 lg:h-5" />
+                            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Terms & Policies</span>
+                        </button>
+                        <button
                             onClick={signOut}
                             className="p-2 lg:p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg lg:rounded-xl transition-all"
                             title="Logout"
@@ -447,12 +470,11 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Tab Switcher */}
             {/* Phone: bottom tab bar (same style as the owner side) */}
             <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-zinc-200 pb-safe" aria-label="Sections">
-                <div className="grid grid-cols-4 px-1 pt-1.5 pb-1.5">
+                <div className="grid grid-cols-3 px-1 pt-1.5 pb-1.5">
                     {([
                         { id: 'deals', label: 'My Deals', icon: Handshake },
                         { id: 'audit', label: 'Audit', icon: ClipboardList },
                         { id: 'profile', label: 'Profile', icon: User },
-                        { id: 'terms', label: 'Terms', icon: ScrollText },
                     ] as const).map(({ id, label, icon: Icon }) => {
                         const active = activeSection === id;
                         return (
@@ -495,13 +517,6 @@ export const EmployeeDashboard: React.FC = () => {
                             }`}
                     >
                         Edit Profile
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('terms')}
-                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'terms' ? 'bg-ink text-white shadow-lg' : 'text-zinc-400 hover:text-black'
-                            }`}
-                    >
-                        Terms & Policies
                     </button>
                 </div>
             </div>
@@ -817,16 +832,16 @@ export const EmployeeDashboard: React.FC = () => {
                     ) : activeSection === 'profile' ? (
                         <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                             {/* PROFILE SECTION */}
-                            <div className="space-y-6">
+                            <div className="space-y-3 sm:space-y-6">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div>
-                                        <h2 className="text-2xl lg:text-3xl font-black tracking-tighter text-black uppercase italic">My Profile</h2>
+                                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter text-black uppercase italic">My Profile</h2>
                                         <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Your personal and payment information</p>
                                     </div>
                                     {!isEditingProfile && (
                                         <button
                                             onClick={() => setIsEditingProfile(true)}
-                                            className="flex items-center gap-2 px-6 py-3.5 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
+                                            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                             Edit Profile
@@ -835,16 +850,16 @@ export const EmployeeDashboard: React.FC = () => {
                                 </div>
 
                                 {/* Hero card */}
-                                <div className="relative overflow-hidden rounded-[1.5rem] lg:rounded-[2rem] bg-ink text-white shadow-xl">
+                                <div className="relative overflow-hidden rounded-2xl sm:rounded-[1.5rem] lg:rounded-[2rem] bg-ink text-white shadow-xl">
                                     <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_85%_0%,rgba(255,255,255,0.35),transparent_55%)]" />
-                                    <div className="relative p-5 lg:p-8 flex flex-col sm:flex-row sm:items-center gap-5 lg:gap-8">
-                                        <div className="relative group w-24 h-24 lg:w-32 lg:h-32 shrink-0 rounded-3xl bg-white/10 border-2 border-white/20 flex items-center justify-center overflow-hidden">
+                                    <div className="relative p-3.5 sm:p-5 lg:p-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 lg:gap-8">
+                                        <div className="relative group w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 shrink-0 rounded-3xl bg-white/10 border-2 border-white/20 flex items-center justify-center overflow-hidden">
                                             {photoFile ? (
                                                 <img src={URL.createObjectURL(photoFile)} className="w-full h-full object-cover" alt="" />
                                             ) : profileForm.photo_url ? (
                                                 <img src={profileForm.photo_url} className="w-full h-full object-cover" alt="" />
                                             ) : (
-                                                <span className="text-4xl font-black text-white/70">{profileForm.name?.charAt(0)?.toUpperCase() || 'E'}</span>
+                                                <span className="text-2xl sm:text-4xl font-black text-white/70">{profileForm.name?.charAt(0)?.toUpperCase() || 'E'}</span>
                                             )}
                                             {isEditingProfile && (
                                                 <>
@@ -859,12 +874,12 @@ export const EmployeeDashboard: React.FC = () => {
 
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/50">WebNegosyo Team</p>
-                                            <h3 className="text-2xl lg:text-3xl font-black tracking-tighter truncate mt-1">{profileForm.name || 'Your name'}</h3>
-                                            <div className="flex flex-wrap items-center gap-2 mt-3">
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-[9px] font-black uppercase tracking-widest">
+                                            <h3 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter truncate mt-0.5 sm:mt-1">{profileForm.name || 'Your name'}</h3>
+                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/10 border border-white/15 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">
                                                     <Briefcase className="w-3 h-3" /> {profileForm.role || 'Employee'}
                                                 </span>
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-[9px] font-black uppercase tracking-widest">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/10 border border-white/15 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">
                                                     <User className="w-3 h-3" /> {profileForm.email || 'username'}
                                                 </span>
                                             </div>
@@ -872,33 +887,33 @@ export const EmployeeDashboard: React.FC = () => {
 
                                         <div className="sm:text-right sm:pl-6 sm:border-l sm:border-white/15">
                                             <p className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Your Commission</p>
-                                            <p className="text-4xl lg:text-5xl font-black tracking-tighter tabular-nums mt-1">{workerRate}%</p>
+                                            <p className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tighter tabular-nums mt-0.5 sm:mt-1">{workerRate}%</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-                                    <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                                    <div className="lg:col-span-2 space-y-3 sm:space-y-4 lg:space-y-6">
                                         {/* Personal info */}
-                                        <div className="bg-white border border-zinc-100 rounded-[1.5rem] p-5 lg:p-7 shadow-sm">
-                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-5">Personal Information</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                <div className="space-y-2">
+                                        <div className="bg-white border border-zinc-100 rounded-2xl sm:rounded-[1.5rem] p-3.5 sm:p-5 lg:p-7 shadow-sm">
+                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-3 sm:mb-5">Personal Information</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-5">
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">Full Name</span>
                                                     <div className="relative">
-                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><User className="w-4 h-4" /></div>
+                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><User className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
                                                         <input
                                                             title="Full Name"
                                                             placeholder="Your name"
                                                             disabled={!isEditingProfile}
-                                                            className={`w-full pl-11 pr-4 py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
                                                             value={profileForm.name}
                                                             onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">Role</span>
                                                     <div className="relative">
                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Briefcase className="w-4 h-4" /></div>
@@ -906,14 +921,31 @@ export const EmployeeDashboard: React.FC = () => {
                                                             title="Role"
                                                             placeholder="Your role"
                                                             disabled={!isEditingProfile}
-                                                            className={`w-full pl-11 pr-4 py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
                                                             value={profileForm.role}
                                                             onChange={(e) => setProfileForm({ ...profileForm, role: e.target.value })}
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
+                                                <div className="space-y-1 sm:space-y-2">
+                                                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">My Commission %</span>
+                                                    <div className="relative">
+                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Percent className="w-4 h-4" /></div>
+                                                        <input
+                                                            title="My Commission %"
+                                                            placeholder="10"
+                                                            inputMode="decimal"
+                                                            disabled={!isEditingProfile}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            value={profileForm.commission_percentage ?? ''}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, commission_percentage: e.target.value.replace(/[^0-9.]/g, '') })}
+                                                        />
+                                                    </div>
+                                                    {rateError && <p className="text-[10px] font-black text-red-600 uppercase tracking-widest px-1">{rateError}</p>}
+                                                </div>
+
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">Cell Number</span>
                                                     <div className="relative">
                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Phone className="w-4 h-4" /></div>
@@ -921,14 +953,14 @@ export const EmployeeDashboard: React.FC = () => {
                                                             title="Cell Number"
                                                             placeholder="09xx-xxx-xxxx"
                                                             disabled={!isEditingProfile}
-                                                            className={`w-full pl-11 pr-4 py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
                                                             value={profileForm.phone}
                                                             onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">Professional Email</span>
                                                     <div className="relative">
                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Mail className="w-4 h-4" /></div>
@@ -937,7 +969,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                             placeholder="email@example.com"
                                                             type="email"
                                                             disabled={!isEditingProfile}
-                                                            className={`w-full pl-11 pr-4 py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
                                                             value={profileForm.contact_email}
                                                             onChange={(e) => setProfileForm({ ...profileForm, contact_email: e.target.value })}
                                                         />
@@ -947,23 +979,23 @@ export const EmployeeDashboard: React.FC = () => {
                                         </div>
 
                                         {/* Account & payment */}
-                                        <div className="bg-white border border-zinc-100 rounded-[1.5rem] p-5 lg:p-7 shadow-sm">
-                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-5">Account & Payout</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                <div className="space-y-2">
+                                        <div className="bg-white border border-zinc-100 rounded-2xl sm:rounded-[1.5rem] p-3.5 sm:p-5 lg:p-7 shadow-sm">
+                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-3 sm:mb-5">Account & Payout</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-5">
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">Username (login)</span>
                                                     <div className="relative">
-                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><User className="w-4 h-4" /></div>
+                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><User className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
                                                         <input
                                                             title="Username"
                                                             disabled
-                                                            className="w-full pl-11 pr-4 py-3.5 bg-zinc-100 border border-zinc-100 rounded-2xl outline-none font-bold text-sm text-zinc-400 cursor-not-allowed"
+                                                            className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 bg-zinc-100 border border-zinc-100 rounded-2xl outline-none font-bold text-sm text-zinc-400 cursor-not-allowed"
                                                             value={profileForm.email}
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
+                                                <div className="space-y-1 sm:space-y-2">
                                                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">GCash Number</span>
                                                     <div className="relative">
                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Wallet className="w-4 h-4" /></div>
@@ -971,7 +1003,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                             title="GCash Number"
                                                             placeholder="09xx-xxx-xxxx"
                                                             disabled={!isEditingProfile}
-                                                            className={`w-full pl-11 pr-4 py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
+                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
                                                             value={profileForm.gcash_number}
                                                             onChange={(e) => setProfileForm({ ...profileForm, gcash_number: e.target.value })}
                                                         />
@@ -982,13 +1014,13 @@ export const EmployeeDashboard: React.FC = () => {
                                     </div>
 
                                     {/* GCash QR */}
-                                    <div className="bg-white border border-zinc-100 rounded-[1.5rem] p-5 lg:p-7 shadow-sm self-start">
-                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-5">GCash QR Code</h4>
-                                        <div className="relative group aspect-square rounded-3xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden hover:border-black/30 transition-all">
+                                    <div className="bg-white border border-zinc-100 rounded-2xl sm:rounded-[1.5rem] p-3.5 sm:p-5 lg:p-7 shadow-sm self-start">
+                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.25em] mb-3 sm:mb-5">GCash QR Code</h4>
+                                        <div className="relative group aspect-square max-w-[9rem] sm:max-w-none mx-auto w-full rounded-2xl sm:rounded-3xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden hover:border-black/30 transition-all">
                                             {qrFile ? (
-                                                <img src={URL.createObjectURL(qrFile)} className="w-full h-full object-contain p-6" alt="" />
+                                                <img src={URL.createObjectURL(qrFile)} className="w-full h-full object-contain p-3 sm:p-6" alt="" />
                                             ) : profileForm.qr_code_url ? (
-                                                <img src={profileForm.qr_code_url} className="w-full h-full object-contain p-6" alt="" />
+                                                <img src={profileForm.qr_code_url} className="w-full h-full object-contain p-3 sm:p-6" alt="" />
                                             ) : (
                                                 <div className="text-center">
                                                     <QrCode className="w-8 h-8 text-zinc-200 mx-auto mb-2" />
@@ -1006,17 +1038,17 @@ export const EmployeeDashboard: React.FC = () => {
                                 </div>
 
                                 {isEditingProfile && (
-                                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
                                         <button
                                             onClick={() => setIsEditingProfile(false)}
-                                            className="px-10 py-4 border border-zinc-100 bg-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 transition-all text-zinc-400 hover:text-black"
+                                            className="px-10 py-3 sm:py-4 border border-zinc-100 bg-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 transition-all text-zinc-400 hover:text-black"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             onClick={handleProfileSave}
                                             disabled={profileSaving}
-                                            className="flex items-center justify-center gap-3 px-10 py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50"
+                                            className="flex items-center justify-center gap-3 px-10 py-3 sm:py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50"
                                         >
                                             {profileSaving ? (
                                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1031,98 +1063,117 @@ export const EmployeeDashboard: React.FC = () => {
                                 )}
                             </div>
                         </motion.div>
-                    ) : activeSection === 'terms' ? (
-                        <motion.div key="terms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                            {/* TERMS & POLICIES SECTION */}
-                            <div className="max-w-4xl mx-auto space-y-8">
-                                <div>
-                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">WebNegosyo</p>
-                                    <h2 className="text-2xl lg:text-3xl font-black tracking-tighter text-ink uppercase">Terms & Policies</h2>
-                                    <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Please read how commissions and records work</p>
-                                </div>
-
-                                {/* Quick facts */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
-                                    <div className="bg-ink text-white rounded-2xl p-5 shadow-xl">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Your Commission</p>
-                                        <p className="text-3xl font-black tracking-tighter tabular-nums mt-2">{workerRate}%</p>
-                                        <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 mt-2">Set by the owner for your role</p>
-                                    </div>
-                                    <div className="bg-white border border-zinc-100 rounded-2xl p-5 shadow-sm">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Payout Cycle</p>
-                                        <p className="text-3xl font-black tracking-tighter text-ink mt-2">2 Weeks</p>
-                                        <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Released every 2 weeks</p>
-                                    </div>
-                                    <div className="bg-white border border-zinc-100 rounded-2xl p-5 shadow-sm">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400">Earned When</p>
-                                        <p className="text-3xl font-black tracking-tighter text-green-600 mt-2">Fully Paid</p>
-                                        <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Project is completely paid</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                                    {[
-                                        {
-                                            icon: Wallet,
-                                            title: 'Commission & Payouts',
-                                            items: [
-                                                ['Bi-weekly release', 'Commissions for all WebNegosyo employees are released every 2 weeks.'],
-                                                ['When you earn', `Your commission (${workerRate}%) is earned and shown once a project is fully paid.`],
-                                                ['No commission', 'Cancelled projects and down-payment-only deals do not earn commission until fully paid.'],
-                                                ['Payout details', 'Keep your GCash number and QR code in My Profile up to date so payouts reach you.'],
-                                            ],
-                                        },
-                                        {
-                                            icon: Briefcase,
-                                            title: 'Deal Records',
-                                            items: [
-                                                ['Be accurate', 'Record client names, package values, down payments and payment status correctly.'],
-                                                ['Fix mistakes early', 'If a record is wrong, edit it right away so your commission is computed correctly.'],
-                                                ['No falsification', 'Falsifying or inflating records is grounds for immediate termination.'],
-                                            ],
-                                        },
-                                        {
-                                            icon: User,
-                                            title: 'Conduct & Confidentiality',
-                                            items: [
-                                                ['Client privacy', 'Protect client contact details and project information at all times.'],
-                                                ['Professionalism', 'Keep communication professional whenever you represent WebNegosyo.'],
-                                            ],
-                                        },
-                                        {
-                                            icon: Key,
-                                            title: 'Your Account',
-                                            items: [
-                                                ['Keep it private', 'Your login is personal. Do not share it with anyone.'],
-                                                ['Report issues', 'Tell the owner immediately if you notice wrong figures or suspicious activity.'],
-                                            ],
-                                        },
-                                    ].map(card => (
-                                        <div key={card.title} className="bg-white border border-zinc-100 rounded-[1.5rem] p-6 lg:p-8 shadow-sm space-y-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-ink rounded-xl flex items-center justify-center">
-                                                    <card.icon className="w-5 h-5 text-white" />
-                                                </div>
-                                                <h3 className="font-black text-xs uppercase tracking-widest text-ink">{card.title}</h3>
-                                            </div>
-                                            <ul className="space-y-3.5">
-                                                {card.items.map(([label, text]) => (
-                                                    <li key={label} className="flex gap-3 items-start">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-ink mt-1.5 shrink-0" />
-                                                        <p className="text-xs font-medium text-zinc-600 leading-relaxed">
-                                                            <span className="font-black text-ink uppercase tracking-tight">{label}: </span>{text}
-                                                        </p>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </motion.div>
                     ) : null}
                 </AnimatePresence>
             </div>
+
+            {/* Terms & Policies Modal (opened from the header) */}
+            <AnimatePresence>
+                {showTerms && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                            onClick={() => setShowTerms(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-2xl max-h-[88vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+                        >
+                            <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                                <div>
+                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">WebNegosyo</p>
+                                    <h2 className="text-lg font-black tracking-tighter text-ink uppercase">Terms & Policies</h2>
+                                </div>
+                                <button
+                                    onClick={() => setShowTerms(false)}
+                                    title="Close"
+                                    className="p-2 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-black transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto p-6 space-y-6">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-ink text-white rounded-2xl p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Commission</p>
+                                        <p className="text-2xl font-black tracking-tighter tabular-nums mt-1.5">{workerRate}%</p>
+                                    </div>
+                                    <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Payout</p>
+                                        <p className="text-lg font-black tracking-tighter text-ink mt-1.5 leading-tight">Every 2 weeks</p>
+                                    </div>
+                                    <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Earned when</p>
+                                        <p className="text-lg font-black tracking-tighter text-green-600 mt-1.5 leading-tight">Fully Paid</p>
+                                    </div>
+                                </div>
+
+                                {[
+                                    {
+                                        icon: Wallet,
+                                        title: 'Commission & Payouts',
+                                        items: [
+                                            ['Payout schedule', 'Commissions are released every 2 weeks.'],
+                                            ['When you earn', `You earn ${workerRate}% of the package value once a project is Fully Paid.`],
+                                            ['No commission', 'Down-payment-only and cancelled projects earn nothing until they are fully paid.'],
+                                            ['Payout details', 'Keep your GCash number and QR code in Edit Profile up to date. We cannot release a payout to wrong or missing details.'],
+                                        ],
+                                    },
+                                    {
+                                        icon: Briefcase,
+                                        title: 'Deals & Daily Audit',
+                                        items: [
+                                            ['Accurate records', 'Enter client names, package values, down payments and payment status correctly.'],
+                                            ['Daily Audit', 'Log every client you contacted in Client Records, then submit your Daily Audit at the end of each day.'],
+                                            ['Fix mistakes early', 'Edit a wrong record right away so your commission is computed correctly.'],
+                                            ['No falsification', 'Fake or inflated records or deals are grounds for immediate termination and forfeiture of unpaid commission.'],
+                                        ],
+                                    },
+                                    {
+                                        icon: User,
+                                        title: 'Conduct & Confidentiality',
+                                        items: [
+                                            ['Client privacy', 'Keep client contact details and project information confidential. Do not share or use them outside WebNegosyo.'],
+                                            ['Professionalism', 'Be honest and professional with every client. Do not make promises WebNegosyo has not approved.'],
+                                        ],
+                                    },
+                                    {
+                                        icon: Key,
+                                        title: 'Your Account',
+                                        items: [
+                                            ['Keep it private', 'Your login is personal. Do not share it with anyone.'],
+                                            ['Report issues', 'Tell the owner right away if you see wrong figures or suspicious activity on your account.'],
+                                        ],
+                                    },
+                                ].map(card => (
+                                    <div key={card.title} className="space-y-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 bg-ink rounded-lg flex items-center justify-center">
+                                                <card.icon className="w-4 h-4 text-white" />
+                                            </div>
+                                            <h3 className="font-black text-[11px] uppercase tracking-widest text-ink">{card.title}</h3>
+                                        </div>
+                                        <ul className="space-y-2.5 pl-1">
+                                            {card.items.map(([label, text]) => (
+                                                <li key={label} className="flex gap-3 items-start">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-ink mt-1.5 shrink-0" />
+                                                    <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                        <span className="font-black text-ink uppercase tracking-tight">{label}: </span>{text}
+                                                    </p>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Add Client Modal */}
             <AnimatePresence>

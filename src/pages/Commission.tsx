@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Percent, Save, CheckCircle2, Trash2 } from 'lucide-react';
+import { Save, CheckCircle2, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Worker {
@@ -16,7 +16,6 @@ const digitsOnly = (v: string) => v.replace(/[^0-9.]/g, '');
 export const CommissionPage: React.FC = () => {
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [loading, setLoading] = useState(true);
-    const [drafts, setDrafts] = useState<Record<string, string>>({});
     const [roleEdits, setRoleEdits] = useState<Record<string, string>>({});
     const [savingId, setSavingId] = useState<string | null>(null);
     const [savedId, setSavedId] = useState<string | null>(null);
@@ -74,24 +73,17 @@ export const CommissionPage: React.FC = () => {
     const rateOf = (w: Worker) => Number(w.commission_percentage ?? 10);
 
     const saveRow = async (w: Worker) => {
-        const pctStr = drafts[w.id] || String(rateOf(w));
-        const pct = Number(pctStr);
         const role = (roleEdits[w.id] ?? w.role ?? '').trim();
-        if (pctStr === '' || isNaN(pct) || pct < 0 || pct > 100) {
-            alert('Enter a percentage between 0 and 100.');
-            return;
-        }
         if (!role) {
             alert('Role cannot be empty.');
             return;
         }
         setSavingId(w.id);
         try {
-            const { data, error } = await supabase.from('workers').update({ commission_percentage: pct, role }).eq('id', w.id).select('id');
+            const { data, error } = await supabase.from('workers').update({ role }).eq('id', w.id).select('id');
             if (error) throw error;
             if (!data || data.length === 0) throw new Error('Not saved — no permission to update this person (check workers RLS policy).');
-            setWorkers(prev => prev.map(x => (x.id === w.id ? { ...x, commission_percentage: pct, role } : x)));
-            setDrafts(prev => { const n = { ...prev }; delete n[w.id]; return n; });
+            setWorkers(prev => prev.map(x => (x.id === w.id ? { ...x, role } : x)));
             setRoleEdits(prev => { const n = { ...prev }; delete n[w.id]; return n; });
             setSavedId(w.id);
             setTimeout(() => setSavedId(null), 2000);
@@ -120,16 +112,16 @@ export const CommissionPage: React.FC = () => {
     const livePrice = packagePrice !== '' ? Number(packagePrice) || 0 : Number(savedPrice) || 0;
 
     return (
-        <div className="space-y-5 animate-in fade-in duration-500">
+        <div className="space-y-3 sm:space-y-3 sm:space-y-5 animate-in fade-in duration-500">
             <div>
                 <h1 className="text-lg font-black tracking-tight text-black uppercase">Commission</h1>
                 <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-widest mt-1">
-                    New sign-ups appear here automatically. Set each employee's role and commission %. Employees only see their commission once a project is fully paid.
+                    New sign-ups appear here automatically. Set each employee's role. Employees enter their own commission %. Employees only see their commission once a project is fully paid.
                 </p>
             </div>
 
             {/* Package price */}
-            <div className="bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="bg-white border border-zinc-100 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1">
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Package Price</p>
                     <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest mt-0.5">Default package amount when employees add a client</p>
@@ -162,7 +154,63 @@ export const CommissionPage: React.FC = () => {
 
 
             {/* Per employee */}
-            <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm">
+            {/* Phone: compact cards instead of a wide table */}
+            <div className="md:hidden bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm divide-y divide-zinc-50">
+                {loading ? (
+                    <p className="px-3 py-8 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest">Loading...</p>
+                ) : workers.length === 0 ? (
+                    <p className="px-3 py-8 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest">No team members yet</p>
+                ) : workers.map(w => {
+                    const rate = rateOf(w);
+                    const roleDraft = roleEdits[w.id];
+                    const total = livePrice * rate / 100;
+                    const dirty = roleDraft !== undefined && roleDraft.trim() !== (w.role || '');
+                    return (
+                        <div key={w.id} className="px-3 py-2.5 space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-md bg-zinc-100 flex items-center justify-center text-[9px] font-black overflow-hidden shrink-0">
+                                    {w.photo_url ? <img src={w.photo_url} alt="" className="w-full h-full object-cover" /> : w.name?.charAt(0)}
+                                </div>
+                                <span className="flex-1 min-w-0 truncate text-[11px] font-black text-black">{w.name}</span>
+                                <span className="text-[11px] font-black text-green-600 tabular-nums">₱{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                <button
+                                    title="Delete person"
+                                    onClick={() => deleteWorker(w)}
+                                    className="p-1 rounded-md text-zinc-300 active:bg-red-50 active:text-red-500"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    title="Role"
+                                    placeholder="Role"
+                                    value={roleDraft ?? w.role ?? ''}
+                                    onChange={(e) => setRoleEdits(prev => ({ ...prev, [w.id]: e.target.value }))}
+                                    className="flex-1 min-w-0 px-2 py-1 bg-zinc-50 border border-zinc-200 rounded-md text-[9px] font-bold uppercase tracking-wider outline-none focus:border-black"
+                                />
+                                <span className="w-12 shrink-0 text-center text-[10px] font-black text-zinc-500 tabular-nums">{rate}%</span>
+                                {savedId === w.id ? (
+                                    <span className="inline-flex items-center gap-1 w-14 justify-center text-[8px] font-black uppercase tracking-widest text-emerald-600">
+                                        <CheckCircle2 className="w-3 h-3" /> Saved
+                                    </span>
+                                ) : (
+                                    <button
+                                        onClick={() => saveRow(w)}
+                                        disabled={!dirty || savingId === w.id}
+                                        className="inline-flex items-center justify-center gap-1 w-14 py-1 bg-black text-white rounded-md text-[8px] font-black uppercase tracking-widest disabled:opacity-20 active:scale-95 transition-all"
+                                    >
+                                        <Save className="w-2.5 h-2.5" /> Save
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="hidden md:block bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -181,12 +229,9 @@ export const CommissionPage: React.FC = () => {
                                 <tr><td colSpan={5} className="px-4 py-10 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest">No team members yet</td></tr>
                             ) : workers.map(w => {
                                 const rate = rateOf(w);
-                                const draft = drafts[w.id];
                                 const roleDraft = roleEdits[w.id];
-                                // Live: typed price / % apply immediately, falling back to the saved values
-                                const liveRate = draft ? Math.min(Number(draft) || 0, 100) : rate;
-                                const total = livePrice * liveRate / 100;
-                                const dirty = (!!draft && draft !== String(rate)) || (roleDraft !== undefined && roleDraft.trim() !== (w.role || ''));
+                                const total = livePrice * rate / 100;
+                                const dirty = roleDraft !== undefined && roleDraft.trim() !== (w.role || '');
                                 return (
                                     <tr key={w.id} className="hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-4 py-2.5">
@@ -208,18 +253,7 @@ export const CommissionPage: React.FC = () => {
                                             />
                                         </td>
                                         <td className="px-4 py-2.5">
-                                            <div className="relative w-20">
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    title="Commission percentage"
-                                                    placeholder={String(rate)}
-                                                    value={draft ?? ''}
-                                                    onChange={(e) => setDrafts(prev => ({ ...prev, [w.id]: digitsOnly(e.target.value) }))}
-                                                    className="w-full pl-2.5 pr-6 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-black outline-none focus:border-black"
-                                                />
-                                                <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-300" />
-                                            </div>
+                                            <span className="text-[11px] font-black text-zinc-500 tabular-nums">{rate}%</span>
                                         </td>
                                         <td className="px-4 py-2.5 text-right tabular-nums">
                                             <p className="text-[11px] font-black text-green-600">₱{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
