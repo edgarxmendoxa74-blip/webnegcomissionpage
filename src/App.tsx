@@ -24,8 +24,9 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center">
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-3">
         <LogoMark className="h-20 w-auto text-ink animate-pulse" />
+        <span className="text-xl font-extrabold tracking-tight text-ink">WebNegosyo</span>
       </div>
     );
   }

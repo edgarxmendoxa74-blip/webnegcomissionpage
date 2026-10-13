@@ -189,6 +189,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 <header className="h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] lg:h-16 lg:pt-0 px-4 sm:px-6 lg:px-12 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-2xl z-30 border-b border-zinc-200/60">
                     <div className="flex items-center gap-3 min-w-0">
                         <LogoMark className="lg:hidden h-6 w-auto shrink-0" />
+                        <span className="lg:hidden text-sm font-extrabold tracking-tight text-ink shrink-0">WebNegosyo</span>
                         <span className="lg:hidden w-px h-5 bg-zinc-200 shrink-0" />
                         <h1 className="text-sm lg:text-xl font-black tracking-tighter text-black uppercase truncate">{activeTab}</h1>
                     </div>

@@ -269,7 +269,8 @@ export const LoginPage: React.FC = () => {
                     </button>
 
                     <div className="text-center mb-10 pt-4">
-                        <LogoMark className="h-20 w-auto text-ink mx-auto mb-6" />
+                        <LogoMark className="h-20 w-auto text-ink mx-auto mb-3" />
+                        <p className="text-lg font-extrabold tracking-tight text-ink mb-5">WebNegosyo</p>
                         <h1 className="text-3xl font-extrabold tracking-tight text-ink mb-2">
                             {isRegistering ? 'Join Team' : portal === 'owner' ? 'Owner Login' : 'Agent Access'}
                         </h1>
