@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS public.audit_records (
     record_date DATE NOT NULL DEFAULT CURRENT_DATE,
     client_name TEXT NOT NULL,
     phone_number TEXT,
+    socials TEXT,
+    notes TEXT,
     status TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );

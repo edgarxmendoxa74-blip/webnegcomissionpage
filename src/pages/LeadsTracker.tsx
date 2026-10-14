@@ -9,6 +9,7 @@ import {
     Trash2,
     Search,
     ArrowLeft,
+    X,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -36,6 +37,13 @@ interface Lead {
     is_hidden: boolean;
     commission_rate?: number;
     created_at: string;
+    month?: string | null;
+    down_payment_date?: string | null;
+    full_payment?: number | null;
+    full_payment_date?: string | null;
+    paid_balance?: number | null;
+    paid_balance_date?: string | null;
+    proof_image_url?: string | null;
 }
 
 interface Worker {
@@ -54,6 +62,7 @@ export const LeadsTracker: React.FC = () => {
     const [showHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [checkedLeads, setCheckedLeads] = useState<Set<string>>(new Set());
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const toggleCheck = (id: string) => {
         setCheckedLeads(prev => {
@@ -220,6 +229,20 @@ export const LeadsTracker: React.FC = () => {
             console.error('Error toggling hide status:', err);
         }
     };
+
+    const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString() : '—');
+
+    const getCommission = (lead: Lead) =>
+        (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
+            ? lead.down_payment * 0.1
+            : lead.deal_value * (lead.commission_rate || 20) / 100;
+
+    const getBalance = (lead: Lead) =>
+        (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
+            ? lead.down_payment - (lead.down_payment * 0.1)
+            : lead.payment_status === 'Fully Paid'
+                ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
+                : lead.deal_value - lead.down_payment;
 
     const exportToCSV = () => {
         const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
@@ -406,16 +429,18 @@ export const LeadsTracker: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Month</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client Name</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev Assigned</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Package</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Downpayment</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Employee</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Down Payment</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Full Payment</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Paid Balance</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Tip</th>
-                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Total Balance</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Balance</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Commission</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Proof</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-center">Done</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Actions</th>
                             </tr>
@@ -424,12 +449,12 @@ export const LeadsTracker: React.FC = () => {
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={10} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
+                                        <td colSpan={14} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                     </tr>
                                 ))
                             ) : filteredLeads.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-8 py-20 text-center">
+                                    <td colSpan={14} className="px-8 py-20 text-center">
                                         <p className="text-zinc-400 font-bold text-sm">
                                             {searchQuery ? "No matching clients found" : "No records found"}
                                         </p>
@@ -448,20 +473,18 @@ export const LeadsTracker: React.FC = () => {
                                     lead.is_hidden && "opacity-40 grayscale"
                                 )}>
                                     <td className="px-2 py-1">
-                                        <div className={cn("font-bold text-[8px] uppercase tracking-widest", lead.payment_status ? "text-zinc-200" : "text-black")}>
-                                            {new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-1">
-                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-zinc-300" : "text-zinc-400")}>
-                                            {new Date(lead.created_at).toLocaleDateString()}
-                                        </div>
+                                        <div className="font-bold text-[8px] uppercase tracking-widest text-inherit whitespace-nowrap">{lead.worker?.name || 'Unknown'}</div>
                                     </td>
                                     <td className="px-2 py-1">
                                         <div className="font-bold text-[9px] text-inherit">{lead.client_name}</div>
-                                        <div className={cn("text-[7px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
-                                            {lead.contact_info}
+                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
+                                            {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })} · {new Date(lead.created_at).toLocaleDateString()}
                                         </div>
+                                        {lead.contact_info && (
+                                            <div className={cn("text-[7px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
+                                                {lead.contact_info}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-2 py-1">
                                         <div className="font-bold text-[8px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
@@ -473,21 +496,19 @@ export const LeadsTracker: React.FC = () => {
                                         <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-amber-600")}>
                                             ₱{Number(lead.down_payment).toLocaleString()}
                                         </div>
+                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>{fmtDate(lead.down_payment_date)}</div>
+                                    </td>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className="text-[8px] font-black tabular-nums text-inherit">₱{Number(lead.full_payment || 0).toLocaleString()}</div>
+                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>{fmtDate(lead.full_payment_date)}</div>
+                                    </td>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className="text-[8px] font-black tabular-nums text-inherit">₱{Number(lead.paid_balance || 0).toLocaleString()}</div>
+                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>{fmtDate(lead.paid_balance_date)}</div>
                                     </td>
                                     <td className="px-2 py-1 text-right">
                                         <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-blue-600")}>
                                             ₱{Number(lead.tip || 0).toLocaleString()}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-1 text-right">
-                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
-                                            ₱{Number(
-                                                (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
-                                                    ? lead.down_payment - (lead.down_payment * 0.1)
-                                                    : lead.payment_status === 'Fully Paid'
-                                                        ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
-                                                        : lead.deal_value - lead.down_payment
-                                            ).toLocaleString()}
                                         </div>
                                     </td>
                                     <td className="px-2 py-1">
@@ -521,9 +542,23 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
 
                                     <td className="px-2 py-1 text-right">
-                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
-                                            ₱{Number((lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') ? (lead.down_payment * 0.1) : (lead.deal_value * (lead.commission_rate || 20) / 100)).toLocaleString()}
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-red-600")}>
+                                            ₱{Number(getBalance(lead)).toLocaleString()}
                                         </div>
+                                    </td>
+                                    <td className="px-2 py-1 text-right">
+                                        <div className={cn("text-[8px] font-black tabular-nums", lead.payment_status ? "text-white" : "text-green-600")}>
+                                            ₱{Number(getCommission(lead)).toLocaleString()}
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                        {lead.proof_image_url ? (
+                                            <button type="button" onClick={() => setPreviewImage(lead.proof_image_url!)} title="View proof">
+                                                <img src={lead.proof_image_url} alt="Proof of payment" className="w-7 h-7 object-cover rounded-md border border-white/30 hover:scale-110 transition-transform" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-[8px] font-black text-inherit opacity-50">—</span>
+                                        )}
                                     </td>
                                     <td className="px-2 py-1 text-center">
                                         <button
@@ -573,30 +608,18 @@ export const LeadsTracker: React.FC = () => {
                             ))}
                             {filteredLeads.length > 0 && (
                                 <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
-                                    <td colSpan={6} className="px-2 py-2 text-right text-[7px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                    <td colSpan={7} className="px-2 py-2 text-right text-[7px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
                                     <td className="px-2 py-2 text-right text-[10px] text-blue-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
                                     </td>
+                                    <td></td>
                                     <td className="px-2 py-2 text-right text-[10px] text-red-600 tabular-nums">
-                                        ₱{filteredLeads.reduce((sum, lead) => {
-                                            const balance = (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
-                                                ? lead.down_payment - (lead.down_payment * 0.1)
-                                                : lead.payment_status === 'Fully Paid'
-                                                    ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
-                                                    : lead.deal_value - lead.down_payment;
-                                            return sum + (Number(balance) || 0);
-                                        }, 0).toLocaleString()}
+                                        ₱{filteredLeads.reduce((sum, lead) => sum + (Number(getBalance(lead)) || 0), 0).toLocaleString()}
                                     </td>
-                                    <td></td>
-                                    <td></td>
                                     <td className="px-2 py-2 text-right text-[10px] text-green-600 tabular-nums">
-                                        ₱{filteredLeads.reduce((sum, lead) => {
-                                            const commission = (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-                                                ? (lead.down_payment * 0.1)
-                                                : (lead.deal_value * (lead.commission_rate || 20) / 100);
-                                            return sum + (Number(commission) || 0);
-                                        }, 0).toLocaleString()}
+                                        ₱{filteredLeads.reduce((sum, lead) => sum + (Number(getCommission(lead)) || 0), 0).toLocaleString()}
                                     </td>
+                                    <td></td>
                                     <td></td>
                                     <td></td>
                                 </tr>
@@ -606,6 +629,27 @@ export const LeadsTracker: React.FC = () => {
                 </div>
             </div>
 
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <button
+                        type="button"
+                        title="Close"
+                        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                    <img
+                        src={previewImage}
+                        alt="Proof of payment"
+                        className="w-auto max-w-[65vw] sm:max-w-xs max-h-[40vh] sm:max-h-[50vh] object-contain rounded-xl shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div >
     );
 };

@@ -44,6 +44,12 @@ interface Lead {
     deal_value: number;
     down_payment: number;
     tip: number;
+    down_payment_date?: string | null;
+    full_payment?: number;
+    full_payment_date?: string | null;
+    paid_balance?: number;
+    paid_balance_date?: string | null;
+    proof_image_url?: string | null;
     worker_id: string;
     webdev_id?: string;
     is_hidden: boolean;
@@ -85,7 +91,15 @@ export const EmployeeDashboard: React.FC = () => {
         down_payment: 0,
         tip: 0,
         payment_status: 'Downpayment Only' as string,
+        down_payment_date: '',
+        full_payment: 0,
+        full_payment_date: '',
+        paid_balance: 0,
+        paid_balance_date: '',
+        proof_image_url: '',
     });
+    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     // Add client form state
     const [addForm, setAddForm] = useState({
@@ -100,7 +114,13 @@ export const EmployeeDashboard: React.FC = () => {
         payment_status: 'Downpayment Only' as string,
         commission_rate: 20,
         webdev_id: '',
+        down_payment_date: '',
+        full_payment: 0,
+        full_payment_date: '',
+        paid_balance: 0,
+        paid_balance_date: '',
     });
+    const [addProofFile, setAddProofFile] = useState<File | null>(null);
 
     // Profile form state
     const [profileForm, setProfileForm] = useState<ProfileData>({
@@ -213,7 +233,14 @@ export const EmployeeDashboard: React.FC = () => {
             down_payment: lead.down_payment,
             tip: lead.tip || 0,
             payment_status: lead.payment_status || 'Downpayment Only',
+            down_payment_date: lead.down_payment_date || '',
+            full_payment: Number(lead.full_payment || 0),
+            full_payment_date: lead.full_payment_date || '',
+            paid_balance: Number(lead.paid_balance || 0),
+            paid_balance_date: lead.paid_balance_date || '',
+            proof_image_url: lead.proof_image_url || '',
         });
+        setProofFile(null);
     };
 
     // Commission % is entered by the employee themselves (My Profile).
@@ -224,6 +251,8 @@ export const EmployeeDashboard: React.FC = () => {
         lead.payment_status === 'Fully Paid' ? Number(lead.deal_value) * workerRate / 100 : 0;
 
     const totalCommission = leads.reduce((sum, l) => sum + getCommission(l), 0);
+
+    const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString() : '—');
 
     const getBalance = (lead: Lead) => {
         if (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project') {
@@ -239,12 +268,19 @@ export const EmployeeDashboard: React.FC = () => {
         setIsSaving(true);
         try {
             const balance = editForm.deal_value - editForm.down_payment;
+            const proofUrl = proofFile ? await handleUpload(proofFile, 'payment-proofs') : (editForm.proof_image_url || null);
             const { error } = await supabase
                 .from('leads')
                 .update({
                     client_name: editForm.client_name,
                     deal_value: editForm.deal_value,
                     down_payment: editForm.down_payment,
+                    down_payment_date: editForm.down_payment_date || null,
+                    full_payment: editForm.full_payment,
+                    full_payment_date: editForm.full_payment_date || null,
+                    paid_balance: editForm.paid_balance,
+                    paid_balance_date: editForm.paid_balance_date || null,
+                    proof_image_url: proofUrl,
                     tip: editForm.tip,
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
@@ -260,6 +296,7 @@ export const EmployeeDashboard: React.FC = () => {
                 throw error;
             }
             setEditingId(null);
+            setProofFile(null);
             fetchLeads();
         } catch (err) {
             console.error('Error saving edit:', err);
@@ -275,6 +312,7 @@ export const EmployeeDashboard: React.FC = () => {
             const balance = addForm.deal_value - addForm.down_payment;
             // Use the manual date or today's time
             const createdAt = new Date(addForm.date).toISOString();
+            const proofUrl = addProofFile ? await handleUpload(addProofFile, 'payment-proofs') : null;
 
             const { error } = await supabase.from('leads').insert({
                 client_name: addForm.client_name,
@@ -282,6 +320,12 @@ export const EmployeeDashboard: React.FC = () => {
                 ad_source: addForm.ad_source,
                 deal_value: addForm.deal_value,
                 down_payment: addForm.down_payment,
+                down_payment_date: addForm.down_payment_date || null,
+                full_payment: addForm.full_payment,
+                full_payment_date: addForm.full_payment_date || null,
+                paid_balance: addForm.paid_balance,
+                paid_balance_date: addForm.paid_balance_date || null,
+                proof_image_url: proofUrl,
                 tip: addForm.tip,
                 payment_status: (addForm.payment_status === 'Cancelled Project' || addForm.payment_status === 'Downpayment Only')
                     ? addForm.payment_status
@@ -311,13 +355,26 @@ export const EmployeeDashboard: React.FC = () => {
                 payment_status: 'Downpayment Only',
                 commission_rate: workerRate,
                 webdev_id: profile?.assigned_webdev_id || '',
+                down_payment_date: '',
+                full_payment: 0,
+                full_payment_date: '',
+                paid_balance: 0,
+                paid_balance_date: '',
             });
+            setAddProofFile(null);
             fetchLeads();
         } catch (err) {
             console.error('Error adding client:', err);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const openAddModal = async () => {
+        const { data } = await supabase.from('app_settings').select('package_price').eq('id', 1).maybeSingle();
+        const price = Number(data?.package_price) || 0;
+        if (price) setAddForm(prev => ({ ...prev, deal_value: prev.deal_value || price }));
+        setShowAddModal(true);
     };
 
     const handleDeleteLead = async (id: string) => {
@@ -334,7 +391,8 @@ export const EmployeeDashboard: React.FC = () => {
     const handleDownloadCSV = () => {
         const headers = [
             'Month', 'Date', 'Client Name', 'Webdev', 'Package Avail',
-            'Down Payment', 'Tip', 'Payment Status', 'Balance', 'Commission'
+            'Down Payment', 'Down Payment Date', 'Full Payment', 'Full Payment Date',
+            'Paid Balance', 'Paid Balance Date', 'Tip', 'Payment Status', 'Balance', 'Commission'
         ];
 
         const csvData = filteredLeads.map(lead => {
@@ -347,6 +405,11 @@ export const EmployeeDashboard: React.FC = () => {
                 `"${lead.webdev?.name || 'Unassigned'}"`,
                 lead.deal_value,
                 lead.down_payment,
+                lead.down_payment_date || '',
+                lead.full_payment || 0,
+                lead.full_payment_date || '',
+                lead.paid_balance || 0,
+                lead.paid_balance_date || '',
                 lead.tip || 0,
                 lead.payment_status || 'Downpayment Only',
                 getBalance(lead),
@@ -534,13 +597,8 @@ export const EmployeeDashboard: React.FC = () => {
                                         <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Track your clients, payments and commissions</p>
                                     </div>
                                     <button
-                                        onClick={async () => {
-                                            const { data } = await supabase.from('app_settings').select('package_price').eq('id', 1).maybeSingle();
-                                            const price = Number(data?.package_price) || 0;
-                                            if (price) setAddForm(prev => ({ ...prev, deal_value: prev.deal_value || price }));
-                                            setShowAddModal(true);
-                                        }}
-                                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-ink text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
+                                        onClick={openAddModal}
+                                        className="hidden md:flex md:w-auto items-center justify-center gap-2 px-6 py-3.5 bg-ink text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
                                     >
                                         <Plus className="w-4 h-4" />
                                         Add Client
@@ -605,13 +663,25 @@ export const EmployeeDashboard: React.FC = () => {
                                             {statusFilter} <X className="w-3 h-3" />
                                         </button>
                                     )}
+                                    <div className="flex flex-col items-stretch md:items-center gap-1">
+                                        <button
+                                            onClick={handleDownloadCSV}
+                                            title="Please download only after 2 weeks"
+                                            className="flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-500 border border-orange-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-orange-600 transition-all active:scale-95"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            CSV
+                                        </button>
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-zinc-400 text-center">
+                                            Export CSV every 2 weeks only
+                                        </p>
+                                    </div>
                                     <button
-                                        onClick={handleDownloadCSV}
-                                        title="Please download only after 2 weeks"
-                                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-zinc-100 text-zinc-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 transition-all active:scale-95"
+                                        onClick={openAddModal}
+                                        className="md:hidden w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-ink text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95"
                                     >
-                                        <Download className="w-4 h-4" />
-                                        CSV
+                                        <Plus className="w-4 h-4" />
+                                        Add Client
                                     </button>
                                 </div>
 
@@ -625,10 +695,13 @@ export const EmployeeDashboard: React.FC = () => {
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Webdev</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Package</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Down Payment</th>
+                                                    <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Full Payment</th>
+                                                    <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Paid Balance</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Tip</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Status</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400 text-right">Balance</th>
                                                     <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-ink text-right">Commission</th>
+                                                    <th className="px-4 py-3 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Proof</th>
                                                     <th className="px-4 py-3" />
                                                 </tr>
                                             </thead>
@@ -636,12 +709,12 @@ export const EmployeeDashboard: React.FC = () => {
                                                 {loading ? (
                                                     [1, 2, 3].map(i => (
                                                         <tr key={i} className="animate-pulse">
-                                                            <td colSpan={9} className="px-6 py-8"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
+                                                            <td colSpan={12} className="px-6 py-8"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                                         </tr>
                                                     ))
                                                 ) : filteredLeads.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={9} className="px-6 py-20 text-center">
+                                                        <td colSpan={12} className="px-6 py-20 text-center">
                                                             <Briefcase className="w-10 h-10 mx-auto text-zinc-200 mb-3" />
                                                             <p className="text-zinc-500 font-black text-xs uppercase tracking-widest">
                                                                 {searchQuery || statusFilter !== 'all' ? 'No matching deals' : 'No deals yet'}
@@ -658,7 +731,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                         status === 'Fully Paid' ? 'bg-green-50 text-green-700 border-green-200' :
                                                             status === 'Cancelled Project' ? 'bg-red-50 text-red-600 border-red-200' :
                                                                 'bg-zinc-100 text-zinc-600 border-zinc-200';
-                                                    const inputCls = 'px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-ink transition-all text-black';
+                                                    const inputCls = 'px-1.5 py-1 sm:px-2 sm:py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold outline-none focus:border-ink transition-all text-black';
                                                     return (
                                                         <tr key={lead.id} className="group hover:bg-zinc-50/60 transition-colors">
                                                             <td className="px-4 py-3">
@@ -667,7 +740,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         type="text"
                                                                         title="Client Name"
                                                                         placeholder="Client name"
-                                                                        className={cn(inputCls, 'w-full min-w-[8rem]')}
+                                                                        className={cn(inputCls, 'w-full min-w-[6rem] sm:min-w-[8rem]')}
                                                                         value={editForm.client_name}
                                                                         onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
                                                                     />
@@ -689,7 +762,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         type="number"
                                                                         title="Package Value"
                                                                         placeholder="0"
-                                                                        className={cn(inputCls, 'w-24 text-right')}
+                                                                        className={cn(inputCls, 'w-16 sm:w-24 text-right')}
                                                                         value={editForm.deal_value || ''}
                                                                         onChange={(e) => setEditForm({ ...editForm, deal_value: Number(e.target.value) })}
                                                                     />
@@ -703,12 +776,73 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         type="number"
                                                                         title="Down Payment"
                                                                         placeholder="0"
-                                                                        className={cn(inputCls, 'w-24 text-right')}
+                                                                        className={cn(inputCls, 'w-16 sm:w-24 text-right')}
                                                                         value={editForm.down_payment || ''}
                                                                         onChange={(e) => setEditForm({ ...editForm, down_payment: Number(e.target.value) })}
                                                                     />
                                                                 ) : (
                                                                     <span className="text-[11px] font-bold tabular-nums text-zinc-500">₱{Number(lead.down_payment).toLocaleString()}</span>
+                                                                )}
+                                                                {editing ? (
+                                                                    <input
+                                                                        type="date"
+                                                                        title="Down Payment Date"
+                                                                        className={cn(inputCls, 'w-24 sm:w-32 mt-1')}
+                                                                        value={editForm.down_payment_date}
+                                                                        onChange={(e) => setEditForm({ ...editForm, down_payment_date: e.target.value })}
+                                                                    />
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{fmtDate(lead.down_payment_date)}</p>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                {editing ? (
+                                                                    <input
+                                                                        type="number"
+                                                                        title="Full Payment"
+                                                                        placeholder="0"
+                                                                        className={cn(inputCls, 'w-16 sm:w-24 text-right')}
+                                                                        value={editForm.full_payment || ''}
+                                                                        onChange={(e) => setEditForm({ ...editForm, full_payment: Number(e.target.value) })}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-[11px] font-bold tabular-nums text-zinc-500">₱{Number(lead.full_payment || 0).toLocaleString()}</span>
+                                                                )}
+                                                                {editing ? (
+                                                                    <input
+                                                                        type="date"
+                                                                        title="Full Payment Date"
+                                                                        className={cn(inputCls, 'w-24 sm:w-32 mt-1')}
+                                                                        value={editForm.full_payment_date}
+                                                                        onChange={(e) => setEditForm({ ...editForm, full_payment_date: e.target.value })}
+                                                                    />
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{fmtDate(lead.full_payment_date)}</p>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                {editing ? (
+                                                                    <input
+                                                                        type="number"
+                                                                        title="Paid Balance"
+                                                                        placeholder="0"
+                                                                        className={cn(inputCls, 'w-16 sm:w-24 text-right')}
+                                                                        value={editForm.paid_balance || ''}
+                                                                        onChange={(e) => setEditForm({ ...editForm, paid_balance: Number(e.target.value) })}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-[11px] font-bold tabular-nums text-zinc-500">₱{Number(lead.paid_balance || 0).toLocaleString()}</span>
+                                                                )}
+                                                                {editing ? (
+                                                                    <input
+                                                                        type="date"
+                                                                        title="Paid Balance Date"
+                                                                        className={cn(inputCls, 'w-24 sm:w-32 mt-1')}
+                                                                        value={editForm.paid_balance_date}
+                                                                        onChange={(e) => setEditForm({ ...editForm, paid_balance_date: e.target.value })}
+                                                                    />
+                                                                ) : (
+                                                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{fmtDate(lead.paid_balance_date)}</p>
                                                                 )}
                                                             </td>
                                                             <td className="px-4 py-3 text-right">
@@ -717,7 +851,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                                         type="number"
                                                                         title="Tip"
                                                                         placeholder="0"
-                                                                        className={cn(inputCls, 'w-20 text-right')}
+                                                                        className={cn(inputCls, 'w-14 sm:w-20 text-right')}
                                                                         value={editForm.tip || ''}
                                                                         onChange={(e) => setEditForm({ ...editForm, tip: Number(e.target.value) })}
                                                                     />
@@ -757,6 +891,28 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 <span className={cn('text-[11px] font-black tabular-nums', status === 'Fully Paid' ? 'text-green-600' : 'text-zinc-300')}>
                                                                     {status === 'Fully Paid' ? `₱${getCommission(lead).toLocaleString()}` : '—'}
                                                                 </span>
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                {editing ? (
+                                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                                        <span className="px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:border-ink transition-all whitespace-nowrap">
+                                                                            {proofFile ? proofFile.name.slice(0, 14) : (editForm.proof_image_url ? 'Replace' : 'Upload')}
+                                                                        </span>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            title="Upload proof of payment"
+                                                                            className="hidden"
+                                                                            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                                                        />
+                                                                    </label>
+                                                                ) : lead.proof_image_url ? (
+                                                                    <button type="button" onClick={() => setPreviewImage(lead.proof_image_url!)} title="View proof">
+                                                                        <img src={lead.proof_image_url} alt="Proof of payment" className="w-10 h-10 object-cover rounded-lg border border-zinc-200 hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-[11px] font-black text-zinc-300">—</span>
+                                                                )}
                                                             </td>
                                                             <td className="px-4 py-3 text-right">
                                                                 <div className="flex items-center justify-end gap-1">
@@ -1070,7 +1226,7 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Terms & Policies Modal (opened from the header) */}
             <AnimatePresence>
                 {showTerms && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4">
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="absolute inset-0 bg-black/70 backdrop-blur-md"
@@ -1080,12 +1236,12 @@ export const EmployeeDashboard: React.FC = () => {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-2xl max-h-[88vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+                            className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
                         >
-                            <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                            <div className="px-4 py-3.5 sm:px-6 sm:py-5 border-b border-zinc-100 flex items-center justify-between shrink-0">
                                 <div>
                                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">WebNegosyo</p>
-                                    <h2 className="text-lg font-black tracking-tighter text-ink uppercase">Terms & Policies</h2>
+                                    <h2 className="text-base sm:text-lg font-black tracking-tighter text-ink uppercase">Terms & Policies</h2>
                                 </div>
                                 <button
                                     onClick={() => setShowTerms(false)}
@@ -1096,19 +1252,19 @@ export const EmployeeDashboard: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="overflow-y-auto p-6 space-y-6">
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-ink text-white rounded-2xl p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Commission</p>
-                                        <p className="text-2xl font-black tracking-tighter tabular-nums mt-1.5">{workerRate}%</p>
+                            <div className="overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-5 sm:space-y-6">
+                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                    <div className="bg-ink text-white rounded-xl sm:rounded-2xl p-2.5 sm:p-4 min-w-0">
+                                        <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Commission</p>
+                                        <p className="text-xl sm:text-2xl font-black tracking-tighter tabular-nums mt-1.5">{workerRate}%</p>
                                     </div>
-                                    <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Payout</p>
-                                        <p className="text-lg font-black tracking-tighter text-ink mt-1.5 leading-tight">Every 2 weeks</p>
+                                    <div className="bg-zinc-50 border border-zinc-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 min-w-0">
+                                        <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Payout</p>
+                                        <p className="text-xs sm:text-lg font-black tracking-tighter text-ink mt-1.5 leading-tight">Every 2 weeks</p>
                                     </div>
-                                    <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Earned when</p>
-                                        <p className="text-lg font-black tracking-tighter text-green-600 mt-1.5 leading-tight">Fully Paid</p>
+                                    <div className="bg-zinc-50 border border-zinc-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 min-w-0">
+                                        <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Earned when</p>
+                                        <p className="text-xs sm:text-lg font-black tracking-tighter text-green-600 mt-1.5 leading-tight">Fully Paid</p>
                                     </div>
                                 </div>
 
@@ -1152,16 +1308,16 @@ export const EmployeeDashboard: React.FC = () => {
                                 ].map(card => (
                                     <div key={card.title} className="space-y-3">
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 bg-ink rounded-lg flex items-center justify-center">
+                                            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-ink rounded-lg flex items-center justify-center">
                                                 <card.icon className="w-4 h-4 text-white" />
                                             </div>
-                                            <h3 className="font-black text-[11px] uppercase tracking-widest text-ink">{card.title}</h3>
+                                            <h3 className="font-black text-[10px] sm:text-[11px] uppercase tracking-widest text-ink">{card.title}</h3>
                                         </div>
                                         <ul className="space-y-2.5 pl-1">
                                             {card.items.map(([label, text]) => (
-                                                <li key={label} className="flex gap-3 items-start">
+                                                <li key={label} className="flex gap-2.5 sm:gap-3 items-start">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-ink mt-1.5 shrink-0" />
-                                                    <p className="text-xs font-medium text-zinc-600 leading-relaxed">
+                                                    <p className="text-[11px] sm:text-xs font-medium break-words min-w-0 text-zinc-600 leading-relaxed">
                                                         <span className="font-black text-ink uppercase tracking-tight">{label}: </span>{text}
                                                     </p>
                                                 </li>
@@ -1177,6 +1333,28 @@ export const EmployeeDashboard: React.FC = () => {
 
             {/* Add Client Modal */}
             <AnimatePresence>
+                {previewImage && (
+                    <div
+                        className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <button
+                            type="button"
+                            title="Close"
+                            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full"
+                            onClick={() => setPreviewImage(null)}
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <img
+                            src={previewImage}
+                            alt="Proof of payment"
+                            className="w-auto max-w-[65vw] sm:max-w-xs max-h-[40vh] sm:max-h-[50vh] object-contain rounded-xl shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                )}
+
                 {showAddModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                         <motion.div
@@ -1190,9 +1368,9 @@ export const EmployeeDashboard: React.FC = () => {
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
                             className="relative w-full max-w-xl bg-white rounded-[2rem] lg:rounded-[3rem] shadow-2xl overflow-hidden"
                         >
-                            <div className="p-6 lg:p-10 border-b border-zinc-50 flex items-center justify-between">
+                            <div className="p-4 lg:p-10 border-b border-zinc-50 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-xl lg:text-2xl font-black tracking-tighter uppercase italic text-black">New Client Record</h2>
+                                    <h2 className="text-base lg:text-2xl font-black tracking-tighter uppercase italic text-black">New Client Record</h2>
                                     <p className="text-[9px] lg:text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-1">Complete all details for the client deal</p>
                                 </div>
                                 <button title="Close" onClick={() => setShowAddModal(false)} className="p-3 hover:bg-zinc-50 rounded-2xl transition-colors">
@@ -1200,13 +1378,13 @@ export const EmployeeDashboard: React.FC = () => {
                                 </button>
                             </div>
 
-                            <form onSubmit={handleAddClient} className="p-6 lg:p-10 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
+                            <form onSubmit={handleAddClient} className="p-4 lg:p-10 space-y-3 lg:space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-6">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Month</span>
                                         <select
                                             title="Month"
-                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all appearance-none"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all appearance-none"
                                             value={addForm.month}
                                             onChange={(e) => setAddForm({ ...addForm, month: e.target.value })}
                                         >
@@ -1215,13 +1393,13 @@ export const EmployeeDashboard: React.FC = () => {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Date Selection</span>
                                         <input
                                             type="date"
                                             required
                                             title="Date"
-                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
                                             value={addForm.date}
                                             onChange={(e) => {
                                                 const d = new Date(e.target.value);
@@ -1235,20 +1413,20 @@ export const EmployeeDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-1 lg:space-y-2">
                                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Client Name</span>
                                     <input
                                         required
                                         title="Client Name"
                                         placeholder="Full Name of the client"
-                                        className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                        className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
                                         value={addForm.client_name}
                                         onChange={(e) => setAddForm({ ...addForm, client_name: e.target.value })}
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-6">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Package Avail (₱)</span>
                                         <input
                                             type="text"
@@ -1256,7 +1434,7 @@ export const EmployeeDashboard: React.FC = () => {
                                             required
                                             title="Package Value"
                                             placeholder="0"
-                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
                                             value={addForm.deal_value || ''}
                                             onChange={(e) => {
                                                 const deal_value = Number(e.target.value.replace(/[^0-9]/g, ""));
@@ -1264,14 +1442,14 @@ export const EmployeeDashboard: React.FC = () => {
                                             }}
                                         />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Down Payment (₱)</span>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             title="Down Payment"
                                             placeholder="0"
-                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
                                             value={addForm.down_payment || ''}
                                             onChange={(e) => {
                                                 const down_payment = Number(e.target.value.replace(/[^0-9]/g, ""));
@@ -1279,28 +1457,28 @@ export const EmployeeDashboard: React.FC = () => {
                                             }}
                                         />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Tip (₱)</span>
                                         <input
                                             type="text"
                                             inputMode="numeric"
                                             title="Tip"
                                             placeholder="0"
-                                            className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-sm transition-all"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
                                             value={addForm.tip || ''}
                                             onChange={(e) => setAddForm({ ...addForm, tip: Number(e.target.value.replace(/[^0-9]/g, "")) })}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-6">
+                                    <div className="space-y-1 lg:space-y-2">
                                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2 text-red-500">
                                             {(addForm.payment_status === 'Downpayment Only' || addForm.payment_status === 'Cancelled Project')
                                                 ? 'Remaining (Net Share)'
                                                 : 'Balance/Natira (₱)'}
                                         </span>
-                                        <div className="w-full px-6 py-4 bg-red-50 border border-red-100 rounded-2xl font-black text-sm text-red-600 tabular-nums">
+                                        <div className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-red-50 border border-red-100 rounded-2xl font-black text-xs lg:text-sm text-red-600 tabular-nums">
                                             ₱{Number(
                                                 (addForm.payment_status === 'Downpayment Only' || addForm.payment_status === 'Cancelled Project')
                                                     ? (addForm.down_payment - (addForm.down_payment * 0.1))
@@ -1309,22 +1487,22 @@ export const EmployeeDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     {(addForm.payment_status === 'Fully Paid' || (addForm.deal_value - addForm.down_payment <= 0 && addForm.payment_status !== 'Cancelled Project' && addForm.payment_status !== 'Downpayment Only')) && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-1 lg:space-y-2">
                                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2 text-green-600">
                                                 Comission
                                             </span>
-                                            <div className="w-full px-6 py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-sm text-green-600 tabular-nums">
+                                            <div className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-xs lg:text-sm text-green-600 tabular-nums">
                                                 ₱{(addForm.deal_value * workerRate / 100).toLocaleString()}
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-1 lg:space-y-2">
                                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Payment Status</span>
                                     <select
                                         title="Payment Status"
-                                        className="w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs uppercase tracking-widest transition-all appearance-none"
+                                        className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs uppercase tracking-widest transition-all appearance-none"
                                         value={addForm.payment_status}
                                         onChange={(e) => setAddForm({ ...addForm, payment_status: e.target.value, commission_rate: workerRate })}
                                     >
@@ -1334,18 +1512,89 @@ export const EmployeeDashboard: React.FC = () => {
                                     </select>
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-6">
+                                    <div className="space-y-1 lg:space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Down Payment Date</span>
+                                        <input
+                                            type="date"
+                                            title="Down Payment Date"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
+                                            value={addForm.down_payment_date}
+                                            onChange={(e) => setAddForm({ ...addForm, down_payment_date: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1 lg:space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Full Payment (₱)</span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            title="Full Payment"
+                                            placeholder="0"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
+                                            value={addForm.full_payment || ''}
+                                            onChange={(e) => setAddForm({ ...addForm, full_payment: Number(e.target.value.replace(/[^0-9]/g, "")) })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1 lg:space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Full Payment Date</span>
+                                        <input
+                                            type="date"
+                                            title="Full Payment Date"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
+                                            value={addForm.full_payment_date}
+                                            onChange={(e) => setAddForm({ ...addForm, full_payment_date: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1 lg:space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Paid Balance (₱)</span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            title="Paid Balance"
+                                            placeholder="0"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
+                                            value={addForm.paid_balance || ''}
+                                            onChange={(e) => setAddForm({ ...addForm, paid_balance: Number(e.target.value.replace(/[^0-9]/g, "")) })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1 lg:space-y-2">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Paid Balance Date</span>
+                                        <input
+                                            type="date"
+                                            title="Paid Balance Date"
+                                            className="w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all"
+                                            value={addForm.paid_balance_date}
+                                            onChange={(e) => setAddForm({ ...addForm, paid_balance_date: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1 lg:space-y-2">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Proof of Payment (Image)</span>
+                                    <label className="flex items-center gap-4 w-full px-4 py-2.5 lg:px-6 lg:py-4 bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl cursor-pointer hover:border-black transition-all">
+                                        <span className="text-xs font-bold text-zinc-500 truncate">{addProofFile ? addProofFile.name : 'Choose image to upload'}</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            title="Upload proof of payment"
+                                            className="hidden"
+                                            onChange={(e) => setAddProofFile(e.target.files?.[0] || null)}
+                                        />
+                                    </label>
+                                </div>
+
+                                <div className="flex gap-3 pt-2 lg:gap-4 lg:pt-4">
                                     <button
                                         type="button"
                                         onClick={() => setShowAddModal(false)}
-                                        className="flex-1 py-4 border border-zinc-100 rounded-2xl font-bold text-zinc-400 hover:text-black hover:bg-zinc-50 transition-all uppercase tracking-widest text-[10px]"
+                                        className="flex-1 py-2.5 lg:py-4 border border-zinc-100 rounded-2xl font-bold text-zinc-400 hover:text-black hover:bg-zinc-50 transition-all uppercase tracking-widest text-[10px]"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isSaving}
-                                        className="flex-[2] py-4 bg-black text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-widest text-[10px]"
+                                        className="flex-[2] py-2.5 lg:py-4 bg-black text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-widest text-[10px]"
                                     >
                                         {isSaving ? (
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

@@ -61,15 +61,15 @@ const navItems = [
     { icon: Target, label: 'Master List', short: 'Leads' },
     { icon: Users, label: 'Manage Team', short: 'Team' },
     { icon: Banknote, label: 'Receipts', short: 'Receipts' },
+    { icon: ClipboardList, label: 'Daily Audit', short: 'Audit' },
     { icon: Percent, label: 'Commission', short: 'Commission' },
     { icon: Eye, label: 'Monitoring', short: 'Monitoring' },
-    { icon: ClipboardList, label: 'Daily Audit', short: 'Audit' },
     { icon: Wallet, label: 'Expenses', short: 'Expenses' },
     { icon: TrendingUp, label: 'Sales', short: 'Sales' },
 ];
 
 // The phone tab bar shows the everyday tabs; everything else lives under "More".
-const primaryLabels = ['Master List', 'Receipts', 'Commission'];
+const primaryLabels = ['Master List', 'Receipts', 'Daily Audit'];
 const primaryItems = navItems.filter((n) => primaryLabels.includes(n.label));
 const moreItems = navItems.filter((n) => !primaryLabels.includes(n.label));
 

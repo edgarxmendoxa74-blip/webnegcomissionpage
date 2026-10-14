@@ -141,16 +141,16 @@ export const MasterAuditPanel: React.FC = () => {
             </div>
 
             {/* Status cards only matter once employees' reports exist */}
-            <div className={reports.length === 0 ? 'hidden' : 'grid grid-cols-3 gap-2'}>
+            <div className={reports.length === 0 ? 'hidden' : 'grid grid-cols-3 gap-1.5 sm:gap-2'}>
                 {STATUSES.map(s => (
                     <button
                         key={s}
                         type="button"
                         onClick={() => setFilter(f => (f === s ? 'All' : s))}
-                        className={`p-3 rounded-2xl border text-left transition-all active:scale-95 ${filter === s ? 'border-ink bg-white shadow-md' : 'border-zinc-100 bg-white'}`}
+                        className={`px-2.5 py-1.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all active:scale-95 ${filter === s ? 'border-ink bg-white shadow-md' : 'border-zinc-100 bg-white'}`}
                     >
-                        <p className="text-xl font-black text-black tabular-nums">{counts[s]}</p>
-                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{s}</p>
+                        <p className="text-sm sm:text-xl font-black text-black tabular-nums leading-tight">{counts[s]}</p>
+                        <p className="text-[7px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-wide sm:tracking-widest">{s}</p>
                     </button>
                 ))}
             </div>
@@ -212,7 +212,7 @@ export const MasterAuditPanel: React.FC = () => {
                                                 value={r.status}
                                                 disabled={savingId === r.id}
                                                 onChange={(e) => setStatus(r.id, e.target.value as DailyAuditRow['status'])}
-                                                className={`h-9 px-4 rounded-full border font-black uppercase tracking-widest text-[9px] outline-none cursor-pointer disabled:opacity-50 ${AUDIT_STATUS_STYLE[r.status]}`}
+                                                className={`h-7 sm:h-9 px-2.5 sm:px-4 rounded-full border font-black uppercase tracking-wide sm:tracking-widest text-[8px] sm:text-[9px] w-fit outline-none cursor-pointer disabled:opacity-50 ${AUDIT_STATUS_STYLE[r.status]}`}
                                             >
                                                 {STATUSES.map(s => <option key={s} value={s} className="bg-white text-black">{s}</option>)}
                                             </select>
@@ -230,32 +230,37 @@ export const MasterAuditPanel: React.FC = () => {
                                     </p>
                                 )}
 
-                                <div className="p-4">
+                                <div className="p-3 sm:p-4">
                                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">
                                         Client records · {g.records.length}
                                     </p>
                                     {g.records.length === 0 ? (
                                         <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">No client records</p>
                                     ) : (
-                                        <div className="overflow-x-auto">
+                                        <div className="overflow-x-auto scrollbar-hide -mx-1">
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
-                                                    <tr className="border-b border-zinc-100">
-                                                        <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
-                                                        <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Phone Number</th>
-                                                        <th className="py-2 pr-4 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Socials</th>
-                                                        <th className="py-2 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                                    <tr className="bg-zinc-50/50 border-b border-zinc-100">
+                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
+                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Phone</th>
+                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Socials</th>
+                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Notes</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-zinc-50">
                                                     {g.records.map(rec => (
                                                         <tr key={rec.id}>
-                                                            <td className="py-2 pr-4 text-[11px] font-black text-black">{rec.client_name}</td>
-                                                            <td className="py-2 pr-4 text-[11px] font-bold text-zinc-600 tabular-nums">{rec.phone_number || '—'}</td>
-                                                            <td className="py-2 pr-4 text-[11px] font-bold text-zinc-600">{rec.socials || '—'}</td>
-                                                            <td className="py-2">
-                                                                <span className="px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-600 text-[8px] font-black uppercase tracking-widest whitespace-nowrap">{rec.status}</span>
+                                                            <td className="px-2 py-1">
+                                                                <div className="font-bold text-[9px] text-black break-words">{rec.client_name}</div>
+                                                                <div className="text-[7px] font-medium uppercase tracking-widest text-zinc-400 tabular-nums">{new Date(`${rec.record_date}T00:00:00`).toLocaleDateString()}</div>
                                                             </td>
+                                                            <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 tabular-nums whitespace-nowrap">{rec.phone_number || '—'}</td>
+                                                            <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 max-w-[5rem] break-words">{rec.socials || '—'}</td>
+                                                            <td className="px-2 py-1">
+                                                                <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-[7px] font-black uppercase tracking-widest whitespace-nowrap">{rec.status}</span>
+                                                            </td>
+                                                            <td className="px-2 py-1 text-[8px] font-medium text-zinc-500 min-w-[5rem] max-w-[10rem] whitespace-pre-wrap break-words">{rec.notes || '—'}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
