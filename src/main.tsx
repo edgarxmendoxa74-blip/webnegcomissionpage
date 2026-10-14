@@ -3,8 +3,21 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Show crashes on screen instead of a blank white page (helps debugging on devices)
+const showFatal = (msg: string) => {
+  const root = document.getElementById('root');
+  if (root && !root.hasChildNodes()) {
+    root.innerHTML = '<pre style="padding:16px;white-space:pre-wrap;font-size:12px;color:#b91c1c">App error:\n' + msg.replace(/</g, '&lt;') + '</pre>';
+  }
+};
+window.addEventListener('error', (e) => showFatal(String(e.message)));
+window.addEventListener('unhandledrejection', (e) => showFatal(String(e.reason)));
+
+// Service worker is for the web/PWA only; inside the Capacitor app it can serve stale assets
+const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+
 // Enhanced PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !isNative) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register(`${import.meta.env.BASE_URL}sw.js`)
