@@ -20,12 +20,12 @@ import {
     Handshake,
     ClipboardList,
     ScrollText,
-    Percent,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
+import { downloadCsv } from '../lib/csv';
 import { useAuth } from '../contexts/AuthContext';
 import { EmployeeDailyAudit } from '../components/EmployeeDailyAudit';
 import { LogoMark } from '../components/Logo';
@@ -97,6 +97,7 @@ export const EmployeeDashboard: React.FC = () => {
         paid_balance: 0,
         paid_balance_date: '',
         proof_image_url: '',
+        commission_rate: 10,
     });
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -134,8 +135,7 @@ export const EmployeeDashboard: React.FC = () => {
         contact_email: '',
         commission_percentage: '10',
     });
-    const [savedRate, setSavedRate] = useState<number | null>(null);
-    const [rateError, setRateError] = useState<string | null>(null);
+    const savedRate: number | null = null;
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [qrFile, setQrFile] = useState<File | null>(null);
     const [profileSaving, setProfileSaving] = useState(false);
@@ -203,8 +203,7 @@ export const EmployeeDashboard: React.FC = () => {
             const { error } = await supabase
                 .from('leads')
                 .update({
-                    payment_status: newStatus,
-                    commission_rate: workerRate
+                    payment_status: newStatus
                 })
                 .eq('id', id);
             if (error) throw error;
@@ -239,6 +238,7 @@ export const EmployeeDashboard: React.FC = () => {
             paid_balance: Number(lead.paid_balance || 0),
             paid_balance_date: lead.paid_balance_date || '',
             proof_image_url: lead.proof_image_url || '',
+            commission_rate: Number(lead.commission_rate ?? workerRate),
         });
         setProofFile(null);
     };
@@ -247,8 +247,9 @@ export const EmployeeDashboard: React.FC = () => {
     const workerRate = savedRate ?? Number(profile?.commission_percentage ?? 10);
 
     // Commission is only earned (and visible) once a project is fully paid.
-    const getCommission = (lead: { payment_status?: string; deal_value: number }) =>
-        lead.payment_status === 'Fully Paid' ? Number(lead.deal_value) * workerRate / 100 : 0;
+    // Each deal can carry its own commission % (editable in the deal row); falls back to the profile %.
+    const getCommission = (lead: { payment_status?: string; deal_value: number; commission_rate?: number | null }) =>
+        lead.payment_status === 'Fully Paid' ? Number(lead.deal_value) * Number(lead.commission_rate ?? workerRate) / 100 : 0;
 
     const totalCommission = leads.reduce((sum, l) => sum + getCommission(l), 0);
 
@@ -285,7 +286,7 @@ export const EmployeeDashboard: React.FC = () => {
                     payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
                         ? editForm.payment_status
                         : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
-                    commission_rate: workerRate,
+                    commission_rate: Math.min(100, Math.max(0, Number(editForm.commission_rate) || 0)),
                     status: 'closed',
                     closed_at: new Date().toISOString(),
                 })
@@ -395,40 +396,25 @@ export const EmployeeDashboard: React.FC = () => {
             'Paid Balance', 'Paid Balance Date', 'Tip', 'Payment Status', 'Balance', 'Commission'
         ];
 
-        const csvData = filteredLeads.map(lead => {
-            const commission = getCommission(lead);
+        const csvData = filteredLeads.map(lead => [
+            lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' }),
+            new Date(lead.created_at).toLocaleDateString(),
+            lead.client_name,
+            lead.webdev?.name || 'Unassigned',
+            lead.deal_value,
+            lead.down_payment,
+            lead.down_payment_date || '',
+            lead.full_payment || 0,
+            lead.full_payment_date || '',
+            lead.paid_balance || 0,
+            lead.paid_balance_date || '',
+            lead.tip || 0,
+            lead.payment_status || 'Downpayment Only',
+            getBalance(lead),
+            getCommission(lead)
+        ]);
 
-            return [
-                lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' }),
-                new Date(lead.created_at).toLocaleDateString(),
-                `"${lead.client_name}"`,
-                `"${lead.webdev?.name || 'Unassigned'}"`,
-                lead.deal_value,
-                lead.down_payment,
-                lead.down_payment_date || '',
-                lead.full_payment || 0,
-                lead.full_payment_date || '',
-                lead.paid_balance || 0,
-                lead.paid_balance_date || '',
-                lead.tip || 0,
-                lead.payment_status || 'Downpayment Only',
-                getBalance(lead),
-                commission
-            ].join(',');
-        });
-
-        const csvString = [headers.join(','), ...csvData].join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', 'client_deals.csv');
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        downloadCsv(`client_deals_${new Date().toISOString().split('T')[0]}.csv`, [headers, ...csvData]);
     };
 
     const handleUpload = async (file: File, path: string) => {
@@ -443,12 +429,6 @@ export const EmployeeDashboard: React.FC = () => {
 
     const handleProfileSave = async () => {
         if (!profile?.id) return;
-        const pct = Number(profileForm.commission_percentage);
-        if (profileForm.commission_percentage === '' || isNaN(pct) || pct < 0 || pct > 100) {
-            setRateError('Enter a commission between 0 and 100.');
-            return;
-        }
-        setRateError(null);
         setProfileSaving(true);
         try {
             let photo_url = profileForm.photo_url;
@@ -467,12 +447,10 @@ export const EmployeeDashboard: React.FC = () => {
                     photo_url,
                     qr_code_url,
                     contact_email: profileForm.contact_email,
-                    commission_percentage: pct,
                 })
                 .eq('id', profile.id);
 
             if (error) throw error;
-            setSavedRate(pct);
             setProfileSuccess(true);
             setIsEditingProfile(false);
             setTimeout(() => setProfileSuccess(false), 3000);
@@ -888,9 +866,28 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 <span className="text-[11px] font-black tabular-nums text-zinc-600">₱{Math.abs(getBalance(lead)).toLocaleString()}</span>
                                                             </td>
                                                             <td className="px-4 py-3 text-right">
-                                                                <span className={cn('text-[11px] font-black tabular-nums', status === 'Fully Paid' ? 'text-green-600' : 'text-zinc-300')}>
-                                                                    {status === 'Fully Paid' ? `₱${getCommission(lead).toLocaleString()}` : '—'}
-                                                                </span>
+                                                                {editing ? (
+                                                                    <div className="flex items-center justify-end gap-1">
+                                                                        <input
+                                                                            type="number"
+                                                                            title="Commission %"
+                                                                            placeholder="0"
+                                                                            min={0}
+                                                                            max={100}
+                                                                            className={cn(inputCls, 'w-12 sm:w-16 text-right')}
+                                                                            value={editForm.commission_rate || ''}
+                                                                            onChange={(e) => setEditForm({ ...editForm, commission_rate: Number(e.target.value) })}
+                                                                        />
+                                                                        <span className="text-[10px] font-black text-zinc-400">%</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className={cn('text-[11px] font-black tabular-nums', status === 'Fully Paid' ? 'text-green-600' : 'text-zinc-300')}>
+                                                                            {status === 'Fully Paid' ? `₱${getCommission(lead).toLocaleString()}` : '—'}
+                                                                        </span>
+                                                                        <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{Number(lead.commission_rate ?? workerRate)}%</p>
+                                                                    </>
+                                                                )}
                                                             </td>
                                                             <td className="px-4 py-3">
                                                                 {editing ? (
@@ -1040,11 +1037,6 @@ export const EmployeeDashboard: React.FC = () => {
                                                 </span>
                                             </div>
                                         </div>
-
-                                        <div className="sm:text-right sm:pl-6 sm:border-l sm:border-white/15">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Your Commission</p>
-                                            <p className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tighter tabular-nums mt-0.5 sm:mt-1">{workerRate}%</p>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -1082,23 +1074,6 @@ export const EmployeeDashboard: React.FC = () => {
                                                             onChange={(e) => setProfileForm({ ...profileForm, role: e.target.value })}
                                                         />
                                                     </div>
-                                                </div>
-
-                                                <div className="space-y-1 sm:space-y-2">
-                                                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">My Commission %</span>
-                                                    <div className="relative">
-                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300"><Percent className="w-4 h-4" /></div>
-                                                        <input
-                                                            title="My Commission %"
-                                                            placeholder="10"
-                                                            inputMode="decimal"
-                                                            disabled={!isEditingProfile}
-                                                            className={`w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-3.5 border rounded-2xl outline-none font-bold text-sm transition-all ${isEditingProfile ? 'bg-zinc-50 border-zinc-100 focus:border-black' : 'bg-zinc-50/60 border-transparent text-zinc-700 cursor-default'}`}
-                                                            value={profileForm.commission_percentage ?? ''}
-                                                            onChange={(e) => setProfileForm({ ...profileForm, commission_percentage: e.target.value.replace(/[^0-9.]/g, '') })}
-                                                        />
-                                                    </div>
-                                                    {rateError && <p className="text-[10px] font-black text-red-600 uppercase tracking-widest px-1">{rateError}</p>}
                                                 </div>
 
                                                 <div className="space-y-1 sm:space-y-2">

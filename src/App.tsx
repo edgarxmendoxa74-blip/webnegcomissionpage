@@ -9,7 +9,6 @@ import { LogoMark } from './components/Logo';
 import { WorkersPage } from './pages/Workers';
 import { LeadsTracker } from './pages/LeadsTracker';
 import { ReceiptsPage } from './pages/Receipts';
-import { CommissionPage } from './pages/Commission';
 import { MonitoringPage } from './pages/Monitoring';
 import { DailyAuditPage } from './pages/DailyAuditPage';
 import { ExpensesPage } from './pages/Expenses';
@@ -46,8 +45,6 @@ function AppContent() {
         return <Dashboard />;
       case 'Manage Team':
         return <WorkersPage />;
-      case 'Commission':
-        return <CommissionPage />;
       case 'Monitoring':
         return <MonitoringPage />;
       case 'Daily Audit':

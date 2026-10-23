@@ -80,10 +80,16 @@ export const ReceiptsPage: React.FC = () => {
         if (!receiptRef.current) return;
         setIsDownloading(true);
         try {
-            const dataUrl = await toPng(receiptRef.current, {
+            const node = receiptRef.current;
+            const width = 340;
+            // Fixed width and a transparent-safe white background so the saved image matches the preview on any screen.
+            const dataUrl = await toPng(node, {
                 cacheBust: true,
-                pixelRatio: 2,
-                backgroundColor: '#ffffff'
+                pixelRatio: 3,
+                backgroundColor: '#ffffff',
+                width,
+                height: node.offsetHeight,
+                style: { width: `${width}px`, maxWidth: 'none', margin: '0', zoom: '1', borderRadius: '0', boxShadow: 'none', border: 'none' },
             });
             const link = document.createElement('a');
             link.download = `receipt-${selectedWorker?.name || 'payout'}-${Date.now()}.png`;
@@ -192,6 +198,7 @@ export const ReceiptsPage: React.FC = () => {
                                             <img
                                                 src={logoUrl || `${import.meta.env.BASE_URL}logo-mark.png`}
                                                 alt="WebNegosyo Logo"
+                                                crossOrigin="anonymous"
                                                 className="w-9 h-9 object-contain"
                                                 onError={() => setLogoError(true)}
                                             />

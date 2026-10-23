@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+    ChevronLeft,
+    ChevronRight,
     CheckCircle2,
     XCircle,
     Clock,
@@ -14,6 +16,8 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
+import { downloadCsv } from '../lib/csv';
+import { dealCommission, dealBalance } from '../lib/dealMath';
 import { useAuth } from '../contexts/AuthContext';
 
 function cn(...inputs: ClassValue[]) {
@@ -44,6 +48,7 @@ interface Lead {
     paid_balance?: number | null;
     paid_balance_date?: string | null;
     proof_image_url?: string | null;
+    paid_stamped_at?: string | null;
 }
 
 interface Worker {
@@ -59,10 +64,17 @@ export const LeadsTracker: React.FC = () => {
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [loading, setLoading] = useState(true);
     const [closingLead, setClosingLead] = useState<Lead | null>(null);
-    const [showHidden] = useState(false);
+    const [showHidden, setShowHidden] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [checkedLeads, setCheckedLeads] = useState<Set<string>>(new Set());
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const tableScrollRef = useRef<HTMLDivElement>(null);
+    const slideTable = (dir: 1 | -1) => {
+        const el = tableScrollRef.current;
+        if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
+    };
 
     const toggleCheck = (id: string) => {
         setCheckedLeads(prev => {
@@ -169,13 +181,10 @@ export const LeadsTracker: React.FC = () => {
             if (leadError) throw leadError;
 
             // 2. Calculate commission
-            let commissionAmount;
-            if (formData.payment_status === 'Downpayment Only' || formData.payment_status === 'Cancelled Project') {
-                commissionAmount = (formData.down_payment * 0.1);
-            } else {
-                const commissionRate = (closingLead.commission_rate || closingLead.worker?.commission_percentage || 20);
-                commissionAmount = (dealValue * commissionRate) / 100;
-            }
+            const commissionAmount = dealCommission(
+                { payment_status: formData.payment_status, deal_value: dealValue, down_payment: formData.down_payment, commission_rate: closingLead.commission_rate },
+                closingLead.worker?.commission_percentage ?? 0
+            );
 
             // 3. Insert commission record
             const { error: commError } = await supabase
@@ -218,6 +227,8 @@ export const LeadsTracker: React.FC = () => {
     };
 
     const toggleHideLead = async (lead: Lead) => {
+        const nextHidden = !lead.is_hidden;
+        setLeads(prev => prev.map(l => (l.id === lead.id ? { ...l, is_hidden: nextHidden } : l)));
         try {
             const { error } = await supabase
                 .from('leads')
@@ -227,62 +238,71 @@ export const LeadsTracker: React.FC = () => {
             fetchData();
         } catch (err) {
             console.error('Error toggling hide status:', err);
+            setLeads(prev => prev.map(l => (l.id === lead.id ? { ...l, is_hidden: lead.is_hidden } : l)));
+        }
+    };
+
+    // Permanent: once stamped, there is intentionally no way to undo it.
+    const stampableChecked = leads.filter(l => checkedLeads.has(l.id) && !l.paid_stamped_at);
+
+    const stampCheckedPaid = async () => {
+        if (stampableChecked.length === 0) return;
+        const names = stampableChecked.map(l => l.client_name).join(', ');
+        if (!confirm(`Stamp ${stampableChecked.length} record(s) as PAID?\n\n${names}\n\nThis is permanent and cannot be removed.`)) return;
+        try {
+            const { error } = await supabase
+                .from('leads')
+                .update({ paid_stamped_at: new Date().toISOString() })
+                .in('id', stampableChecked.map(l => l.id))
+                .is('paid_stamped_at', null);
+            if (error) throw error;
+            setCheckedLeads(new Set());
+            fetchData();
+        } catch (err) {
+            console.error('Error stamping lead as paid:', err);
+            alert('Could not stamp as paid. Make sure add_paid_stamp.sql was run in Supabase.');
         }
     };
 
     const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString() : '—');
 
-    const getCommission = (lead: Lead) =>
-        (lead.payment_status === 'Downpayment Only' || lead.payment_status === 'Cancelled Project')
-            ? lead.down_payment * 0.1
-            : lead.deal_value * (lead.commission_rate || 20) / 100;
-
-    const getBalance = (lead: Lead) =>
-        (lead.payment_status === 'Cancelled Project' || lead.payment_status === 'Downpayment Only')
-            ? lead.down_payment - (lead.down_payment * 0.1)
-            : lead.payment_status === 'Fully Paid'
-                ? lead.deal_value - (lead.deal_value * (lead.commission_rate || 20) / 100)
-                : lead.deal_value - lead.down_payment;
+    // Same formulas as the employee's My Deals, so both sides always show the same numbers.
+    const getCommission = (lead: Lead) => dealCommission(lead, lead.worker?.commission_percentage ?? 0);
+    const getBalance = (lead: Lead) => dealBalance(lead, lead.worker?.commission_percentage ?? 0);
 
     const exportToCSV = () => {
-        const headers = ['Month', 'Date', 'Client Name', 'Total Package', 'Downpayment', 'Total Balance', 'Status', 'Commission'];
-        const rows = leads.map(l => {
+        const headers = [
+            'Month', 'Date', 'Employee', 'Client Name', 'Webdev', 'Total Package',
+            'Downpayment', 'Downpayment Date', 'Full Payment', 'Full Payment Date',
+            'Paid Balance', 'Paid Balance Date', 'Tip', 'Total Balance', 'Status', 'Commission', 'Paid Stamp'
+        ];
+        const rows = filteredLeads.map(l => {
             const date = new Date(l.created_at);
-            const isCancelledOrDP = l.payment_status === 'Downpayment Only' || l.payment_status === 'Cancelled Project';
-            const commission = isCancelledOrDP ? (l.down_payment * 0.1) : (l.deal_value * (l.commission_rate || 20) / 100);
-
-            const totalBalance = isCancelledOrDP
-                ? l.down_payment - commission
-                : l.payment_status === 'Fully Paid'
-                    ? l.deal_value - commission
-                    : l.deal_value - l.down_payment;
+            const commission = getCommission(l);
+            const totalBalance = getBalance(l);
 
             return [
                 date.toLocaleString('default', { month: 'long' }),
                 date.toLocaleDateString(),
+                l.worker?.name || 'Unknown',
                 l.client_name,
+                l.webdev?.name || 'Unassigned',
                 l.deal_value,
                 l.down_payment,
+                l.down_payment_date || '',
+                l.full_payment || 0,
+                l.full_payment_date || '',
+                l.paid_balance || 0,
+                l.paid_balance_date || '',
+                l.tip || 0,
                 Number(totalBalance).toFixed(2),
                 l.status === 'failed' ? 'Cancelled' : (l.payment_status || 'Downpayment Only'),
-                Number(commission).toFixed(2)
+                Number(commission).toFixed(2),
+                l.paid_stamped_at ? new Date(l.paid_stamped_at).toLocaleDateString() : ''
             ];
         });
 
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.map(cell => `"${cell || ''}"`).join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `Master_List_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadCsv(`Master_List_${new Date().toISOString().split('T')[0]}.csv`, [headers, ...rows]);
     };
 
     const filteredLeads = leads.filter(l => {
@@ -399,8 +419,29 @@ export const LeadsTracker: React.FC = () => {
                     />
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="flex flex-col gap-1 w-full md:w-auto">
+                <div className="flex flex-wrap items-start gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => setShowHidden(v => !v)}
+                        className={cn(
+                            "flex items-center justify-center gap-2 px-4 py-2 rounded-2xl transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase border whitespace-nowrap",
+                            showHidden ? "bg-black text-white border-black" : "bg-white text-zinc-500 border-zinc-200 hover:border-black"
+                        )}
+                    >
+                        {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        {showHidden ? 'Showing Hidden' : `Hidden (${leads.filter(l => l.is_hidden).length})`}
+                    </button>
+                    {isOwner && (
+                        <button
+                            onClick={stampCheckedPaid}
+                            disabled={stampableChecked.length === 0}
+                            title="Check the Done box of records first, then click to stamp them PAID"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-800 text-white rounded-2xl hover:bg-red-700 transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase shadow-lg shadow-red-800/20 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Stamp Paid ({stampableChecked.length})
+                        </button>
+                    )}
+                    <div className="flex flex-col gap-1">
                         <button
                             onClick={exportToCSV}
                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 transition-all active:scale-95 font-bold tracking-tight text-[10px] lg:text-xs uppercase shadow-lg shadow-orange-500/20"
@@ -417,20 +458,161 @@ export const LeadsTracker: React.FC = () => {
 
             {/* Table Container with Horizontal Scroll Hint */}
             <div className="bg-white border border-zinc-100 rounded-xl lg:rounded-2xl overflow-hidden shadow-sm relative group">
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/5 backdrop-blur-sm text-black/20 p-2 rounded-full lg:hidden pointer-events-none animate-pulse">
-                    <div className="flex items-center gap-1">
-                        <span className="text-[7px] font-black uppercase tracking-widest">Scroll</span>
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
+                {/* Mobile: card list that fits the screen */}
+                <div className="md:hidden divide-y divide-zinc-100">
+                    {loading ? (
+                        [1, 2, 3].map(i => <div key={i} className="h-24 bg-zinc-100 rounded-xl animate-pulse" />)
+                    ) : filteredLeads.length === 0 ? (
+                        <div className="py-12 text-center">
+                            <p className="text-zinc-400 font-bold text-sm">
+                                {searchQuery ? "No matching clients found" : "No records found"}
+                            </p>
+                        </div>
+                    ) : filteredLeads.map((lead) => {
+                        const colored = !!lead.payment_status;
+                        const sub = colored ? "text-white/70" : "text-zinc-400";
+                        const expanded = expandedId === lead.id;
+                        return (
+                            <div key={lead.id} className={cn(
+                                "relative px-3 py-2",
+                                lead.payment_status === 'Fully Paid' ? "bg-green-600 text-white" :
+                                    lead.payment_status === 'Downpayment Only' ? "bg-zinc-600 text-white" :
+                                        lead.payment_status === 'Cancelled Project' ? "bg-red-600 text-white" :
+                                            "bg-white text-zinc-900",
+                                lead.is_hidden && "opacity-40 grayscale"
+                            )}>
+                                <button
+                                    type="button"
+                                    onClick={() => setExpandedId(expanded ? null : lead.id)}
+                                    className="w-full flex items-center gap-2 text-left"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <div className="font-black text-[11px] truncate">{lead.client_name}</div>
+                                        <div className={cn("text-[8px] font-bold uppercase tracking-widest truncate", sub)}>
+                                            {new Date(lead.created_at).toLocaleDateString()} · {lead.worker?.name || 'Unknown'}
+                                        </div>
+                                    </div>
+                                    {lead.paid_stamped_at && (
+                                        <img
+                                            src="/paid-stamp.jpg"
+                                            alt="Paid"
+                                            className="w-9 h-9 object-contain -rotate-12 pointer-events-none select-none mix-blend-multiply shrink-0 [filter:saturate(3)_brightness(1.15)_contrast(1.2)]"
+                                        />
+                                    )}
+                                    <div className="text-right shrink-0">
+                                        <div className="font-black text-[11px] tabular-nums">₱{Number(lead.deal_value).toLocaleString()}</div>
+                                        <div className={cn("text-[8px] font-black uppercase tracking-widest", sub)}>
+                                            {lead.status === 'closed' ? (lead.payment_status || 'Downpayment Only') : lead.status === 'failed' ? 'Cancelled' : lead.status}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className={cn("w-4 h-4 shrink-0 transition-transform", sub, expanded && "rotate-90")} />
+                                </button>
+                                {expanded && (<>
+                                {lead.contact_info && <div className={cn("text-[9px] font-medium break-words mt-1", sub)}>{lead.contact_info}</div>}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[9px]">
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Employee</span><span className="font-bold uppercase">{lead.worker?.name || 'Unknown'}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Webdev</span><span className="font-bold uppercase">{lead.webdev?.name || 'Unassigned'}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Package</span><span className="font-black tabular-nums">₱{Number(lead.deal_value).toLocaleString()}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Down Payment</span><span className="font-black tabular-nums">₱{Number(lead.down_payment).toLocaleString()}</span><span className={cn("block text-[7px]", sub)}>{fmtDate(lead.down_payment_date)}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Full Payment</span><span className="font-black tabular-nums">₱{Number(lead.full_payment || 0).toLocaleString()}</span><span className={cn("block text-[7px]", sub)}>{fmtDate(lead.full_payment_date)}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Paid Balance</span><span className="font-black tabular-nums">₱{Number(lead.paid_balance || 0).toLocaleString()}</span><span className={cn("block text-[7px]", sub)}>{fmtDate(lead.paid_balance_date)}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Tip</span><span className="font-black tabular-nums">₱{Number(lead.tip || 0).toLocaleString()}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Balance</span><span className={cn("font-black tabular-nums", !colored && "text-red-600")}>₱{Number(getBalance(lead)).toLocaleString()}</span></div>
+                                    <div><span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Commission</span><span className={cn("font-black tabular-nums", !colored && "text-green-600")}>₱{Number(getCommission(lead)).toLocaleString()}</span></div>
+                                    <div>
+                                        <span className={cn("block text-[7px] font-black uppercase tracking-widest", sub)}>Status</span>
+                                        <span className="font-black uppercase">{lead.status === 'failed' ? 'Cancelled' : lead.status}</span>
+                                        {lead.status === 'closed' && <span className={cn("block text-[7px] font-black uppercase", sub)}>{lead.payment_status || 'Downpayment Only'}</span>}
+                                    </div>
+                                </div>
+                                <div className={cn("flex items-center justify-between mt-3 pt-2 border-t", colored ? "border-white/20" : "border-zinc-100")}>
+                                    <div className="flex items-center gap-3">
+                                        {lead.proof_image_url ? (
+                                            <button type="button" onClick={() => setPreviewImage(lead.proof_image_url!)} title="View proof">
+                                                <img src={lead.proof_image_url} alt="Proof of payment" className="w-9 h-9 object-cover rounded-md border border-white/30" />
+                                            </button>
+                                        ) : (
+                                            <span className={cn("text-[8px] font-black uppercase", sub)}>No proof</span>
+                                        )}
+                                        <button
+                                            onClick={() => (lead.is_hidden ? toggleHideLead(lead) : toggleCheck(lead.id))}
+                                            className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest"
+                                        >
+                                            <span className={cn(
+                                                "w-4 h-4 rounded border-2 flex items-center justify-center",
+                                                checkedLeads.has(lead.id) ? "bg-emerald-500 border-emerald-500 text-white" : colored ? "border-white/50" : "border-zinc-300"
+                                            )}>
+                                                {checkedLeads.has(lead.id) && <CheckCircle2 className="w-3" />}
+                                            </span>
+                                            {lead.is_hidden ? 'Restore' : 'Done'}
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {lead.status === 'pending' && (
+                                            <button
+                                                onClick={() => setClosingLead(lead)}
+                                                className="px-3 py-1.5 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-full active:scale-95"
+                                            >
+                                                Close
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => toggleHideLead(lead)}
+                                            title={lead.is_hidden ? "Unhide" : "Hide Record"}
+                                            className="p-1.5 rounded-lg active:bg-black/10"
+                                        >
+                                            {lead.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                        </button>
+                                        {!lead.paid_stamped_at && (
+                                            <button
+                                                onClick={() => handleDeleteLead(lead.id)}
+                                                title="Delete Record"
+                                                className="p-1.5 rounded-lg active:bg-black/10"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                </>)}
+                            </div>
+                        );
+                    })}
+                    {filteredLeads.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 bg-zinc-50 rounded-xl p-3 text-center">
+                            <div><span className="block text-[7px] font-black uppercase tracking-widest text-zinc-400">Tip</span><span className="text-[11px] font-black text-blue-600 tabular-nums">₱{filteredLeads.reduce((s, l) => s + (Number(l.tip) || 0), 0).toLocaleString()}</span></div>
+                            <div><span className="block text-[7px] font-black uppercase tracking-widest text-zinc-400">Balance</span><span className="text-[11px] font-black text-red-600 tabular-nums">₱{filteredLeads.reduce((s, l) => s + (Number(getBalance(l)) || 0), 0).toLocaleString()}</span></div>
+                            <div><span className="block text-[7px] font-black uppercase tracking-widest text-zinc-400">Commission</span><span className="text-[11px] font-black text-green-600 tabular-nums">₱{filteredLeads.reduce((s, l) => s + (Number(getCommission(l)) || 0), 0).toLocaleString()}</span></div>
+                        </div>
+                    )}
                 </div>
-                <div className="overflow-x-auto scrollbar-hide">
+
+                <div className="hidden md:flex items-center justify-end gap-2 px-2 py-1 border-b border-zinc-100">
+                    <span className="text-[7px] font-black uppercase tracking-widest text-zinc-400 mr-1">Slide</span>
+                    <button
+                        type="button"
+                        onClick={() => slideTable(-1)}
+                        title="Slide left"
+                        className="p-1 rounded-full bg-zinc-100 hover:bg-black hover:text-white transition-all active:scale-90"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => slideTable(1)}
+                        title="Slide right"
+                        className="p-1 rounded-full bg-zinc-100 hover:bg-black hover:text-white transition-all active:scale-90"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+                <div ref={tableScrollRef} className="hidden md:block overflow-x-auto pb-2 scroll-smooth [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-zinc-100 [&::-webkit-scrollbar-thumb]:bg-zinc-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-zinc-50/50 border-b border-zinc-100">
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Employee</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
+                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Date</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Webdev</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Package</th>
                                 <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400 text-right">Down Payment</th>
@@ -449,12 +631,12 @@ export const LeadsTracker: React.FC = () => {
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={14} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
+                                        <td colSpan={15} className="px-8 py-10"><div className="h-4 bg-zinc-100 rounded-full w-full" /></td>
                                     </tr>
                                 ))
                             ) : filteredLeads.length === 0 ? (
                                 <tr>
-                                    <td colSpan={14} className="px-8 py-20 text-center">
+                                    <td colSpan={15} className="px-8 py-20 text-center">
                                         <p className="text-zinc-400 font-bold text-sm">
                                             {searchQuery ? "No matching clients found" : "No records found"}
                                         </p>
@@ -475,16 +657,29 @@ export const LeadsTracker: React.FC = () => {
                                     <td className="px-2 py-1">
                                         <div className="font-bold text-[8px] uppercase tracking-widest text-inherit whitespace-nowrap">{lead.worker?.name || 'Unknown'}</div>
                                     </td>
-                                    <td className="px-2 py-1">
-                                        <div className="font-bold text-[9px] text-inherit">{lead.client_name}</div>
-                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
-                                            {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })} · {new Date(lead.created_at).toLocaleDateString()}
+                                    <td className="px-2 py-1 pr-14 relative">
+                                        <div>
+                                            <div className="font-bold text-[9px] text-inherit">{lead.client_name}</div>
+                                            {lead.paid_stamped_at && (
+                                                <img
+                                                    src="/paid-stamp.jpg"
+                                                    alt="Paid"
+                                                    title={`Paid on ${new Date(lead.paid_stamped_at).toLocaleDateString()}`}
+                                                    className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 object-contain -rotate-12 pointer-events-none select-none mix-blend-multiply z-10 [filter:saturate(3)_brightness(1.15)_contrast(1.2)]"
+                                                />
+                                            )}
                                         </div>
                                         {lead.contact_info && (
                                             <div className={cn("text-[7px] font-medium", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
                                                 {lead.contact_info}
                                             </div>
                                         )}
+                                    </td>
+                                    <td className="px-2 py-1 whitespace-nowrap">
+                                        <div className="font-bold text-[8px] tabular-nums text-inherit">{new Date(lead.created_at).toLocaleDateString()}</div>
+                                        <div className={cn("text-[7px] font-medium uppercase tracking-widest", lead.payment_status ? "text-white/70" : "text-zinc-400")}>
+                                            {lead.month || new Date(lead.created_at).toLocaleString('default', { month: 'short' })}
+                                        </div>
                                     </td>
                                     <td className="px-2 py-1">
                                         <div className="font-bold text-[8px] uppercase tracking-widest text-inherit">{lead.webdev?.name || 'Unassigned'}</div>
@@ -562,7 +757,8 @@ export const LeadsTracker: React.FC = () => {
                                     </td>
                                     <td className="px-2 py-1 text-center">
                                         <button
-                                            onClick={() => toggleCheck(lead.id)}
+                                            onClick={() => (lead.is_hidden ? toggleHideLead(lead) : toggleCheck(lead.id))}
+                                            title={lead.is_hidden ? "Restore to Master List" : undefined}
                                             className={cn(
                                                 "w-3 h-3 rounded border-2 flex items-center justify-center transition-all duration-200 active:scale-90",
                                                 checkedLeads.has(lead.id)
@@ -595,20 +791,20 @@ export const LeadsTracker: React.FC = () => {
                                             >
                                                 {lead.is_hidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                             </button>
-                                            <button
+                                            {!lead.paid_stamped_at && <button
                                                 onClick={() => handleDeleteLead(lead.id)}
                                                 title="Delete Record"
                                                 className={cn("p-1 rounded-lg transition-colors", lead.payment_status ? "hover:bg-red-500 text-white" : "hover:bg-red-50 text-zinc-400 hover:text-red-500")}
                                             >
                                                 <Trash2 className="w-3 h-3" />
-                                            </button>
+                                            </button>}
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                             {filteredLeads.length > 0 && (
                                 <tr className="bg-zinc-50/50 font-black border-t-2 border-zinc-100">
-                                    <td colSpan={7} className="px-2 py-2 text-right text-[7px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
+                                    <td colSpan={8} className="px-2 py-2 text-right text-[7px] uppercase tracking-[0.2em] text-zinc-400">Totals</td>
                                     <td className="px-2 py-2 text-right text-[10px] text-blue-600 tabular-nums">
                                         ₱{filteredLeads.reduce((sum, lead) => sum + (Number(lead.tip) || 0), 0).toLocaleString()}
                                     </td>
