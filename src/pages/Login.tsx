@@ -1,8 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint } from 'lucide-react';
 import { LogoMark } from '../components/Logo';
+import { authenticateWithBiometrics, isBiometricsAvailable } from '../lib/biometrics';
 
 const OWNER_EMAIL = 'owner@webnegosyo.com';
 const REMEMBER_KEY = 'webnegosyo.remember';
@@ -47,9 +48,30 @@ export const LoginPage: React.FC = () => {
     const [name, setName] = useState('');
     const [gcash, setGcash] = useState('');
     const [loading, setLoading] = useState(false);
+    const [biometricLoading, setBiometricLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    const handleBiometricLogin = async () => {
+        setError(null);
+        setBiometricLoading(true);
+        try {
+            const isAvail = await isBiometricsAvailable();
+            if (!isAvail) {
+                setError('Biometric sensor / fingerprint is not available on this browser/device.');
+                return;
+            }
+
+            const targetUser = username.trim() || undefined;
+            await authenticateWithBiometrics(targetUser);
+            // Supabase session restored via authenticateWithBiometrics, AuthContext listener will handle redirect
+        } catch (err: any) {
+            setError(err?.message || 'Fingerprint sign in failed');
+        } finally {
+            setBiometricLoading(false);
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -404,7 +426,7 @@ export const LoginPage: React.FC = () => {
                         )}
 
                         <button
-                            disabled={loading}
+                            disabled={loading || biometricLoading}
                             type="submit"
                             className="w-full h-16 bg-ink text-white rounded-full font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
@@ -414,6 +436,32 @@ export const LoginPage: React.FC = () => {
                                 isRegistering ? "Register Account" : portal === 'owner' ? "Authorize Login" : "Agent Sign In"
                             )}
                         </button>
+
+                        {portal === 'employee' && !isRegistering && (
+                            <div className="pt-2 space-y-3">
+                                <div className="relative flex py-1 items-center">
+                                    <div className="flex-grow border-t border-zinc-200"></div>
+                                    <span className="flex-shrink mx-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">or quick sign in</span>
+                                    <div className="flex-grow border-t border-zinc-200"></div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={loading || biometricLoading}
+                                    onClick={handleBiometricLogin}
+                                    className="w-full h-14 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-full font-black uppercase tracking-[0.2em] text-[10px] shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2.5"
+                                >
+                                    {biometricLoading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Fingerprint className="w-5 h-5" />
+                                            <span>Sign In with Fingerprint</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </form>
 
                     {portal !== 'owner' && (

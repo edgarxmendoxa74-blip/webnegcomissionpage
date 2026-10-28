@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AUDIT_STATUS_STYLE, type DailyAuditRow, type AuditRecord } from './EmployeeDailyAudit';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 
 const STATUSES: DailyAuditRow['status'][] = ['Submitted', 'Reviewed', 'Needs Review'];
 
@@ -35,33 +36,75 @@ export const MasterAuditPanel: React.FC = () => {
     const [savingId, setSavingId] = useState<string | null>(null);
 
     const load = async () => {
-        // Plain selects (no joins) so one failing query can never hide the other data
-        const [ws, rep, rec] = await Promise.all([
-            supabase.from('workers').select('id, name, role, is_owner').order('name'),
-            supabase.from('daily_audits').select('*').order('audit_date', { ascending: false }).limit(500),
-            supabase
-                .from('audit_records')
-                .select('*')
-                .order('record_date', { ascending: false })
-                .order('created_at', { ascending: false })
-                .limit(1000),
-        ]);
-        if (ws.data) setWorkers(ws.data.filter(w => !w.is_owner && w.role?.toLowerCase() !== 'owner'));
-        if (rep.error) setError(rep.error.message);
-        else { setError(null); setReports((rep.data as DailyAuditRow[]) || []); }
-        if (rec.error) setRecordsError(rec.error.message);
-        else { setRecordsError(null); setRecords((rec.data as AuditRecord[]) || []); }
-        setLoading(false);
+        try {
+            setLoading(true);
+            setError(null);
+            setRecordsError(null);
+
+            // Plain selects (no joins) so one failing query can never hide the other data
+            const [ws, rep, rec] = await Promise.all([
+                supabase.from('workers').select('id, name, role, is_owner').order('name'),
+                supabase.from('daily_audits').select('*').order('audit_date', { ascending: false }).limit(500),
+                supabase
+                    .from('audit_records')
+                    .select('*')
+                    .order('record_date', { ascending: false })
+                    .order('created_at', { ascending: false })
+                    .limit(1000),
+            ]);
+
+            if (ws.data) {
+                setWorkers(ws.data.filter(w => !w.is_owner && w.role?.toLowerCase() !== 'owner'));
+            }
+
+            if (rep.error) {
+                const msg = rep.error.message || '';
+                setError(msg.includes('fetch') || msg.includes('network')
+                    ? 'Network connection issue. Please check your internet connection.'
+                    : msg);
+            } else {
+                setError(null);
+                setReports((rep.data as DailyAuditRow[]) || []);
+            }
+
+            if (rec.error) {
+                const msg = rec.error.message || '';
+                setRecordsError(msg.includes('fetch') || msg.includes('network')
+                    ? 'Network connection issue. Please check your internet connection.'
+                    : msg);
+            } else {
+                setRecordsError(null);
+                setRecords((rec.data as AuditRecord[]) || []);
+            }
+        } catch (err: any) {
+            console.error('Error loading master audit:', err);
+            const msg = err?.message || String(err);
+            setError(msg.includes('fetch') || msg.includes('network')
+                ? 'Network connection issue. Please check your internet connection.'
+                : msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         load();
+
+        const handleOnline = () => {
+            load();
+        };
+        window.addEventListener('online', handleOnline);
+
         const channel = supabase
             .channel('master-daily-audits')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_audits' }, () => load())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_records' }, () => load())
             .subscribe();
-        return () => { supabase.removeChannel(channel); };
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const setStatus = async (id: string, status: DailyAuditRow['status']) => {
@@ -116,28 +159,41 @@ export const MasterAuditPanel: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-                <select
-                    aria-label="Account"
-                    value={workerId}
-                    onChange={(e) => setWorkerId(e.target.value)}
-                    className="px-3 py-2 bg-white border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-black"
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                    onClick={load}
+                    disabled={loading}
+                    title="Refresh Daily Audits"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-slate-700 hover:border-black transition-all active:scale-95 disabled:opacity-50"
                 >
-                    <option value="all">All accounts</option>
-                    {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-                <input
-                    type="date"
-                    aria-label="Date"
-                    value={day}
-                    onChange={(e) => setDay(e.target.value)}
-                    className="px-3 py-2 bg-white border border-zinc-200 rounded-xl text-[10px] font-black outline-none focus:border-black"
-                />
-                {day && (
-                    <button onClick={() => setDay('')} className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-black">
-                        All dates
-                    </button>
-                )}
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-black' : ''}`} />
+                    <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        aria-label="Account"
+                        value={workerId}
+                        onChange={(e) => setWorkerId(e.target.value)}
+                        className="px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold uppercase tracking-wider outline-none focus:border-black"
+                    >
+                        <option value="all">All accounts</option>
+                        {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                    <input
+                        type="date"
+                        aria-label="Date"
+                        value={day}
+                        onChange={(e) => setDay(e.target.value)}
+                        className="px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold outline-none focus:border-black"
+                    >
+                    </input>
+                    {day && (
+                        <button onClick={() => setDay('')} className="text-xs font-bold text-zinc-500 uppercase tracking-wider hover:text-black">
+                            All dates
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Status cards only matter once employees' reports exist */}
@@ -156,20 +212,38 @@ export const MasterAuditPanel: React.FC = () => {
             </div>
 
             {error && (
-                <p className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-black text-red-600 uppercase tracking-widest">
-                    Could not load submitted reports: {error}
-                </p>
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-xs text-red-700">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                    <button
+                        onClick={load}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs shrink-0 active:scale-95"
+                    >
+                        Retry
+                    </button>
+                </div>
             )}
             {recordsError && (
-                <p className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-black text-red-600 uppercase tracking-widest">
-                    Could not load client records: {recordsError}
-                </p>
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-xs text-red-700">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span className="font-semibold">{recordsError}</span>
+                    </div>
+                    <button
+                        onClick={load}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs shrink-0 active:scale-95"
+                    >
+                        Retry
+                    </button>
+                </div>
             )}
 
             {loading ? (
                 <div className="h-24 bg-white rounded-2xl animate-pulse" />
             ) : visible.length === 0 ? (
-                <p className="py-12 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest bg-white border border-zinc-100 rounded-2xl">
+                <p className="py-12 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider bg-white border border-zinc-100 rounded-2xl">
                     {groups.length === 0 ? 'Nothing submitted yet' : 'Nothing matches this filter'}
                 </p>
             ) : (
