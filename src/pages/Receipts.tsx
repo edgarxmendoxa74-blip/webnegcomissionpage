@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Download,
     User,
     Calculator,
-    CheckCircle2,
-    Check,
-    Sparkles
+    Plus,
+    Trash2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -18,21 +17,10 @@ interface Worker {
     commission_percentage?: number | null;
 }
 
-interface ClosedDeal {
-    id: string;
-    client_name: string;
-    deal_value: number;
-    down_payment: number;
-    payment_status: string;
-    status: string;
-    closed_at?: string;
-    created_at: string;
-    month?: string | null;
-}
-
 export const ReceiptsPage: React.FC = () => {
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [selectedWorkerId, setSelectedWorkerId] = useState('');
+    const [clientNames, setClientNames] = useState<string[]>(['']);
     const [amount, setAmount] = useState('');
     const [customRole, setCustomRole] = useState('');
     const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
@@ -41,10 +29,7 @@ export const ReceiptsPage: React.FC = () => {
     const [packagePrice, setPackagePrice] = useState<number>(3499);
     const [showCalculator, setShowCalculator] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [closedDeals, setClosedDeals] = useState<ClosedDeal[]>([]);
-    const [selectedDealIds, setSelectedDealIds] = useState<string[]>([]);
-    const [loadingDeals, setLoadingDeals] = useState(false);
-    const [includeClientsOnReceipt, setIncludeClientsOnReceipt] = useState(true);
+
     const receiptRef = useRef<HTMLDivElement>(null);
     // Stable per session so it doesn't change on every keystroke
     const [serial] = useState(() => `WN-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -53,87 +38,28 @@ export const ReceiptsPage: React.FC = () => {
 
     useEffect(() => {
         if (selectedWorker) {
-            setCustomRole(selectedWorker.role);
+            setCustomRole(selectedWorker.role || '');
         }
     }, [selectedWorker]);
 
-    // Fetch closed deals when a worker is selected
-    useEffect(() => {
-        if (!selectedWorkerId) {
-            setClosedDeals([]);
-            setSelectedDealIds([]);
+    const handleClientNameChange = (index: number, value: string) => {
+        setClientNames(prev => {
+            const updated = [...prev];
+            updated[index] = value;
+            return updated;
+        });
+    };
+
+    const handleAddClient = () => {
+        setClientNames(prev => [...prev, '']);
+    };
+
+    const handleRemoveClient = (index: number) => {
+        if (clientNames.length <= 1) {
+            setClientNames(['']);
             return;
         }
-
-        const fetchWorkerDeals = async () => {
-            setLoadingDeals(true);
-            try {
-                const { data, error } = await supabase
-                    .from('leads')
-                    .select('id, client_name, deal_value, down_payment, payment_status, status, closed_at, created_at, month, worker_id, webdev_id')
-                    .or(`worker_id.eq.${selectedWorkerId},webdev_id.eq.${selectedWorkerId}`)
-                    .order('created_at', { ascending: false });
-
-                if (error) {
-                    console.error('Error fetching worker deals:', error);
-                    return;
-                }
-
-                // Only include Fully Paid deals in the receipt list
-                const closed = (data || []).filter(l =>
-                    l.payment_status === 'Fully Paid'
-                );
-                setClosedDeals(closed);
-                // Default select all closed deals
-                setSelectedDealIds(closed.map(d => d.id));
-            } catch (err) {
-                console.error('Error fetching deals:', err);
-            } finally {
-                setLoadingDeals(false);
-            }
-        };
-
-        fetchWorkerDeals();
-    }, [selectedWorkerId]);
-
-    const selectedDeals = useMemo(() => {
-        return closedDeals.filter(d => selectedDealIds.includes(d.id));
-    }, [closedDeals, selectedDealIds]);
-
-    const totalSelectedValue = useMemo(() => {
-        return selectedDeals.reduce((sum, d) => sum + (Number(d.deal_value) || 0), 0);
-    }, [selectedDeals]);
-
-    const toggleDealSelection = (id: string) => {
-        setSelectedDealIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
-    };
-
-    const handleToggleAllDeals = () => {
-        if (selectedDealIds.length === closedDeals.length) {
-            setSelectedDealIds([]);
-        } else {
-            setSelectedDealIds(closedDeals.map(d => d.id));
-        }
-    };
-
-    // Fixed commission: ₱300 per deal if 5499, ₱250 per deal if 3499
-    const getFixedCommission = (dealValue: number): number => {
-        if (dealValue >= 5499) return 300;
-        if (dealValue >= 3499) return 250;
-        // Fallback: use worker commission percentage
-        const rate = selectedWorker?.commission_percentage ?? 10;
-        return dealValue * (rate / 100);
-    };
-
-    const handleAutoCalculate = () => {
-        const total = selectedDeals.reduce((sum, d) => {
-            const val = Number(d.deal_value) > 0 ? Number(d.deal_value) : packagePrice;
-            return sum + getFixedCommission(val);
-        }, 0);
-        const formatted = Number.isInteger(total) ? String(total) : total.toFixed(2);
-        setAmount(formatted);
+        setClientNames(prev => prev.filter((_, i) => i !== index));
     };
 
     const formattedDate = new Date(customDate).toLocaleDateString('en-PH', {
@@ -208,12 +134,15 @@ export const ReceiptsPage: React.FC = () => {
         }
     };
 
+    const validClientNames = clientNames.map(n => n.trim()).filter(n => n.length > 0);
+
     return (
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-8 animate-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start">
                 {/* Generator Form */}
                 <div className="bg-white border border-zinc-100 rounded-2xl sm:rounded-[1.5rem] p-3.5 sm:p-6 shadow-sm space-y-3 sm:space-y-5">
                     <div className="space-y-2.5 sm:space-y-4">
+                        {/* Member Select */}
                         <div className="space-y-1 sm:space-y-2">
                             <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Select Team Member</span>
                             <div className="relative">
@@ -231,6 +160,7 @@ export const ReceiptsPage: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Role & Date */}
                         <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
                             <div className="space-y-1 sm:space-y-2">
                                 <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Role</span>
@@ -254,122 +184,51 @@ export const ReceiptsPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Closed Deals & Client List */}
-                        {selectedWorkerId && (
-                            <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 sm:p-4 space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            Closed Deals
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
-                                            {closedDeals.length} {closedDeals.length === 1 ? 'deal' : 'deals'}
-                                        </span>
-                                    </div>
-
-                                    {closedDeals.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={handleToggleAllDeals}
-                                            className="text-[9px] font-bold text-zinc-500 hover:text-black uppercase tracking-wider transition-colors"
-                                        >
-                                            {selectedDealIds.length === closedDeals.length ? 'Deselect All' : 'Select All'}
-                                        </button>
-                                    )}
-                                </div>
-
-                                {loadingDeals ? (
-                                    <div className="py-4 text-center text-xs text-zinc-400 font-medium animate-pulse flex items-center justify-center gap-2">
-                                        <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-black rounded-full animate-spin" />
-                                        <span>Loading closed deals...</span>
-                                    </div>
-                                ) : closedDeals.length === 0 ? (
-                                    <div className="p-3 bg-white border border-dashed border-zinc-200 rounded-xl text-center">
-                                        <p className="text-xs font-bold text-zinc-600">No closed deals found</p>
-                                        <p className="text-[10px] text-zinc-400 mt-0.5">This member has no closed leads recorded yet.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {/* Scrollable list of closed client deals */}
-                                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                                            {closedDeals.map((deal) => {
-                                                const isSelected = selectedDealIds.includes(deal.id);
-                                                return (
-                                                    <div
-                                                        key={deal.id}
-                                                        onClick={() => toggleDealSelection(deal.id)}
-                                                        className={`p-2 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between gap-2.5 ${
-                                                            isSelected
-                                                                ? 'bg-white border-zinc-300 shadow-xs'
-                                                                : 'bg-zinc-100/60 border-zinc-200/60 opacity-60 hover:opacity-100'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
-                                                                isSelected ? 'bg-black border-black text-white' : 'border-zinc-300 bg-white'
-                                                            }`}>
-                                                                {isSelected && <Check className="w-3 h-3" />}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="font-bold text-black text-xs truncate leading-tight">{deal.client_name}</p>
-                                                                <p className="text-[9px] text-zinc-400 font-medium">
-                                                                    {deal.closed_at
-                                                                        ? new Date(deal.closed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
-                                                                        : deal.month || 'Closed'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right shrink-0">
-                                                            <p className="font-black text-black text-xs tabular-nums">
-                                                                ₱{(Number(deal.deal_value) || 0).toLocaleString()}
-                                                            </p>
-                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                                {deal.payment_status || 'Closed'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Summary & Auto-calculate action */}
-                                        <div className="pt-2 border-t border-zinc-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                            <div className="text-[10px] text-zinc-500 font-medium">
-                                                Selected: <span className="font-bold text-black">{selectedDeals.length}</span> deals (₱{totalSelectedValue.toLocaleString()})
-                                            </div>
-                                            {selectedDeals.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAutoCalculate}
-                                                    className="px-2.5 py-1 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-zinc-800 transition-all flex items-center justify-center gap-1.5"
-                                                >
-                                                    <Sparkles className="w-3 h-3 text-amber-300" />
-                                                    <span>Auto-Calculate (₱250/₱300 per deal)</span>
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Option to show on receipt */}
-                                        <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
-                                            <input
-                                                type="checkbox"
-                                                checked={includeClientsOnReceipt}
-                                                onChange={(e) => setIncludeClientsOnReceipt(e.target.checked)}
-                                                className="w-3.5 h-3.5 rounded text-black focus:ring-black accent-black cursor-pointer"
-                                            />
-                                            <span className="text-[10px] font-bold text-zinc-600">
-                                                Include client names on receipt preview & export
-                                            </span>
-                                        </label>
-                                    </div>
-                                )}
+                        {/* Client Name Input */}
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">
+                                    Client Name
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleAddClient}
+                                    className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-zinc-500 hover:text-black transition-colors"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                    <span>Add Client</span>
+                                </button>
                             </div>
-                        )}
 
+                            <div className="space-y-2">
+                                {clientNames.map((name, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder={clientNames.length > 1 ? `Client #${index + 1} Name` : "Enter client name"}
+                                            value={name}
+                                            onChange={(e) => handleClientNameChange(index, e.target.value)}
+                                            className="flex-1 px-3 py-2 sm:py-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-4 focus:ring-black/5 focus:border-black font-bold text-xs transition-all"
+                                        />
+                                        {clientNames.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveClient(index)}
+                                                className="p-2 text-zinc-400 hover:text-rose-500 transition-colors rounded-xl hover:bg-zinc-100"
+                                                title="Remove"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Payout Amount (₱) & Calculator */}
                         <div className="space-y-1 sm:space-y-2">
                             <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Commission Amount (₱)</span>
+                                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Payout Amount (₱)</span>
                                 <button
                                     type="button"
                                     onClick={() => setShowCalculator(prev => !prev)}
@@ -401,7 +260,7 @@ export const ReceiptsPage: React.FC = () => {
                                 initialPrice={packagePrice}
                                 workerCommission={selectedWorker?.commission_percentage}
                                 workerName={selectedWorker?.name}
-                                dealsCount={selectedDeals.length > 0 ? selectedDeals.length : 1}
+                                dealsCount={validClientNames.length > 0 ? validClientNames.length : 1}
                                 currentAmount={amount}
                                 onClose={() => setShowCalculator(false)}
                             />
@@ -409,7 +268,7 @@ export const ReceiptsPage: React.FC = () => {
                     </div>
 
                     <button
-                        disabled={!selectedWorkerId || !amount || isDownloading}
+                        disabled={!selectedWorkerId || !amount || Number(amount) <= 0 || isDownloading}
                         onClick={handleDownload}
                         className="w-full py-2.5 sm:py-3 bg-black text-white rounded-xl font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-2xl hover:shadow-black/20 transition-all active:scale-95 disabled:opacity-20 flex items-center justify-center gap-3"
                     >
@@ -483,35 +342,23 @@ export const ReceiptsPage: React.FC = () => {
                                 <div className="flex justify-between items-center gap-3">
                                     <span className="text-[8px] leading-none font-black uppercase tracking-[0.25em] text-zinc-400">Description</span>
                                     <span className="text-[11px] leading-none font-bold text-black text-right">
-                                        {selectedDeals.length > 0
-                                            ? `Sales commission (${selectedDeals.length} closed ${selectedDeals.length === 1 ? 'deal' : 'deals'})`
-                                            : 'Sales commission'}
+                                        Sales commission
                                     </span>
                                 </div>
 
-                                {/* Closed Clients List on the Actual Receipt */}
-                                {includeClientsOnReceipt && selectedDeals.length > 0 && (
+                                {/* Client Name on the Receipt */}
+                                {validClientNames.length > 0 && (
                                     <>
                                         <div className="border-t border-dashed border-zinc-300" />
-                                        <div className="space-y-1.5">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[8px] leading-none font-black uppercase tracking-[0.25em] text-zinc-400">
-                                                    Fully Paid Clients ({selectedDeals.length})
-                                                </span>
-                                                <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-wider">
-                                                    Commission
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 bg-zinc-50 rounded-xl p-2.5 border border-zinc-100">
-                                                {selectedDeals.map((deal, idx) => (
-                                                    <div key={deal.id || idx} className="flex justify-between items-center text-[10px] gap-2">
-                                                        <span className="font-bold text-black truncate max-w-[170px]" title={deal.client_name}>
-                                                            {idx + 1}. {deal.client_name}
-                                                        </span>
-                                                        <span className="font-mono font-semibold text-emerald-700 text-[9px] tabular-nums shrink-0">
-                                                            ₱{getFixedCommission(Number(deal.deal_value) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </span>
-                                                    </div>
+                                        <div className="flex justify-between items-start gap-3">
+                                            <span className="text-[8px] leading-none font-black uppercase tracking-[0.25em] text-zinc-400 pt-0.5">
+                                                {validClientNames.length > 1 ? 'Clients' : 'Client'}
+                                            </span>
+                                            <div className="text-right space-y-0.5">
+                                                {validClientNames.map((name, idx) => (
+                                                    <p key={idx} className="text-[11px] leading-tight font-bold text-black">
+                                                        {validClientNames.length > 1 ? `${idx + 1}. ` : ''}{name}
+                                                    </p>
                                                 ))}
                                             </div>
                                         </div>
