@@ -8,7 +8,6 @@ export interface Applicant {
     id: string;
     full_name: string;
     email: string;
-    password_hash?: string;
     phone_number?: string;
     resume_link?: string;
     fb_link?: string;
@@ -111,7 +110,6 @@ export const SALES_QUESTIONS: SalesQuestion[] = [
 ];
 
 const LOCAL_STORAGE_KEY = 'webnegosyo_applicants_local';
-const ACTIVE_APPLICANT_KEY = 'webnegosyo_active_applicant_session';
 
 // Local storage helper fallback
 const getLocalApplicants = (): Applicant[] => {
@@ -131,61 +129,46 @@ const saveLocalApplicants = (list: Applicant[]) => {
     }
 };
 
-export const getActiveApplicantSession = (): Applicant | null => {
-    try {
-        const raw = localStorage.getItem(ACTIVE_APPLICANT_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
-    }
-};
-
-export const setActiveApplicantSession = (applicant: Applicant | null) => {
-    try {
-        if (applicant) {
-            localStorage.setItem(ACTIVE_APPLICANT_KEY, JSON.stringify(applicant));
-        } else {
-            localStorage.removeItem(ACTIVE_APPLICANT_KEY);
-        }
-    } catch {
-        /* ignore */
-    }
-};
-
-// Generate readable code e.g. WN-SC-8492
+// Generate readable code e.g. WN-SC-84921
 export const generateApplicationCode = (): string => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     return `WN-SC-${randomNum}`;
 };
 
 /**
- * Register a new applicant
+ * Submit a completed application (all 3 stages at once)
  */
-export const registerApplicant = async (data: {
+export const submitApplication = async (data: {
     fullName: string;
     email: string;
-    password: string;
     phoneNumber: string;
     resumeLink: string;
     fbLink: string;
     otherSocials?: string;
+    answers: ApplicantAnswers;
+    meetingDate: string;
+    meetingTime: string;
 }): Promise<Applicant> => {
-    const normalizedEmail = data.email.trim().toLowerCase();
+    const code = generateApplicationCode();
+    const now = new Date().toISOString();
 
     const newApplicant: Applicant = {
         id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `app-${Date.now()}`,
         full_name: data.fullName.trim(),
-        email: normalizedEmail,
-        password_hash: data.password,
+        email: data.email.trim().toLowerCase(),
         phone_number: data.phoneNumber.trim(),
         resume_link: data.resumeLink.trim(),
         fb_link: data.fbLink.trim(),
         other_socials: (data.otherSocials || '').trim(),
-        current_stage: 2, // Advanced to Q&A stage after submitting basic profile!
-        status: 'incomplete',
-        answers: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        current_stage: 4,
+        status: 'completed',
+        answers: data.answers,
+        meeting_date: data.meetingDate,
+        meeting_time: data.meetingTime,
+        application_code: code,
+        completed_at: now,
+        created_at: now,
+        updated_at: now
     };
 
     // Attempt to persist to Supabase
@@ -196,14 +179,17 @@ export const registerApplicant = async (data: {
                 id: newApplicant.id,
                 full_name: newApplicant.full_name,
                 email: newApplicant.email,
-                password_hash: newApplicant.password_hash,
                 phone_number: newApplicant.phone_number,
                 resume_link: newApplicant.resume_link,
                 fb_link: newApplicant.fb_link,
                 other_socials: newApplicant.other_socials,
                 current_stage: newApplicant.current_stage,
                 status: newApplicant.status,
-                answers: newApplicant.answers
+                answers: newApplicant.answers,
+                meeting_date: newApplicant.meeting_date,
+                meeting_time: newApplicant.meeting_time,
+                application_code: newApplicant.application_code,
+                completed_at: newApplicant.completed_at
             }])
             .select('*')
             .single();
@@ -219,123 +205,10 @@ export const registerApplicant = async (data: {
 
     // Always sync with local storage
     const local = getLocalApplicants();
-    const existingIdx = local.findIndex(a => a.email === normalizedEmail);
-    if (existingIdx >= 0) {
-        local[existingIdx] = newApplicant;
-    } else {
-        local.unshift(newApplicant);
-    }
+    local.unshift(newApplicant);
     saveLocalApplicants(local);
-    setActiveApplicantSession(newApplicant);
 
     return newApplicant;
-};
-
-/**
- * Sign in an applicant
- */
-export const loginApplicant = async (email: string, password: string): Promise<Applicant> => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Try Supabase first
-    try {
-        const { data, error } = await supabase
-            .from('applicants')
-            .select('*')
-            .eq('email', normalizedEmail)
-            .maybeSingle();
-
-        if (!error && data) {
-            if (data.password_hash && data.password_hash !== password) {
-                throw new Error('Maling password. Pakisubukang muli.');
-            }
-            setActiveApplicantSession(data);
-            return data;
-        }
-    } catch (err: any) {
-        if (err?.message === 'Maling password. Pakisubukang muli.') throw err;
-        console.warn('Error checking supabase applicant login:', err);
-    }
-
-    // Check local storage fallback
-    const local = getLocalApplicants();
-    const found = local.find(a => a.email === normalizedEmail);
-    if (found) {
-        if (found.password_hash && found.password_hash !== password) {
-            throw new Error('Maling password. Pakisubukang muli.');
-        }
-        setActiveApplicantSession(found);
-        return found;
-    }
-
-    throw new Error('Walang natagpuang aplikante gamit ang email na ito. Mangyaring mag-sign up muna.');
-};
-
-/**
- * Save stage progress (e.g. Stage 2 answers or profile updates)
- */
-export const saveApplicantProgress = async (
-    applicantId: string,
-    updates: Partial<Applicant>
-): Promise<Applicant> => {
-    const payload = {
-        ...updates,
-        updated_at: new Date().toISOString()
-    };
-
-    // Update in Supabase
-    try {
-        await supabase
-            .from('applicants')
-            .update(payload)
-            .eq('id', applicantId);
-    } catch (err) {
-        console.warn('Error updating applicant progress in Supabase:', err);
-    }
-
-    // Update locally
-    const local = getLocalApplicants();
-    const idx = local.findIndex(a => a.id === applicantId);
-    let updatedApplicant: Applicant;
-    if (idx >= 0) {
-        local[idx] = { ...local[idx], ...payload };
-        updatedApplicant = local[idx];
-    } else {
-        updatedApplicant = payload as Applicant;
-        local.unshift(updatedApplicant);
-    }
-    saveLocalApplicants(local);
-
-    const active = getActiveApplicantSession();
-    if (active && active.id === applicantId) {
-        setActiveApplicantSession({ ...active, ...payload });
-    }
-
-    return updatedApplicant;
-};
-
-/**
- * Stage 3 Completion: Select meeting time and generate confirmation code
- */
-export const completeApplicantMeeting = async (
-    applicantId: string,
-    meetingDate: string,
-    meetingTime: string
-): Promise<Applicant> => {
-    const active = getActiveApplicantSession();
-    const code = active?.application_code || generateApplicationCode();
-
-    const updates: Partial<Applicant> = {
-        meeting_date: meetingDate,
-        meeting_time: meetingTime,
-        application_code: code,
-        current_stage: 4,
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-    };
-
-    return await saveApplicantProgress(applicantId, updates);
 };
 
 /**
