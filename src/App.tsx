@@ -519,17 +519,7 @@ function App() {
   }, []);
 
   if (isHiring) {
-    return (
-      <ApplicantPortal
-        onBackToSelection={() => {
-          if (window.history.length > 1) {
-            window.history.back();
-          } else {
-            window.location.href = '/';
-          }
-        }}
-      />
-    );
+    return <ApplicantPortal />;
   }
 
   return (

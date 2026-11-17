@@ -38,30 +38,30 @@ export const SALES_QUESTIONS: SalesQuestion[] = [
     {
         id: 'q1_background',
         category: 'personal',
-        badge: 'Tungkol Sa Iyo',
-        question: '1. Ikwento mo ang tungkol sa iyong sarili, iyong sales background, at mga nakaraang karanasan sa pakikipag-usap sa mga kliyente.',
-        hint: 'Maging tapat at detalyado sa iyong work experience at background.'
+        badge: 'About You',
+        question: '1. Tell us about yourself, your background in sales, and your past experience communicating with clients.',
+        hint: 'Be honest and detailed about your work history, communication style, and relevant background.'
     },
     {
         id: 'q2_motivation',
         category: 'personal',
-        badge: 'Motibasyon & Layunin',
-        question: '2. Ano ang nag-uudyok sa iyo na mag-apply bilang Sales Consultant sa WebNegosyo, at ano ang buwanang income goal mo?',
-        hint: 'Ibahagi ang iyong inspirasyon at pinansyal o propesyonal na target.'
+        badge: 'Motivation & Goals',
+        question: '2. What motivates you to apply as a Sales Consultant for SmartMenu, and what is your monthly income goal?',
+        hint: 'Share your personal ambition, financial targets, and why you are excited about this role.'
     },
     {
         id: 'q3_discipline',
         category: 'personal',
         badge: 'Work Ethic & Time',
-        question: '3. Paano mo pinapamahalaan ang iyong oras at sariling disiplina kapag nagtatrabaho sa isang commission-based o remote sales setup?',
-        hint: 'Paano mo sinisigurado na productive ka araw-araw kahit walang nagbabantay?'
+        question: '3. How do you manage your time and stay self-disciplined when working in a remote or commission-based sales environment?',
+        hint: 'Explain your daily habits and how you maintain high productivity without constant supervision.'
     },
     {
         id: 'q4_strengths',
         category: 'personal',
-        badge: 'Kalakasan & Growth',
-        question: '4. Ano ang nangungunang 3 kalakasan (strengths) mo sa sales, at ano ang isang bagay na patuloy mong pinagbubuti sa sarili mo?',
-        hint: 'Hal. Communication, persuasion, resilience, follow-up habits, active listening.'
+        badge: 'Strengths & Growth',
+        question: '4. What are your top 3 strengths in sales, and what is one skill you are actively working to improve?',
+        hint: 'E.g., Persuasion, active listening, objection handling, consistency, building rapport.'
     },
 
     // Questions regarding sales calls & objections (Sales Call Scenarios)
@@ -69,43 +69,43 @@ export const SALES_QUESTIONS: SalesQuestion[] = [
         id: 'q5_first_minute',
         category: 'sales_call',
         badge: 'Sales Call: First 60 Secs',
-        question: '5. Kapag tumawag ka sa isang Filipino business owner o lead, paano mo kukunin ang tiwala at atensyon nila sa unang 60 segundo ng tawag?',
-        hint: 'Ibigay ang iyong opening pitch o approach para hindi agad ibaba ang tawag.'
+        question: '5. When calling a busy restaurant owner or prospect, how do you hook their interest and build trust within the first 60 seconds?',
+        hint: 'Share your exact opening pitch or approach to prevent them from hanging up.'
     },
     {
         id: 'q6_price_objection',
         category: 'sales_call',
         badge: 'Sales Call: Price Objection',
-        question: '6. Sinabi ng client sa tawag: "Mahal naman ng ₱3,499 / ₱5,499 ninyo! May libre naman sa Facebook at may mas murang gumagawa diyan." Paano mo sasagutin?',
-        hint: 'Ipakita ang value, return on investment (ROI), at tiwala na ibinibigay ng WebNegosyo.'
+        question: '6. The client on the call says: "Your solution is too expensive! We can find free tools or cheaper alternatives." How do you handle this objection?',
+        hint: 'Demonstrate return on investment (ROI), tangible business value, and why SmartMenu pays for itself.'
     },
     {
         id: 'q7_busy_client',
         category: 'sales_call',
         badge: 'Sales Call: Busy Owner',
-        question: '7. Ang sagot ng kausap mo: "Wala akong oras para diyan, busy ako sa araw-araw na operasyon ng tindahan/negosyo ko." Paano mo ipapaliwanag ang solusyon?',
-        hint: 'Paano makakatulong ang WebNegosyo para mabawasan ang abala ng may-ari?'
+        question: '7. The prospect replies: "I don\'t have time for this right now, I am swamped running my restaurant daily." How do you address their pain point?',
+        hint: 'Explain how SmartMenu actually frees up their time and simplifies daily operations.'
     },
     {
         id: 'q8_think_about_it',
         category: 'sales_call',
-        badge: 'Sales Call: "Pag-iisipan Ko"',
-        question: '8. Sinabi ng client: "Sige, pag-iisipan ko muna. Tawag ka na lang sa susunod na linggo." Ano ang gagawin mo bago tapusin ang tawag, at paano mo sila ifo-follow up?',
-        hint: 'Paano mo maiiwasan ang ghosting at mapapanatiling mainit ang deal?'
+        badge: 'Sales Call: "I\'ll Think About It"',
+        question: '8. The prospect says: "Let me think about it, just call me next week." What do you do before ending the call, and how do you follow up?',
+        hint: 'How do you avoid getting ghosted and keep the sales momentum alive?'
     },
     {
         id: 'q9_closing_downpayment',
         category: 'sales_call',
         badge: 'Sales Call: Closing Deal',
-        question: '9. Nagpakita ng interes ang kliyente sa package. Paano mo maayos at kumpiyansang hihingin ang pagsara ng deal at pag-settle ng downpayment?',
-        hint: 'Ibahagi ang iyong closing technique o call-to-action.'
+        question: '9. The client shows clear interest in the solution. How do you confidently ask for the close and secure their commitment or downpayment?',
+        hint: 'Share your closing technique, transition, and call-to-action.'
     },
     {
         id: 'q10_rejection_resilience',
         category: 'sales_call',
-        badge: 'Mindset: Rejection Handling',
-        question: '10. Kung magkaroon ka ng isang linggo na panay rejection at walang naisarang benta, ano ang gagawin mo para makabawi at mapanatiling mataas ang iyong energy?',
-        hint: 'Paano mo hinaharap ang no at pinapanatili ang focus sa susunod na yes?'
+        badge: 'Mindset: Rejection Resilience',
+        question: '10. If you encounter a tough week filled with rejections and zero closed deals, how do you bounce back and keep your energy high?',
+        hint: 'How do you process hearing "no" and maintain motivation toward your next "yes"?'
     }
 ];
 

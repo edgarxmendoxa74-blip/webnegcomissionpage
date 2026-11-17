@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     SALES_QUESTIONS,
     type Applicant,
@@ -16,19 +16,24 @@ import {
     CheckCircle2,
     Check,
     Copy,
-    ArrowLeft,
     ArrowRight,
     Send,
     Sparkles,
-    AlertCircle
+    AlertCircle,
+    UploadCloud,
+    Image as ImageIcon,
+    Trash2,
+    ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const TARGET_EMAIL = 'webnegosyo3@gmail.com';
 
 interface ApplicantPortalProps {
     onBackToSelection?: () => void;
 }
 
-export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelection }) => {
+export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     // Current step: 1 = Profile, 2 = Q&A, 3 = Meeting
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -36,9 +41,15 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [resumeLink, setResumeLink] = useState('');
+    const [resumeLink, setResumeLink] = useState(''); // Holds image data URL or external link
+    const [resumeFileName, setResumeFileName] = useState('');
+    const [resumeFileSize, setResumeFileSize] = useState('');
+    const [useManualLink, setUseManualLink] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [fbLink, setFbLink] = useState('');
     const [otherSocials, setOtherSocials] = useState('');
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Stage 2: Q&A Answers
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
@@ -61,27 +72,99 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
 
+    // Helper: compress image file via canvas to keep it lightweight (<300KB)
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1600;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                    } else {
+                        resolve(img.src);
+                    }
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setError('Pakipili ang image file ng iyong resume (JPG, PNG, o WebP format).');
+            return;
+        }
+
+        try {
+            setError(null);
+            setUploadingImage(true);
+            const compressed = await compressImage(file);
+            setResumeLink(compressed);
+            setResumeFileName(file.name);
+            setResumeFileSize(`${(file.size / 1024).toFixed(0)} KB`);
+        } catch {
+            setError('Nabigong basahin ang image. Pakisubukang muli gamit ang ibang photo.');
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setResumeLink('');
+        setResumeFileName('');
+        setResumeFileSize('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     // Handle Stage 1 → Stage 2
     const handleProceedToQA = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
         if (!fullName.trim() || !email.trim() || !phoneNumber.trim()) {
-            setError('Pakipunan ang lahat ng mahahalagang fields (Pangalan, Email, Phone Number).');
+            setError('Please fill in all required fields (Full Name, Email Address, Phone Number).');
             return;
         }
         if (!resumeLink.trim()) {
-            setError('Pakilagay ang link ng iyong Resume (Google Drive, LinkedIn, o Portfolio).');
+            setError('Please upload an image/photo of your resume (or paste a resume link).');
             return;
         }
         if (!fbLink.trim()) {
-            setError('Pakilagay ang link ng iyong Facebook profile para sa pag-verify.');
+            setError('Please provide your Facebook profile link for identity verification.');
             return;
         }
 
         setCurrentStep(2);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        setSuccessMessage('Na-save ang iyong profile! Magpatuloy sa Q&A Portion.');
+        setSuccessMessage('Profile saved! Proceed to the Q&A Portion.');
         setTimeout(() => setSuccessMessage(null), 3000);
     };
 
@@ -90,21 +173,39 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
         setError(null);
         const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
         if (answeredCount < 5) {
-            setError(`Pakisagutan ang kahit 5 o higit pang katanungan bago magpatuloy (Kasalukuyang nasagutan: ${answeredCount} / 10).`);
+            setError(`Please answer at least 5 or more questions before proceeding (Currently answered: ${answeredCount} / 10).`);
             return;
         }
 
         setCurrentStep(3);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        setSuccessMessage('Naitala ang iyong mga sagot! Pumili ng schedule para sa iyong meeting.');
+        setSuccessMessage('Answers recorded! Choose your interview meeting schedule.');
         setTimeout(() => setSuccessMessage(null), 3000);
+    };
+
+    // Helper to generate Gmail URLs
+    const getEmailUrls = (app: Applicant) => {
+        const subject = `SmartMenu Sales Consultant Application Code: ${app.application_code}`;
+        const body =
+            `Hi WebNegosyo / SmartMenu Team,\n\n` +
+            `My name is ${app.full_name}.\n` +
+            `Here is my Application Code: ${app.application_code}\n\n` +
+            `Scheduled Interview: ${app.meeting_date} at ${app.meeting_time}\n` +
+            `Phone: ${app.phone_number}\n` +
+            `Email: ${app.email}\n\n` +
+            `Thank you!`;
+
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${TARGET_EMAIL}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const mailtoUrl = `mailto:${TARGET_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        return { gmailUrl, mailtoUrl };
     };
 
     // Handle Final Submission (Stage 3 → Complete)
     const handleCompleteApplication = async () => {
         setError(null);
         if (!meetingDate) {
-            setError('Pumili ng petsa para sa iyong scheduled meeting.');
+            setError('Please select a date for your scheduled meeting.');
             return;
         }
 
@@ -121,10 +222,23 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 meetingDate,
                 meetingTime
             });
+
             setCompletedApplicant(result);
             setShowCompletionModal(true);
+
+            // Automatically open Gmail to send code
+            const { gmailUrl, mailtoUrl } = getEmailUrls(result);
+            try {
+                const opened = window.open(gmailUrl, '_blank');
+                if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+                    // If pop-up was blocked, try opening default mailto client
+                    window.location.href = mailtoUrl;
+                }
+            } catch {
+                window.location.href = mailtoUrl;
+            }
         } catch (err: any) {
-            setError(err?.message || 'Nabigong kumpletuhin ang application. Pakisubukang muli.');
+            setError(err?.message || 'Failed to complete application. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -138,7 +252,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     };
 
     const handleCopyEmail = () => {
-        navigator.clipboard.writeText('webnegosyp@gmail.com');
+        navigator.clipboard.writeText(TARGET_EMAIL);
         setCopiedEmail(true);
         setTimeout(() => setCopiedEmail(false), 2000);
     };
@@ -162,26 +276,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 <div className="absolute inset-0 bg-[radial-gradient(#f97316_0.75px,transparent_0.75px)] [background-size:24px_24px] opacity-[0.06]" />
             </div>
 
-            {/* Top Navigation Bar */}
-            <div className="max-w-4xl w-full mx-auto flex items-center justify-between py-1 mb-4 sm:mb-6">
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (onBackToSelection) {
-                            onBackToSelection();
-                        } else {
-                            window.location.href = '/';
-                        }
-                    }}
-                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold text-zinc-700 hover:text-black bg-white/80 hover:bg-white border border-amber-200/70 hover:border-amber-400 shadow-2xs transition-all active:scale-95 backdrop-blur-xs"
-                >
-                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-600" />
-                    <span>Back to Home</span>
-                </button>
-            </div>
-
             {/* Main Container */}
-            <div className="max-w-4xl w-full mx-auto flex-1">
+            <div className="max-w-4xl w-full mx-auto flex-1 pt-2 sm:pt-4">
                 {/* SmartMenu Branding & Header Banner */}
                 <div className="text-center mb-5 sm:mb-8">
                     {/* Glowing Logo Card Container */}
@@ -229,8 +325,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 <div className="bg-white/90 backdrop-blur-xs border border-amber-100/90 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-sm mb-4 sm:mb-6">
                     <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                         {[
-                            { num: 1, label: 'Profile', sub: 'Details', desc: 'Basic Info & Socials' },
-                            { num: 2, label: 'Q&A', sub: '10 Qs', desc: '10 Sales Questions' },
+                            { num: 1, label: 'Profile', sub: 'Details', desc: 'Basic Info & Resume' },
+                            { num: 2, label: 'Q&A', sub: '10 Qs', desc: '10 Sales Assessment Questions' },
                             { num: 3, label: 'Schedule', sub: 'Meeting', desc: '10 AM / 4 PM / 10 PM' }
                         ].map((step) => {
                             const isDone = currentStep > step.num || isCompleted;
@@ -278,7 +374,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         Stage 1: Applicant Profile
                                     </h3>
                                     <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium">
-                                        Mag-fill up ng iyong impormasyon para makapagsimula sa hiring process.
+                                        Fill in your basic information and upload your resume image to get started.
                                     </p>
                                 </div>
                                 <span className="text-[9px] font-black text-rose-600 uppercase tracking-wider bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200/60 hidden sm:inline-block">
@@ -294,7 +390,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     <input
                                         type="text"
                                         required
-                                        placeholder="Hal. Juan Dela Cruz"
+                                        placeholder="e.g. Juan Dela Cruz"
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
                                         className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-zinc-50/70 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 transition-all"
@@ -339,22 +435,119 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
-                                    Resume Link (Google Drive / Portfolio URL) *
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="url"
-                                        required
-                                        placeholder="https://drive.google.com/... o LinkedIn"
-                                        value={resumeLink}
-                                        onChange={(e) => setResumeLink(e.target.value)}
-                                        className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-zinc-50/70 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 transition-all"
-                                    />
-                                    <FileText className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            {/* RESUME IMAGE UPLOAD SECTION */}
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                                        <ImageIcon className="w-3.5 h-3.5 text-rose-600" />
+                                        Resume (Upload Image / Photo) *
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setUseManualLink(!useManualLink)}
+                                        className="text-[9px] font-bold text-orange-600 hover:text-orange-700 underline"
+                                    >
+                                        {useManualLink ? 'Switch to Image Upload' : 'Or paste a link instead'}
+                                    </button>
                                 </div>
-                                <p className="text-[8px] text-zinc-400">Siguraduhing naka-"Anyone with the link can view" ang iyong Google Drive link.</p>
+
+                                {!useManualLink ? (
+                                    /* Image File Uploader */
+                                    <div>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            id="resume-image-input"
+                                        />
+
+                                        {resumeLink && resumeLink.startsWith('data:image/') ? (
+                                            /* Image Preview Card */
+                                            <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-white border border-amber-200 shrink-0 shadow-xs">
+                                                        <img
+                                                            src={resumeLink}
+                                                            alt="Resume Preview"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                            <p className="font-black text-xs text-zinc-900 truncate">
+                                                                {resumeFileName || 'resume-photo.jpg'}
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-[10px] text-zinc-500 font-bold mt-0.5">
+                                                            Image attached • {resumeFileSize || 'Ready'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
+                                                    >
+                                                        Change
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveImage}
+                                                        title="Remove resume image"
+                                                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* Upload Dropzone / Button */
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="border-2 border-dashed border-amber-200 hover:border-rose-400 bg-amber-50/30 hover:bg-amber-50/60 rounded-2xl p-4 sm:p-5 text-center cursor-pointer transition-all group"
+                                            >
+                                                {uploadingImage ? (
+                                                    <div className="flex flex-col items-center gap-2 py-2">
+                                                        <div className="w-6 h-6 border-2 border-rose-500/30 border-t-rose-600 rounded-full animate-spin" />
+                                                        <span className="text-xs font-bold text-zinc-600">Processing photo...</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-1.5">
+                                                        <div className="w-10 h-10 rounded-full bg-white border border-amber-200 flex items-center justify-center text-rose-600 shadow-2xs group-hover:scale-105 transition-transform">
+                                                            <UploadCloud className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-extrabold text-xs text-zinc-900">
+                                                                Click to upload a photo of your Resume
+                                                            </p>
+                                                            <p className="text-[10px] text-zinc-500 mt-0.5">
+                                                                Supports JPG, PNG, WebP (camera photo or screenshot)
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    /* Manual Link Input Alternative */
+                                    <div className="relative">
+                                        <input
+                                            type="url"
+                                            required={useManualLink}
+                                            placeholder="https://drive.google.com/... o LinkedIn"
+                                            value={resumeLink}
+                                            onChange={(e) => setResumeLink(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-zinc-50/70 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 transition-all"
+                                        />
+                                        <FileText className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-1">
@@ -381,7 +574,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        placeholder="Hal. LinkedIn: ... / TikTok: @handle"
+                                        placeholder="e.g. LinkedIn: ... / TikTok: @handle"
                                         value={otherSocials}
                                         onChange={(e) => setOtherSocials(e.target.value)}
                                         className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-zinc-50/70 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 transition-all"
@@ -401,7 +594,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                     </div>
                 )}
 
-                {/* ===== STAGE 2: 10 QUESTIONS AND ANSWERS ===== */}
+                {/* ===== STAGE 2: 10 ENGLISH QUESTIONS AND ANSWERS ===== */}
                 {currentStep === 2 && (
                     <div className="bg-white/95 backdrop-blur-xs border border-amber-100/90 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-xl shadow-orange-500/5 space-y-5 sm:space-y-6">
                         <div className="border-b border-amber-100/80 pb-3 sm:pb-4">
@@ -411,7 +604,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         Assessment Stage
                                     </span>
                                     <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-zinc-950">
-                                        Stage 2: Question & Answer Portion
+                                        Stage 2: Question & Answer Assessment
                                     </h3>
                                 </div>
                                 <div className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-[10px] sm:text-xs font-bold text-amber-900">
@@ -419,7 +612,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 </div>
                             </div>
                             <p className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-                                May 10 katanungan tungkol sa iyong sarili at mga practical na sitwasyon sa sales call. Sagutan nang tapat at detalyado.
+                                10 practical questions about your sales experience, mindset, and call handling scenarios. Please answer thoroughly in English or Taglish.
                             </p>
                         </div>
 
@@ -451,7 +644,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
 
                                     <textarea
                                         rows={3}
-                                        placeholder="I-type dito ang iyong sagot..."
+                                        placeholder="Type your answer here..."
                                         value={answers[q.id] || ''}
                                         onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
                                         className="w-full p-2.5 sm:p-3 bg-white border border-zinc-200 rounded-xl font-medium text-xs outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 transition-all resize-y min-h-[70px] sm:min-h-[80px]"
@@ -492,7 +685,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 Stage 3: Interview & Meeting Schedule
                             </h3>
                             <p className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-                                Pumili ng isa sa 3 schedule slots para sa iyong 1-on-1 interview via Google Meet o Phone Call.
+                                Choose one of the 3 time slots for your 1-on-1 interview via Google Meet or Phone Call.
                             </p>
                         </div>
 
@@ -500,7 +693,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                         <div className="space-y-1.5 max-w-sm">
                             <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-orange-600" />
-                                Piliin ang Araw ng Meeting
+                                Meeting Date
                             </label>
                             <input
                                 type="date"
@@ -515,7 +708,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                         <div className="space-y-2">
                             <span className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
                                 <Clock className="w-3.5 h-3.5 text-orange-600" />
-                                Piliin ang Oras ng Meeting (3 Choices)
+                                Meeting Time Slot (3 Choices)
                             </span>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3">
@@ -523,20 +716,20 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     {
                                         time: '10:00 AM' as const,
                                         label: 'Morning Slot',
-                                        tag: '🌅 Umaga',
-                                        desc: 'Perpekto para sa maagang briefing at Q&A session.'
+                                        tag: '🌅 Morning',
+                                        desc: 'Ideal for early briefing and live Q&A orientation.'
                                     },
                                     {
                                         time: '4:00 PM' as const,
                                         label: 'Afternoon Slot',
-                                        tag: '☀️ Hapon',
-                                        desc: 'Mainam para sa hapon bago matapos ang araw.'
+                                        tag: '☀️ Afternoon',
+                                        desc: 'Great for a mid-day discussion before wrapping up the day.'
                                     },
                                     {
                                         time: '10:00 PM' as const,
                                         label: 'Evening Slot',
-                                        tag: '🌙 Gabi',
-                                        desc: 'Para sa mga may daytime commitment o night owl sales reps.'
+                                        tag: '🌙 Evening',
+                                        desc: 'For night owls or applicants with daytime commitments.'
                                     }
                                 ].map((slot) => {
                                     const isSelected = meetingTime === slot.time;
@@ -583,7 +776,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 onClick={() => { setCurrentStep(2); setError(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                                 className="text-xs font-bold text-zinc-600 hover:text-black py-1.5 self-start sm:self-auto"
                             >
-                                ← Balikan ang Q&A Stage
+                                ← Back to Q&A Assessment
                             </button>
 
                             <button
@@ -597,7 +790,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 ) : (
                                     <>
                                         <Sparkles className="w-4 h-4 text-amber-200" />
-                                        <span>Confirm Meeting & Get Code</span>
+                                        <span>Confirm Meeting & Send Code via Gmail</span>
                                     </>
                                 )}
                             </button>
@@ -606,90 +799,92 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 )}
             </div>
 
-            {/* ===== COMPLETION MODAL WITH GENERATED CODE - Branded & Mobile-Optimized ===== */}
+            {/* ===== COMPLETION MODAL WITH GENERATED CODE - Automatic Gmail Redirect ===== */}
             <AnimatePresence>
-                {showCompletionModal && completedApplicant?.application_code && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-amber-100 p-5 sm:p-8 max-w-lg w-full max-h-[92dvh] overflow-y-auto shadow-2xl relative"
-                        >
-                            {/* SmartMenu Sun & Red Gradient Bar */}
-                            <div className="absolute top-0 left-0 right-0 h-2.5 bg-gradient-to-r from-amber-400 via-red-500 to-rose-600" />
+                {showCompletionModal && completedApplicant?.application_code && (() => {
+                    const { gmailUrl, mailtoUrl } = getEmailUrls(completedApplicant);
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-amber-100 p-5 sm:p-8 max-w-lg w-full max-h-[92dvh] overflow-y-auto shadow-2xl relative"
+                            >
+                                {/* SmartMenu Sun & Red Gradient Bar */}
+                                <div className="absolute top-0 left-0 right-0 h-2.5 bg-gradient-to-r from-amber-400 via-red-500 to-rose-600" />
 
-                            <div className="text-center space-y-1.5 sm:space-y-2 mt-1">
-                                <div className="inline-block p-1.5 bg-white rounded-2xl border border-amber-100 shadow-xs mb-1">
-                                    <img 
-                                        src="/smartmenu-logo.jpg" 
-                                        alt="SmartMenu Logo" 
-                                        className="h-10 sm:h-12 w-auto object-contain mx-auto"
-                                    />
+                                <div className="text-center space-y-1.5 sm:space-y-2 mt-1">
+                                    <div className="inline-block p-1.5 bg-white rounded-2xl border border-amber-100 shadow-xs mb-1">
+                                        <img 
+                                            src="/smartmenu-logo.jpg" 
+                                            alt="SmartMenu Logo" 
+                                            className="h-10 sm:h-12 w-auto object-contain mx-auto"
+                                        />
+                                    </div>
+                                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-100 to-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner border border-amber-200">
+                                        <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    </div>
+                                    <span className="text-[8px] sm:text-[9px] font-black text-rose-700 uppercase tracking-[0.25em] bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                                        Application Complete
+                                    </span>
+                                    <h3 className="text-lg sm:text-2xl font-black tracking-tight text-zinc-950">
+                                        Mabuhay, {completedApplicant.full_name}!
+                                    </h3>
+                                    <p className="text-[11px] sm:text-xs text-zinc-500 font-medium leading-relaxed">
+                                        Natanggap na ang iyong SmartMenu Sales Consultant Application at napili ang interview schedule.
+                                    </p>
                                 </div>
-                                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-100 to-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner border border-amber-200">
-                                    <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />
-                                </div>
-                                <span className="text-[8px] sm:text-[9px] font-black text-rose-700 uppercase tracking-[0.25em] bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
-                                    Application Complete
-                                </span>
-                                <h3 className="text-lg sm:text-2xl font-black tracking-tight text-zinc-950">
-                                    Mabuhay, {completedApplicant.full_name}!
-                                </h3>
-                                <p className="text-[11px] sm:text-xs text-zinc-500 font-medium leading-relaxed">
-                                    Natanggap na ang iyong SmartMenu Sales Consultant Application at napili ang interview schedule.
-                                </p>
-                            </div>
 
-                            {/* Meeting Recap Box */}
-                            <div className="mt-3.5 sm:mt-4 p-2.5 sm:p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl sm:rounded-2xl flex items-center justify-between text-xs">
-                                <div>
-                                    <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Scheduled Meeting</span>
-                                    <span className="font-bold text-zinc-900 text-[11px] sm:text-xs">{completedApplicant.meeting_date}</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Time Slot</span>
-                                    <span className="font-black text-rose-600 text-[11px] sm:text-xs">{completedApplicant.meeting_time}</span>
-                                </div>
-                            </div>
-
-                            {/* Prominent Generated Code Box */}
-                            <div className="mt-3 sm:mt-4 p-3.5 sm:p-5 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white rounded-xl sm:rounded-2xl text-center space-y-1.5 sm:space-y-2 relative overflow-hidden shadow-xl border border-amber-400/30">
-                                <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.3em] text-amber-300">
-                                    Ang Iyong Generated Code
-                                </p>
-                                <div className="text-xl sm:text-3xl font-black font-mono tracking-widest text-amber-400 py-0.5 sm:py-1 drop-shadow-sm">
-                                    {completedApplicant.application_code}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleCopyCode}
-                                    className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 border border-white/10"
-                                >
-                                    {copiedCode ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
-                                    <span>{copiedCode ? 'Copied to Clipboard!' : 'Copy Code'}</span>
-                                </button>
-                            </div>
-
-                            {/* Instruction Alert: Send to webnegosyp */}
-                            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-amber-50/90 border border-amber-200 rounded-xl sm:rounded-2xl space-y-2 text-xs">
-                                <div className="flex items-start gap-2">
-                                    <AlertCircle className="w-4 h-4 text-orange-700 shrink-0 mt-0.5" />
+                                {/* Meeting Recap Box */}
+                                <div className="mt-3.5 sm:mt-4 p-2.5 sm:p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl sm:rounded-2xl flex items-center justify-between text-xs">
                                     <div>
-                                        <p className="font-black text-amber-950 uppercase tracking-wide text-[9px] sm:text-[10px]">
-                                            Mahalagang Hakbang:
-                                        </p>
-                                        <p className="text-amber-900 font-medium leading-relaxed mt-0.5 text-[10px] sm:text-xs">
-                                            I-send ang code na <strong className="font-mono">{completedApplicant.application_code}</strong> sa email na ito para ma-confirm ang interview:
-                                        </p>
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Scheduled Meeting</span>
+                                        <span className="font-bold text-zinc-900 text-[11px] sm:text-xs">{completedApplicant.meeting_date}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Time Slot</span>
+                                        <span className="font-black text-rose-600 text-[11px] sm:text-xs">{completedApplicant.meeting_time}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-amber-200 p-2 sm:p-2.5 rounded-xl gap-2">
-                                    <span className="font-mono font-bold text-zinc-900 text-[11px] sm:text-xs break-all">
-                                        webnegosyp@gmail.com
-                                    </span>
-                                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                                {/* Prominent Generated Code Box */}
+                                <div className="mt-3 sm:mt-4 p-3.5 sm:p-5 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-white rounded-xl sm:rounded-2xl text-center space-y-1.5 sm:space-y-2 relative overflow-hidden shadow-xl border border-amber-400/30">
+                                    <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.3em] text-amber-300">
+                                        Ang Iyong Generated Code
+                                    </p>
+                                    <div className="text-xl sm:text-3xl font-black font-mono tracking-widest text-amber-400 py-0.5 sm:py-1 drop-shadow-sm">
+                                        {completedApplicant.application_code}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyCode}
+                                        className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 border border-white/10"
+                                    >
+                                        {copiedCode ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
+                                        <span>{copiedCode ? 'Copied to Clipboard!' : 'Copy Code'}</span>
+                                    </button>
+                                </div>
+
+                                {/* Instruction Alert: Send to webnegosyo3@gmail.com */}
+                                <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-amber-50/90 border border-amber-200 rounded-xl sm:rounded-2xl space-y-2.5 text-xs">
+                                    <div className="flex items-start gap-2">
+                                        <AlertCircle className="w-4 h-4 text-orange-700 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-black text-amber-950 uppercase tracking-wide text-[9px] sm:text-[10px]">
+                                                Mahalagang Hakbang:
+                                            </p>
+                                            <p className="text-amber-900 font-medium leading-relaxed mt-0.5 text-[10px] sm:text-xs">
+                                                I-send ang iyong code na <strong className="font-mono">{completedApplicant.application_code}</strong> sa email na ito para ma-confirm ang interview:
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Email display & copy */}
+                                    <div className="flex items-center justify-between bg-white border border-amber-200 p-2 sm:p-2.5 rounded-xl">
+                                        <span className="font-mono font-bold text-zinc-900 text-xs sm:text-sm">
+                                            {TARGET_EMAIL}
+                                        </span>
                                         <button
                                             type="button"
                                             onClick={handleCopyEmail}
@@ -697,29 +892,44 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         >
                                             {copiedEmail ? 'Copied!' : 'Copy Email'}
                                         </button>
+                                    </div>
+
+                                    {/* Direct Action Buttons for Gmail */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                                         <a
-                                            href={`mailto:webnegosyp@gmail.com?subject=SmartMenu%20Sales%20Consultant%20Application%20Code:%20${completedApplicant.application_code}&body=Hi%20WebNegosyo%20/%20SmartMenu%20Team,%0D%0A%0D%0AAng%20aking%20pangalan%20ay%20${encodeURIComponent(completedApplicant.full_name)}.%0D%0AIto%20po%20ang%20aking%20Application%20Code:%20${completedApplicant.application_code}%0D%0AScheduled%20Meeting:%20${completedApplicant.meeting_date}%20at%20${completedApplicant.meeting_time}%0D%0APhone:%20${completedApplicant.phone_number}%0D%0A%0D%0ASalamat%20po!`}
-                                            className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-xs"
+                                            href={gmailUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-98"
                                         >
-                                            <Send className="w-3 h-3" />
-                                            <span>Send Now</span>
+                                            <Send className="w-3.5 h-3.5" />
+                                            <span>Open in Gmail (Web)</span>
+                                            <ExternalLink className="w-3 h-3 opacity-80" />
+                                        </a>
+
+                                        <a
+                                            href={mailtoUrl}
+                                            className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-black hover:bg-zinc-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-98"
+                                        >
+                                            <Mail className="w-3.5 h-3.5" />
+                                            <span>Open Default Mail App</span>
                                         </a>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-4 sm:mt-5">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCompletionModal(false)}
-                                    className="w-full py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
-                                >
-                                    Isara (Close Window)
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
+                                <div className="mt-4 sm:mt-5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCompletionModal(false)}
+                                        className="w-full py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                                    >
+                                        Isara (Close Window)
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* Footer */}

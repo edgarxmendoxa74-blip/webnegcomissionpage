@@ -417,7 +417,7 @@ export const ApplicantsPage: React.FC = () => {
                                                                 title="View Resume"
                                                             >
                                                                 <FileText className="w-3 h-3" />
-                                                                <span>Resume</span>
+                                                                <span>{app.resume_link.startsWith('data:image/') ? 'Resume (Image)' : 'Resume'}</span>
                                                                 <ExternalLink className="w-2.5 h-2.5" />
                                                             </a>
                                                         )}
@@ -537,7 +537,7 @@ export const ApplicantsPage: React.FC = () => {
                                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800"
                                             >
                                                 <FileText className="w-3.5 h-3.5" />
-                                                <span>Open Resume</span>
+                                                <span>{selectedApplicant.resume_link.startsWith('data:image/') ? 'View Full Resume Image' : 'Open Resume'}</span>
                                                 <ExternalLink className="w-3 h-3" />
                                             </a>
                                         )}
@@ -554,6 +554,33 @@ export const ApplicantsPage: React.FC = () => {
                                             </a>
                                         )}
                                     </div>
+
+                                    {/* Uploaded Resume Photo Inline Preview */}
+                                    {selectedApplicant.resume_link && selectedApplicant.resume_link.startsWith('data:image/') && (
+                                        <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
+                                                    Uploaded Resume Photo
+                                                </span>
+                                                <a
+                                                    href={selectedApplicant.resume_link}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[9px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
+                                                >
+                                                    <span>Open full size</span>
+                                                    <ExternalLink className="w-2.5 h-2.5" />
+                                                </a>
+                                            </div>
+                                            <div className="max-h-80 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-1 shadow-inner">
+                                                <img 
+                                                    src={selectedApplicant.resume_link} 
+                                                    alt="Applicant Resume" 
+                                                    className="w-full h-auto object-contain rounded"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
