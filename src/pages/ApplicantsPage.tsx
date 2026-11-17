@@ -19,6 +19,7 @@ import {
     Filter,
     RefreshCw,
     UserCheck,
+    PhoneCall,
     X,
     Eye,
     MessageSquare,
@@ -592,26 +593,88 @@ export const ApplicantsPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* 10 Questions and Answers */}
+                            {/* Candidate Assessment Answers */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                                     <h4 className="font-black text-sm uppercase tracking-wider text-black flex items-center gap-2">
                                         <MessageSquare className="w-4 h-4 text-black" />
-                                        <span>Assessment Answers (10 Questions)</span>
+                                        <span>Candidate Assessment ({SALES_QUESTIONS.length} Questions)</span>
                                     </h4>
                                     <span className="text-[10px] font-bold text-zinc-500">
                                         {Object.keys(selectedApplicant.answers || {}).length} answered
                                     </span>
                                 </div>
 
+                                {/* SECTION 1: HR & Personality Assessment */}
                                 <div className="space-y-3">
-                                    {SALES_QUESTIONS.map((q, idx) => {
-                                        const answer = selectedApplicant.answers?.[q.id];
+                                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <UserCheck className="w-4 h-4 text-amber-700" />
+                                            <span className="font-black text-xs uppercase tracking-wider text-amber-950">
+                                                Section 1: HR & Personality Interview
+                                            </span>
+                                        </div>
+                                        <span className="text-[9px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200">
+                                            Strengths, Weaknesses & Contribution
+                                        </span>
+                                    </div>
+
+                                    {SALES_QUESTIONS.filter(q => q.category === 'personality').map((q, idx) => {
+                                        const answer = selectedApplicant.answers?.[q.id]
+                                            || (q.id === 'q_hr_background' ? selectedApplicant.answers?.['q1_background'] : undefined)
+                                            || (q.id === 'q_hr_motivation_goals' ? selectedApplicant.answers?.['q2_motivation'] : undefined)
+                                            || (q.id === 'q_hr_pressure_resilience' ? selectedApplicant.answers?.['q3_discipline'] : undefined)
+                                            || (q.id === 'q_hr_strengths_weaknesses' ? selectedApplicant.answers?.['q4_strengths'] : undefined);
+
                                         return (
                                             <div key={q.id} className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-1.5">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400">
+                                                    <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded">
                                                         Q{idx + 1}: {q.badge}
+                                                    </span>
+                                                    {!answer && (
+                                                        <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                                            Walang Sagot
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="font-extrabold text-black text-xs">{q.question}</p>
+                                                <div className="p-2.5 bg-white rounded-lg border border-zinc-200 font-medium text-zinc-800 whitespace-pre-wrap leading-relaxed">
+                                                    {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* SECTION 2: Sales Call Scenarios */}
+                                <div className="space-y-3 pt-2">
+                                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <PhoneCall className="w-4 h-4 text-rose-700" />
+                                            <span className="font-black text-xs uppercase tracking-wider text-rose-950">
+                                                Section 2: Sales Call Scenarios
+                                            </span>
+                                        </div>
+                                        <span className="text-[9px] font-bold text-rose-800 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
+                                            Objections, Phone Pitch & Closing
+                                        </span>
+                                    </div>
+
+                                    {SALES_QUESTIONS.filter(q => q.category === 'sales_call').map((q, idx) => {
+                                        const answer = selectedApplicant.answers?.[q.id]
+                                            || (q.id === 'q_sales_first_minute' ? selectedApplicant.answers?.['q5_first_minute'] : undefined)
+                                            || (q.id === 'q_sales_price_objection' ? selectedApplicant.answers?.['q6_price_objection'] : undefined)
+                                            || (q.id === 'q_sales_busy_client' ? selectedApplicant.answers?.['q7_busy_client'] : undefined)
+                                            || (q.id === 'q_sales_think_about_it' ? selectedApplicant.answers?.['q8_think_about_it'] : undefined)
+                                            || (q.id === 'q_sales_closing_deal' ? selectedApplicant.answers?.['q9_closing_downpayment'] : undefined)
+                                            || (q.id === 'q_sales_rejection_resilience' ? selectedApplicant.answers?.['q10_rejection_resilience'] : undefined);
+
+                                        return (
+                                            <div key={q.id} className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[8px] font-black uppercase tracking-wider text-rose-800 bg-rose-100/70 px-1.5 py-0.5 rounded">
+                                                        Q{SALES_QUESTIONS.filter(sq => sq.category === 'personality').length + idx + 1}: {q.badge}
                                                     </span>
                                                     {!answer && (
                                                         <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">

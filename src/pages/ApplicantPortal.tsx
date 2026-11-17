@@ -22,7 +22,9 @@ import {
     Image as ImageIcon,
     Trash2,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    UserCheck,
+    PhoneCall
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,6 +77,12 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     const [copiedEmail, setCopiedEmail] = useState(false);
 
     const isCompleted = !!completedApplicant;
+
+    const personalityQuestions = SALES_QUESTIONS.filter(q => q.category === 'personality');
+    const salesQuestions = SALES_QUESTIONS.filter(q => q.category === 'sales_call');
+    const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
+    const personalityAnswered = personalityQuestions.filter(q => answers[q.id]?.trim()).length;
+    const salesAnswered = salesQuestions.filter(q => answers[q.id]?.trim()).length;
 
     // Autoplay slideshow on the home view
     useEffect(() => {
@@ -184,7 +192,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         setError(null);
         const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
         if (answeredCount < 5) {
-            setError(`Please answer at least 5 questions (${answeredCount}/10 answered).`);
+            setError(`Please answer at least 5 questions (${answeredCount}/${SALES_QUESTIONS.length} answered).`);
             return;
         }
 
@@ -655,49 +663,128 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                             </div>
                         )}
 
-                        {/* ===== STAGE 2: Q&A (CLEAN & LESS TEXT) ===== */}
+                        {/* ===== STAGE 2: Q&A ASSESSMENT (PERSONALITY & SALES SECTIONS) ===== */}
                         {currentStep === 2 && (
-                            <div className="bg-white/95 border border-amber-100 rounded-2xl p-3.5 sm:p-5 shadow-md shadow-orange-500/5 space-y-3">
-                                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100">
-                                    <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
-                                        Sales Assessment
-                                    </h3>
-                                    <span className="text-[10px] font-black text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                        {Object.keys(answers).filter(k => answers[k]?.trim()).length}/10 answered
+                            <div className="bg-white/95 border border-amber-100 rounded-2xl p-3 sm:p-5 shadow-md shadow-orange-500/5 space-y-4">
+                                <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                                    <div>
+                                        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                            Candidate Assessment
+                                        </h3>
+                                        <p className="text-[10px] text-zinc-500 font-bold">
+                                            2 Sections • {SALES_QUESTIONS.length} Questions
+                                        </p>
+                                    </div>
+                                    <span className="text-[10px] font-black text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                        {answeredCount}/{SALES_QUESTIONS.length} answered
                                     </span>
                                 </div>
 
-                                <div className="space-y-3">
-                                    {SALES_QUESTIONS.map((q, idx) => (
-                                        <div
-                                            key={q.id}
-                                            className="bg-zinc-50/90 border border-zinc-200/80 rounded-xl p-3 space-y-1.5"
-                                        >
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
-                                                    {q.badge}
-                                                </span>
-                                                <span className="text-[9px] font-bold text-zinc-400">
-                                                    #{idx + 1}
-                                                </span>
+                                {/* SECTION 1: HR & PERSONALITY ASSESSMENT */}
+                                <div className="space-y-2.5">
+                                    <div className="p-2.5 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/40 border border-amber-200/80 rounded-xl flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                                                <UserCheck className="w-3.5 h-3.5" />
                                             </div>
-
-                                            <p className="font-extrabold text-xs text-zinc-900 leading-snug">
-                                                {q.question}
-                                            </p>
-
-                                            <textarea
-                                                rows={2}
-                                                placeholder="Your answer..."
-                                                value={answers[q.id] || ''}
-                                                onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                                                className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px]"
-                                            />
+                                            <div>
+                                                <h4 className="text-[11px] font-black uppercase text-amber-950 leading-tight">
+                                                    Section 1: HR & Personality Interview
+                                                </h4>
+                                                <p className="text-[9px] text-amber-800 font-medium">
+                                                    Strengths, weaknesses & company value
+                                                </p>
+                                            </div>
                                         </div>
-                                    ))}
+                                        <span className="text-[9px] font-black text-amber-900 bg-white/90 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0">
+                                            {personalityAnswered}/{personalityQuestions.length}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2.5">
+                                        {personalityQuestions.map((q, idx) => (
+                                            <div
+                                                key={q.id}
+                                                className="bg-zinc-50/90 border border-zinc-200/80 rounded-xl p-3 space-y-1.5"
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                                        {q.badge}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-zinc-400">
+                                                        #{idx + 1}
+                                                    </span>
+                                                </div>
+
+                                                <p className="font-extrabold text-xs text-zinc-900 leading-snug">
+                                                    {q.question}
+                                                </p>
+
+                                                <textarea
+                                                    rows={2}
+                                                    placeholder="Your answer..."
+                                                    value={answers[q.id] || ''}
+                                                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                                                    className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px]"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <div className="pt-2 flex items-center justify-between gap-2">
+                                {/* SECTION 2: SALES CALL SCENARIOS */}
+                                <div className="space-y-2.5 pt-1">
+                                    <div className="p-2.5 bg-gradient-to-r from-red-600/10 via-rose-500/10 to-orange-50/40 border border-rose-200/80 rounded-xl flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                                                <PhoneCall className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-[11px] font-black uppercase text-rose-950 leading-tight">
+                                                    Section 2: Sales Call Scenarios
+                                                </h4>
+                                                <p className="text-[9px] text-rose-800 font-medium">
+                                                    Live pitching, price objections & closing deals
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] font-black text-rose-900 bg-white/90 px-2 py-0.5 rounded-full border border-rose-200/80 shrink-0">
+                                            {salesAnswered}/{salesQuestions.length}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2.5">
+                                        {salesQuestions.map((q, idx) => (
+                                            <div
+                                                key={q.id}
+                                                className="bg-zinc-50/90 border border-zinc-200/80 rounded-xl p-3 space-y-1.5"
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-100 text-rose-900">
+                                                        {q.badge}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-zinc-400">
+                                                        #{personalityQuestions.length + idx + 1}
+                                                    </span>
+                                                </div>
+
+                                                <p className="font-extrabold text-xs text-zinc-900 leading-snug">
+                                                    {q.question}
+                                                </p>
+
+                                                <textarea
+                                                    rows={2}
+                                                    placeholder="Your answer..."
+                                                    value={answers[q.id] || ''}
+                                                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                                                    className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px]"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
                                     <button
                                         type="button"
                                         onClick={() => { setCurrentStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}

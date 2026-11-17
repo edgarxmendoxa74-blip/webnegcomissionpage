@@ -27,84 +27,109 @@ export interface Applicant {
 
 export interface SalesQuestion {
     id: string;
-    category: 'personal' | 'sales_call';
+    category: 'personality' | 'sales_call';
+    section: 'HR & Personality' | 'Sales Call Scenarios';
     badge: string;
     question: string;
     hint: string;
 }
 
 export const SALES_QUESTIONS: SalesQuestion[] = [
-    // Questions all about him or her (Personal & Mindset)
+    // =========================================================================
+    // SECTION 1: HR & PERSONALITY ASSESSMENT
+    // (Strengths, Weaknesses, Company Value, and Standard HR Interview Questions)
+    // =========================================================================
     {
-        id: 'q1_background',
-        category: 'personal',
-        badge: 'About You',
-        question: '1. Tell us about yourself, your background in sales, and your past experience communicating with clients.',
-        hint: 'Be honest and detailed about your work history, communication style, and relevant background.'
+        id: 'q_hr_background',
+        category: 'personality',
+        section: 'HR & Personality',
+        badge: 'About You & Background',
+        question: '1. Tell us about yourself, your personal background, and what makes you a great fit for our team.',
+        hint: 'Share your background, passions, and communication experience.'
     },
     {
-        id: 'q2_motivation',
-        category: 'personal',
-        badge: 'Motivation & Goals',
-        question: '2. What motivates you to apply as a Sales Consultant for SmartMenu, and what is your monthly income goal?',
-        hint: 'Share your personal ambition, financial targets, and why you are excited about this role.'
+        id: 'q_hr_strengths_weaknesses',
+        category: 'personality',
+        section: 'HR & Personality',
+        badge: 'Strengths & Weaknesses',
+        question: '2. What are your greatest strengths and weaknesses, and what concrete steps do you take to improve your weaknesses?',
+        hint: 'Be genuine. Highlight your key strengths and how you actively work on areas of growth.'
     },
     {
-        id: 'q3_discipline',
-        category: 'personal',
-        badge: 'Work Ethic & Time',
-        question: '3. How do you manage your time and stay self-disciplined when working in a remote or commission-based sales environment?',
-        hint: 'Explain your daily habits and how you maintain high productivity without constant supervision.'
+        id: 'q_hr_company_contribution',
+        category: 'personality',
+        section: 'HR & Personality',
+        badge: 'Contribution to Company',
+        question: '3. How can you contribute to SmartMenu, and in what specific ways will your skills help our company grow?',
+        hint: 'Explain how your efforts will help restaurant owners succeed and drive company revenue.'
     },
     {
-        id: 'q4_strengths',
-        category: 'personal',
-        badge: 'Strengths & Growth',
-        question: '4. What are your top 3 strengths in sales, and what is one skill you are actively working to improve?',
-        hint: 'E.g., Persuasion, active listening, objection handling, consistency, building rapport.'
+        id: 'q_hr_motivation_goals',
+        category: 'personality',
+        section: 'HR & Personality',
+        badge: 'Motivation & Why Us',
+        question: '4. Why do you want to work with SmartMenu, and what are your career and income goals for the next 12 months?',
+        hint: 'Share your personal ambition and why SmartMenu excites you over other opportunities.'
+    },
+    {
+        id: 'q_hr_pressure_resilience',
+        category: 'personality',
+        section: 'HR & Personality',
+        badge: 'Handling Pressure & Work Ethic',
+        question: '5. How do you handle work pressure, stressful days, and stay self-disciplined in a remote work environment?',
+        hint: 'Explain how you stay calm, organized, and maintain high energy when facing challenges.'
     },
 
-    // Questions regarding sales calls & objections (Sales Call Scenarios)
+    // =========================================================================
+    // SECTION 2: SALES CALL SCENARIOS
+    // (Live Pitching, Price Objection, Busy Client, and Closing Deals)
+    // =========================================================================
     {
-        id: 'q5_first_minute',
+        id: 'q_sales_first_minute',
         category: 'sales_call',
-        badge: 'Sales Call: First 60 Secs',
-        question: '5. When calling a busy restaurant owner or prospect, how do you hook their interest and build trust within the first 60 seconds?',
+        section: 'Sales Call Scenarios',
+        badge: 'First 60 Seconds Hook',
+        question: '6. When calling a busy restaurant owner or prospect, how do you hook their interest and build trust within the first 60 seconds?',
         hint: 'Share your exact opening pitch or approach to prevent them from hanging up.'
     },
     {
-        id: 'q6_price_objection',
+        id: 'q_sales_price_objection',
         category: 'sales_call',
-        badge: 'Sales Call: Price Objection',
-        question: '6. The client on the call says: "Your solution is too expensive! We can find free tools or cheaper alternatives." How do you handle this objection?',
+        section: 'Sales Call Scenarios',
+        badge: 'Price Objection',
+        question: '7. The client on the call says: "Your solution is too expensive! We can find free tools or cheaper alternatives." How do you handle this objection?',
         hint: 'Demonstrate return on investment (ROI), tangible business value, and why SmartMenu pays for itself.'
     },
     {
-        id: 'q7_busy_client',
+        id: 'q_sales_busy_client',
         category: 'sales_call',
-        badge: 'Sales Call: Busy Owner',
-        question: '7. The prospect replies: "I don\'t have time for this right now, I am swamped running my restaurant daily." How do you address their pain point?',
+        section: 'Sales Call Scenarios',
+        badge: 'Busy Restaurant Owner',
+        question: '8. The prospect replies: "I don\'t have time for this right now, I am swamped running my restaurant daily." How do you address their pain point?',
         hint: 'Explain how SmartMenu actually frees up their time and simplifies daily operations.'
     },
     {
-        id: 'q8_think_about_it',
+        id: 'q_sales_think_about_it',
         category: 'sales_call',
-        badge: 'Sales Call: "I\'ll Think About It"',
-        question: '8. The prospect says: "Let me think about it, just call me next week." What do you do before ending the call, and how do you follow up?',
+        section: 'Sales Call Scenarios',
+        badge: '"I\'ll Think About It"',
+        question: '9. The prospect says: "Let me think about it, just call me next week." What do you do before ending the call, and how do you follow up?',
         hint: 'How do you avoid getting ghosted and keep the sales momentum alive?'
     },
     {
-        id: 'q9_closing_downpayment',
+        id: 'q_sales_closing_deal',
         category: 'sales_call',
-        badge: 'Sales Call: Closing Deal',
-        question: '9. The client shows clear interest in the solution. How do you confidently ask for the close and secure their commitment or downpayment?',
+        section: 'Sales Call Scenarios',
+        badge: 'Closing Deal & Downpayment',
+        question: '10. The client shows clear interest in the solution. How do you confidently ask for the close and secure their commitment or downpayment?',
         hint: 'Share your closing technique, transition, and call-to-action.'
     },
     {
-        id: 'q10_rejection_resilience',
+        id: 'q_sales_rejection_resilience',
         category: 'sales_call',
+        section: 'Sales Call Scenarios',
         badge: 'Mindset: Rejection Resilience',
-        question: '10. If you encounter a tough week filled with rejections and zero closed deals, how do you bounce back and keep your energy high?',
+        question: '11. If you encounter a tough week filled with rejections and zero closed deals, how do you bounce back and keep your energy high?',
         hint: 'How do you process hearing "no" and maintain motivation toward your next "yes"?'
     }
 ];
