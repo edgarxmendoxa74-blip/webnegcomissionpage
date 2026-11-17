@@ -154,16 +154,214 @@ const saveLocalApplicants = (list: Applicant[]) => {
     }
 };
 
+// Valid UUID v4 generator
+export const generateUUID = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
+
 // Generate readable code e.g. WN-SC-84921
 export const generateApplicationCode = (): string => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     return `WN-SC-${randomNum}`;
 };
 
+export const APPLICANTS_SQL_SETUP = `-- =========================================================================
+-- CREATE APPLICANTS TABLE FOR SALES CONSULTANT HIRING PORTAL
+-- Run this in your Supabase SQL Editor:
+-- https://supabase.com/dashboard/project/tctqctqsuibfrktmirzc/sql/new
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS public.applicants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    password_hash TEXT,
+    phone_number TEXT,
+    resume_link TEXT,
+    fb_link TEXT,
+    other_socials TEXT,
+    
+    current_stage INT NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'incomplete',
+    
+    answers JSONB DEFAULT '{}'::jsonb,
+    
+    meeting_date DATE,
+    meeting_time TEXT,
+    
+    application_code TEXT UNIQUE,
+    completed_at TIMESTAMPTZ,
+    
+    owner_notes TEXT,
+    owner_rating INT DEFAULT 0,
+    
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_applicants_status ON public.applicants(status);
+CREATE INDEX IF NOT EXISTS idx_applicants_email ON public.applicants(email);
+CREATE INDEX IF NOT EXISTS idx_applicants_code ON public.applicants(application_code);
+CREATE INDEX IF NOT EXISTS idx_applicants_meeting ON public.applicants(meeting_date, meeting_time);
+
+ALTER TABLE public.applicants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can submit and update application" ON public.applicants;
+CREATE POLICY "Public can submit and update application" ON public.applicants
+    FOR ALL USING (true) WITH CHECK (true);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'applicants'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.applicants;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;`;
+
 /**
- * Submit a completed application (all 3 stages at once)
+ * Check if the applicants table exists in Supabase
+ */
+export const checkApplicantsTable = async (): Promise<{ exists: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('applicants')
+            .select('id')
+            .limit(1);
+
+        if (error) {
+            if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+                return { exists: false, error: 'Table public.applicants does not exist in Supabase.' };
+            }
+            return { exists: false, error: error.message };
+        }
+        return { exists: true };
+    } catch (err: any) {
+        return { exists: false, error: err?.message || 'Connection error' };
+    }
+};
+
+/**
+ * Stage 1: Save initial applicant info immediately
+ * So owner sees all who started applying even if they drop off later
+ */
+export const saveStage1Applicant = async (data: {
+    id?: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    resumeLink: string;
+    fbLink: string;
+    otherSocials?: string;
+    existingCode?: string;
+}): Promise<Applicant> => {
+    const id = data.id || generateUUID();
+    const code = data.existingCode || generateApplicationCode();
+    const now = new Date().toISOString();
+
+    const record: Applicant = {
+        id,
+        full_name: data.fullName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone_number: data.phoneNumber.trim(),
+        resume_link: data.resumeLink.trim(),
+        fb_link: data.fbLink.trim(),
+        other_socials: (data.otherSocials || '').trim(),
+        current_stage: 1,
+        status: 'incomplete',
+        application_code: code,
+        answers: {},
+        created_at: now,
+        updated_at: now
+    };
+
+    try {
+        const { data: dbData, error } = await supabase
+            .from('applicants')
+            .upsert([{
+                id: record.id,
+                full_name: record.full_name,
+                email: record.email,
+                phone_number: record.phone_number,
+                resume_link: record.resume_link,
+                fb_link: record.fb_link,
+                other_socials: record.other_socials,
+                current_stage: record.current_stage,
+                status: record.status,
+                application_code: record.application_code,
+                updated_at: now
+            }], { onConflict: 'id' })
+            .select('*')
+            .single();
+
+        if (error) {
+            console.warn('Supabase Stage 1 upsert failed:', error.message);
+        } else if (dbData) {
+            record.id = dbData.id;
+        }
+    } catch (err) {
+        console.warn('Supabase Stage 1 exception:', err);
+    }
+
+    // Sync to local storage
+    const local = getLocalApplicants();
+    const idx = local.findIndex(a => a.id === record.id || a.email === record.email);
+    if (idx >= 0) {
+        local[idx] = { ...local[idx], ...record };
+    } else {
+        local.unshift(record);
+    }
+    saveLocalApplicants(local);
+
+    return record;
+};
+
+/**
+ * Stage 2: Save Q&A answers as they progress
+ */
+export const updateStage2Answers = async (applicantId: string, answers: ApplicantAnswers): Promise<void> => {
+    if (!applicantId) return;
+    const now = new Date().toISOString();
+
+    try {
+        await supabase
+            .from('applicants')
+            .update({
+                answers,
+                current_stage: 2,
+                updated_at: now
+            })
+            .eq('id', applicantId);
+    } catch (err) {
+        console.warn('Supabase Stage 2 update failed:', err);
+    }
+
+    const local = getLocalApplicants();
+    const idx = local.findIndex(a => a.id === applicantId);
+    if (idx >= 0) {
+        local[idx].answers = answers;
+        local[idx].current_stage = 2;
+        local[idx].updated_at = now;
+        saveLocalApplicants(local);
+    }
+};
+
+/**
+ * Submit / Finalize a completed application (Stage 3 Complete)
  */
 export const submitApplication = async (data: {
+    applicantId?: string;
     fullName: string;
     email: string;
     phoneNumber: string;
@@ -173,12 +371,14 @@ export const submitApplication = async (data: {
     answers: ApplicantAnswers;
     meetingDate: string;
     meetingTime: string;
+    applicationCode?: string;
 }): Promise<Applicant> => {
-    const code = generateApplicationCode();
+    const id = data.applicantId || generateUUID();
+    const code = data.applicationCode || generateApplicationCode();
     const now = new Date().toISOString();
 
     const newApplicant: Applicant = {
-        id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `app-${Date.now()}`,
+        id,
         full_name: data.fullName.trim(),
         email: data.email.trim().toLowerCase(),
         phone_number: data.phoneNumber.trim(),
@@ -200,7 +400,7 @@ export const submitApplication = async (data: {
     try {
         const { data: dbData, error } = await supabase
             .from('applicants')
-            .insert([{
+            .upsert([{
                 id: newApplicant.id,
                 full_name: newApplicant.full_name,
                 email: newApplicant.email,
@@ -214,13 +414,14 @@ export const submitApplication = async (data: {
                 meeting_date: newApplicant.meeting_date,
                 meeting_time: newApplicant.meeting_time,
                 application_code: newApplicant.application_code,
-                completed_at: newApplicant.completed_at
-            }])
+                completed_at: newApplicant.completed_at,
+                updated_at: now
+            }], { onConflict: 'id' })
             .select('*')
             .single();
 
         if (error) {
-            console.warn('Supabase insert failed, saving locally:', error.message);
+            console.warn('Supabase upsert failed, saving locally:', error.message);
         } else if (dbData) {
             newApplicant.id = dbData.id;
         }
@@ -230,7 +431,12 @@ export const submitApplication = async (data: {
 
     // Always sync with local storage
     const local = getLocalApplicants();
-    local.unshift(newApplicant);
+    const idx = local.findIndex(a => a.id === newApplicant.id || a.email === newApplicant.email);
+    if (idx >= 0) {
+        local[idx] = { ...local[idx], ...newApplicant };
+    } else {
+        local.unshift(newApplicant);
+    }
     saveLocalApplicants(local);
 
     return newApplicant;
@@ -248,7 +454,7 @@ export const fetchAllApplicants = async (): Promise<Applicant[]> => {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
             // Merge with local storage in case of offline additions
             const combinedMap = new Map<string, Applicant>();
             data.forEach((item: Applicant) => combinedMap.set(item.id, item));

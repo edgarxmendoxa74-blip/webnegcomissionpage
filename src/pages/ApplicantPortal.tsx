@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     SALES_QUESTIONS,
     type Applicant,
-    submitApplication
+    submitApplication,
+    saveStage1Applicant,
+    updateStage2Answers
 } from '../lib/applicants';
+import { supabase } from '../lib/supabase';
 import {
     User,
     Mail,
@@ -70,6 +73,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
     // UI State
     const [loading, setLoading] = useState(false);
+    const [savingStage, setSavingStage] = useState(false);
+    const [applicantId, setApplicantId] = useState<string>('');
+    const [appCode, setAppCode] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [completedApplicant, setCompletedApplicant] = useState<Applicant | null>(null);
@@ -145,8 +151,28 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         try {
             setError(null);
             setUploadingImage(true);
-            const compressed = await compressImage(file);
-            setResumeLink(compressed);
+
+            // Try uploading directly to Supabase storage first
+            let storedUrl = '';
+            try {
+                const ext = file.name.split('.').pop() || 'jpg';
+                const filePath = `resumes/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error: upErr } = await supabase.storage.from('profiles').upload(filePath, file, { upsert: true });
+                if (!upErr) {
+                    const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
+                    if (publicUrl) storedUrl = publicUrl;
+                }
+            } catch {
+                // Ignore storage error, fallback to base64
+            }
+
+            if (storedUrl) {
+                setResumeLink(storedUrl);
+            } else {
+                const compressed = await compressImage(file);
+                setResumeLink(compressed);
+            }
+
             setResumeFileName(file.name);
             setResumeFileSize(`${(file.size / 1024).toFixed(0)} KB`);
         } catch {
@@ -165,8 +191,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         }
     };
 
-    // Stage 1 → Stage 2
-    const handleProceedToQA = (e: React.FormEvent) => {
+    // Stage 1 → Stage 2 (AUTOMATICALLY SAVES APPLICANT TO DATABASE!)
+    const handleProceedToQA = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
@@ -183,17 +209,45 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             return;
         }
 
+        setSavingStage(true);
+        try {
+            const saved = await saveStage1Applicant({
+                id: applicantId || undefined,
+                fullName,
+                email,
+                phoneNumber,
+                resumeLink,
+                fbLink,
+                otherSocials,
+                existingCode: appCode || undefined
+            });
+            if (saved?.id) setApplicantId(saved.id);
+            if (saved?.application_code) setAppCode(saved.application_code);
+        } catch (err) {
+            console.warn('Silent fallback for stage 1:', err);
+        } finally {
+            setSavingStage(false);
+        }
+
         setCurrentStep(2);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Stage 2 → Stage 3
-    const handleProceedToMeeting = () => {
+    // Stage 2 → Stage 3 (AUTOMATICALLY SAVES Q&A ANSWERS!)
+    const handleProceedToMeeting = async () => {
         setError(null);
-        const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
-        if (answeredCount < 5) {
-            setError(`Please answer at least 5 questions (${answeredCount}/${SALES_QUESTIONS.length} answered).`);
+        const answeredTotal = Object.keys(answers).filter(k => answers[k]?.trim()).length;
+        if (answeredTotal < 5) {
+            setError(`Please answer at least 5 questions (${answeredTotal}/${SALES_QUESTIONS.length} answered).`);
             return;
+        }
+
+        if (applicantId) {
+            try {
+                await updateStage2Answers(applicantId, answers);
+            } catch (err) {
+                console.warn('Silent fallback for stage 2 answers:', err);
+            }
         }
 
         setCurrentStep(3);
@@ -229,6 +283,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         setLoading(true);
         try {
             const result = await submitApplication({
+                applicantId: applicantId || undefined,
+                applicationCode: appCode || undefined,
                 fullName,
                 email,
                 phoneNumber,
@@ -654,9 +710,10 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
                                     <button
                                         type="submit"
-                                        className="w-full mt-2 py-3 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
+                                        disabled={savingStage}
+                                        className="w-full mt-2 py-3 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
                                     >
-                                        <span>Continue to Q&A</span>
+                                        <span>{savingStage ? 'Saving Details...' : 'Continue to Q&A'}</span>
                                         <ArrowRight className="w-4 h-4" />
                                     </button>
                                 </form>

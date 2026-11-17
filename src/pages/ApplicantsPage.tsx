@@ -4,7 +4,9 @@ import {
     type Applicant,
     SALES_QUESTIONS,
     fetchAllApplicants,
-    updateApplicantReview
+    updateApplicantReview,
+    checkApplicantsTable,
+    APPLICANTS_SQL_SETUP
 } from '../lib/applicants';
 import {
     Users,
@@ -26,7 +28,9 @@ import {
     Save,
     Link2,
     Check,
-    ChevronRight
+    ChevronRight,
+    AlertTriangle,
+    Copy
 } from 'lucide-react';
 
 export const ApplicantsPage: React.FC = () => {
@@ -43,6 +47,8 @@ export const ApplicantsPage: React.FC = () => {
     const [savingReview, setSavingReview] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
+    const [tableMissing, setTableMissing] = useState(false);
+    const [copiedSql, setCopiedSql] = useState(false);
 
     const handleCopyHiringLink = () => {
         const url = `${window.location.origin}/hiring`;
@@ -51,9 +57,18 @@ export const ApplicantsPage: React.FC = () => {
         setTimeout(() => setCopiedLink(false), 2000);
     };
 
+    const handleCopySql = () => {
+        navigator.clipboard.writeText(APPLICANTS_SQL_SETUP);
+        setCopiedSql(true);
+        setTimeout(() => setCopiedSql(false), 2500);
+    };
+
     const loadData = async () => {
         setLoading(true);
         try {
+            const tableStatus = await checkApplicantsTable();
+            setTableMissing(!tableStatus.exists);
+
             const list = await fetchAllApplicants();
             setApplicants(list);
         } catch (err) {
@@ -588,6 +603,60 @@ export const ApplicantsPage: React.FC = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Supabase Table Missing Setup Banner */}
+            {tableMissing && (
+                <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-400/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 shadow-xs">
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-black text-sm text-black uppercase tracking-tight">
+                                    One-Time Setup: Applicants Database Table Not Found
+                                </h3>
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-200 text-amber-900">
+                                    Action Required
+                                </span>
+                            </div>
+                            <p className="text-xs text-zinc-700 font-medium mt-1 leading-relaxed">
+                                Para pumasok nang <strong>awtomatiko ang lahat ng nag-aapply</strong> mula sa kahit saang cellphone o computer papunta dito sa Owner Portal, kailangan patakbuhin ang table script sa Supabase SQL Editor nang isang beses lang.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/80">
+                        <button
+                            type="button"
+                            onClick={handleCopySql}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
+                        >
+                            {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedSql ? 'SQL Script Copied!' : 'Copy SQL Script'}</span>
+                        </button>
+
+                        <a
+                            href="https://supabase.com/dashboard/project/tctqctqsuibfrktmirzc/sql/new"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-amber-50 border border-zinc-300 hover:border-black text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-2xs active:scale-95"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Open Supabase SQL Editor</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            onClick={loadData}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 sm:ml-auto"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            <span>Check Now</span>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Top Metric Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
