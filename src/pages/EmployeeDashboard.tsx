@@ -104,6 +104,8 @@ export const EmployeeDashboard: React.FC = () => {
         if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
     };
 
+    const [showEditModal, setShowEditModal] = useState(false);
+
     // Edit form state
     const [editForm, setEditForm] = useState({
         client_name: '',
@@ -118,6 +120,8 @@ export const EmployeeDashboard: React.FC = () => {
         paid_balance_date: '',
         proof_image_url: '',
         commission_rate: 10,
+        month: new Date().toLocaleString('default', { month: 'long' }),
+        date: new Date().toISOString().split('T')[0],
     });
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -202,7 +206,7 @@ export const EmployeeDashboard: React.FC = () => {
 
         // Subscribe to real-time changes exactly like LeadsTracker does
         const channel = supabase
-            .channel('schema-db-changes-employee-leads')
+            .channel(`schema-db-changes-employee-leads-${Date.now()}`)
             .on(
                 'postgres_changes',
                 {
@@ -216,7 +220,14 @@ export const EmployeeDashboard: React.FC = () => {
             )
             .subscribe();
 
+        // Polling fallback & focus refresh
+        const poll = setInterval(fetchLeads, 8000);
+        const handleFocus = () => fetchLeads();
+        window.addEventListener('focus', handleFocus);
+
         return () => {
+            clearInterval(poll);
+            window.removeEventListener('focus', handleFocus);
             supabase.removeChannel(channel);
         };
     }, [profile]);
@@ -322,11 +333,12 @@ export const EmployeeDashboard: React.FC = () => {
 
     const startEditing = (lead: Lead) => {
         setEditingId(lead.id);
+        const leadDate = lead.created_at ? lead.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
         setEditForm({
             client_name: lead.client_name,
-            deal_value: lead.deal_value,
-            down_payment: lead.down_payment,
-            tip: lead.tip || 0,
+            deal_value: Number(lead.deal_value || 0),
+            down_payment: Number(lead.down_payment || 0),
+            tip: Number(lead.tip || 0),
             payment_status: lead.payment_status || 'Downpayment Only',
             down_payment_date: lead.down_payment_date || '',
             full_payment: Number(lead.full_payment || 0),
@@ -335,8 +347,11 @@ export const EmployeeDashboard: React.FC = () => {
             paid_balance_date: lead.paid_balance_date || '',
             proof_image_url: lead.proof_image_url || '',
             commission_rate: Number(lead.commission_rate ?? workerRate),
+            month: lead.month || new Date(lead.created_at || Date.now()).toLocaleString('default', { month: 'long' }),
+            date: leadDate
         });
         setProofFile(null);
+        setShowEditModal(true);
     };
 
     // Commission % is entered by the employee themselves (My Profile).
@@ -370,35 +385,41 @@ export const EmployeeDashboard: React.FC = () => {
                     return;
                 }
             }
+
+            const updatePayload: any = {
+                client_name: editForm.client_name.trim(),
+                deal_value: Number(editForm.deal_value) || 0,
+                down_payment: Number(editForm.down_payment) || 0,
+                down_payment_date: editForm.down_payment_date || null,
+                full_payment: Number(editForm.full_payment) || 0,
+                full_payment_date: editForm.full_payment_date || null,
+                paid_balance: Number(editForm.paid_balance) || 0,
+                paid_balance_date: editForm.paid_balance_date || null,
+                proof_image_url: proofUrl,
+                tip: Number(editForm.tip) || 0,
+                payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
+                    ? editForm.payment_status
+                    : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
+                commission_rate: Math.min(100, Math.max(0, Number(editForm.commission_rate) || 0)),
+                month: editForm.month,
+                status: 'closed',
+                updated_at: new Date().toISOString()
+            };
+
             const { error } = await supabase
                 .from('leads')
-                .update({
-                    client_name: editForm.client_name,
-                    deal_value: editForm.deal_value,
-                    down_payment: editForm.down_payment,
-                    down_payment_date: editForm.down_payment_date || null,
-                    full_payment: editForm.full_payment,
-                    full_payment_date: editForm.full_payment_date || null,
-                    paid_balance: editForm.paid_balance,
-                    paid_balance_date: editForm.paid_balance_date || null,
-                    proof_image_url: proofUrl,
-                    tip: editForm.tip,
-                    payment_status: (editForm.payment_status === 'Cancelled Project' || editForm.payment_status === 'Downpayment Only')
-                        ? editForm.payment_status
-                        : (balance <= 0 ? 'Fully Paid' : editForm.payment_status),
-                    commission_rate: Math.min(100, Math.max(0, Number(editForm.commission_rate) || 0)),
-                    status: 'closed',
-                    closed_at: new Date().toISOString(),
-                })
+                .update(updatePayload)
                 .eq('id', id);
 
             if (error) {
                 alert(`Error saving changes: ${error.message}`);
                 throw error;
             }
+
             setEditingId(null);
+            setShowEditModal(false);
             setProofFile(null);
-            fetchLeads();
+            await fetchLeads();
         } catch (err: any) {
             console.error('Error saving edit:', err);
             if (err?.message && !err.message.includes('upload')) {
@@ -2530,6 +2551,326 @@ export const EmployeeDashboard: React.FC = () => {
                                             <CheckCircle2 className="w-4 h-4" />
                                         )}
                                         Save Client Record
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* UNIVERSAL EDIT CLIENT DEAL MODAL (MOBILE & PC) */}
+                {showEditModal && editingId && (
+                    <div className="fixed inset-0 z-[65] flex items-center justify-center p-3 sm:p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => {
+                                setEditingId(null);
+                                setShowEditModal(false);
+                            }}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-xl bg-white rounded-[2rem] shadow-2xl overflow-hidden z-10"
+                        >
+                            <div className="p-4 sm:p-6 border-b border-zinc-100 flex items-center justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-base sm:text-xl font-black tracking-tighter uppercase italic text-black">
+                                            Edit Client Deal
+                                        </h2>
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-100 text-zinc-700">
+                                            Live Sync
+                                        </span>
+                                    </div>
+                                    <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-0.5">
+                                        Changes will automatically update in Owner's Master List
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    title="Close"
+                                    onClick={() => {
+                                        setEditingId(null);
+                                        setShowEditModal(false);
+                                    }}
+                                    className="p-2 sm:p-2.5 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5 text-zinc-400" />
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (editingId) saveEdit(editingId);
+                                }}
+                                className="p-4 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs"
+                            >
+                                {/* Month & Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Month</label>
+                                        <select
+                                            className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black transition-all"
+                                            value={editForm.month}
+                                            onChange={(e) => setEditForm({ ...editForm, month: e.target.value })}
+                                        >
+                                            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                                                <option key={m} value={m}>{m}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Client Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editForm.client_name}
+                                            onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
+                                            className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black transition-all"
+                                            placeholder="Client Name"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Package Preset Selector */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">
+                                        Package Price (₱)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({ ...editForm, deal_value: 3499 })}
+                                            className={cn(
+                                                "p-2.5 rounded-xl border text-center transition-all",
+                                                editForm.deal_value === 3499
+                                                    ? "bg-black text-white border-black font-black"
+                                                    : "bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border-zinc-200 font-bold"
+                                            )}
+                                        >
+                                            <p className="text-xs">₱3,499</p>
+                                            <span className="text-[8px] uppercase tracking-wider block opacity-80">Comm: ₱250</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({ ...editForm, deal_value: 5499 })}
+                                            className={cn(
+                                                "p-2.5 rounded-xl border text-center transition-all",
+                                                editForm.deal_value === 5499
+                                                    ? "bg-black text-white border-black font-black"
+                                                    : "bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border-zinc-200 font-bold"
+                                            )}
+                                        >
+                                            <p className="text-xs">₱5,499</p>
+                                            <span className="text-[8px] uppercase tracking-wider block opacity-80">Comm: ₱300</span>
+                                        </button>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={editForm.deal_value || ''}
+                                                onChange={(e) => setEditForm({ ...editForm, deal_value: Number(e.target.value) || 0 })}
+                                                placeholder="Custom"
+                                                className="w-full h-full p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs text-center outline-none focus:border-black"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Payment Status Selector */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">
+                                        Payment Status
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({ ...editForm, payment_status: 'Fully Paid' })}
+                                            className={cn(
+                                                "py-2 px-1 rounded-xl text-xs font-black uppercase tracking-wider border transition-all text-center",
+                                                editForm.payment_status === 'Fully Paid'
+                                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                                    : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                                            )}
+                                        >
+                                            Fully Paid
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({ ...editForm, payment_status: 'Downpayment Only' })}
+                                            className={cn(
+                                                "py-2 px-1 rounded-xl text-xs font-black uppercase tracking-wider border transition-all text-center",
+                                                editForm.payment_status === 'Downpayment Only'
+                                                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                                                    : "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100"
+                                            )}
+                                        >
+                                            Downpayment
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({ ...editForm, payment_status: 'Cancelled Project' })}
+                                            className={cn(
+                                                "py-2 px-1 rounded-xl text-xs font-black uppercase tracking-wider border transition-all text-center",
+                                                editForm.payment_status === 'Cancelled Project'
+                                                    ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                                    : "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100"
+                                            )}
+                                        >
+                                            Cancelled
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Downpayment & Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Downpayment (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={editForm.down_payment || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, down_payment: Number(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Downpayment Date</label>
+                                        <input
+                                            type="date"
+                                            value={editForm.down_payment_date || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, down_payment_date: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Full Payment & Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Full Payment (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={editForm.full_payment || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, full_payment: Number(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Full Payment Date</label>
+                                        <input
+                                            type="date"
+                                            value={editForm.full_payment_date || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, full_payment_date: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Paid Balance & Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Paid Balance (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={editForm.paid_balance || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, paid_balance: Number(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Paid Balance Date</label>
+                                        <input
+                                            type="date"
+                                            value={editForm.paid_balance_date || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, paid_balance_date: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg font-bold text-xs outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Tip & Commission Rate */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Client Tip (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={editForm.tip || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, tip: Number(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Commission Rate (%)</label>
+                                        <input
+                                            type="number"
+                                            value={editForm.commission_rate || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, commission_rate: Number(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black"
+                                            placeholder="10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Proof of Payment Image */}
+                                <div className="space-y-1.5 pt-1">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">
+                                        Receipt / Proof of Payment Image
+                                    </label>
+                                    <div className="flex items-center gap-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                                        {(editForm.proof_image_url || proofFile) && (
+                                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-zinc-300 shrink-0 bg-white">
+                                                <img
+                                                    src={proofFile ? URL.createObjectURL(proofFile) : editForm.proof_image_url}
+                                                    alt="Receipt Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                                className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-black file:text-white hover:file:bg-zinc-800 cursor-pointer"
+                                            />
+                                            <p className="text-[9px] text-zinc-400 mt-1">Select a new image to replace current proof.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2.5 pt-3 border-t border-zinc-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditingId(null);
+                                            setShowEditModal(false);
+                                        }}
+                                        className="flex-1 py-3 border border-zinc-200 hover:border-black rounded-xl font-black text-zinc-700 hover:text-black uppercase tracking-wider text-xs transition-all cursor-pointer active:scale-95"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSaving}
+                                        className="flex-[2] py-3 bg-black hover:bg-zinc-800 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                                    >
+                                        {isSaving ? (
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                        )}
+                                        <span>{isSaving ? 'Saving Changes...' : 'Save & Sync Changes'}</span>
                                     </button>
                                 </div>
                             </form>

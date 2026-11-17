@@ -114,7 +114,7 @@ export const LeadsTracker: React.FC = () => {
 
         // Subscribe to real-time changes
         const channel = supabase
-            .channel('schema-db-changes-leads')
+            .channel(`schema-db-changes-leads-${Date.now()}`)
             .on(
                 'postgres_changes',
                 {
@@ -128,7 +128,19 @@ export const LeadsTracker: React.FC = () => {
             )
             .subscribe();
 
+        // Auto sync fallback every 8 seconds & on window focus
+        const pollInterval = setInterval(() => {
+            fetchData();
+        }, 8000);
+
+        const handleFocus = () => {
+            fetchData();
+        };
+        window.addEventListener('focus', handleFocus);
+
         return () => {
+            clearInterval(pollInterval);
+            window.removeEventListener('focus', handleFocus);
             supabase.removeChannel(channel);
         };
     }, [isOwner, profile?.id]);
