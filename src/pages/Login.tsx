@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint, ArrowRight } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint } from 'lucide-react';
 import { LogoMark } from '../components/Logo';
 import { authenticateWithBiometrics, isBiometricsAvailable } from '../lib/biometrics';
-import { ApplicantPortal } from './ApplicantPortal';
 
 const OWNER_EMAIL = 'owner@webnegosyo.com';
 const REMEMBER_KEY = 'webnegosyo.remember';
@@ -40,7 +39,7 @@ const offerToSavePassword = async (id: string, password: string) => {
 };
 
 export const LoginPage: React.FC = () => {
-    const [portal, setPortal] = useState<'selection' | 'owner' | 'employee' | 'applicant'>('selection');
+    const [portal, setPortal] = useState<'selection' | 'owner' | 'employee'>('selection');
     const [isRegistering, setIsRegistering] = useState(false);
     const [remembered] = useState(readRemembered);
     const [rememberMe, setRememberMe] = useState(remembered.remember);
@@ -218,10 +217,6 @@ export const LoginPage: React.FC = () => {
         }
     };
 
-    if (portal === 'applicant') {
-        return <ApplicantPortal onBackToSelection={() => setPortal('selection')} />;
-    }
-
     if (portal === 'selection') {
         return (
             <div className="min-h-dvh flex items-center justify-center p-6">
@@ -263,41 +258,6 @@ export const LoginPage: React.FC = () => {
                             </p>
                         </motion.button>
                     </div>
-
-                    <motion.button
-                        whileHover={{ y: -6, scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => setPortal('applicant')}
-                        className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-zinc-900 via-black to-zinc-900 text-white p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border border-zinc-800 text-left group transition-all shadow-xl shadow-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                        <div className="flex items-center gap-3.5 sm:gap-4">
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl p-1.5 flex items-center justify-center shrink-0 shadow-md overflow-hidden group-hover:scale-105 transition-transform">
-                                <img 
-                                    src="/smartmenu-logo.jpg" 
-                                    alt="SmartMenu Logo" 
-                                    className="w-full h-full object-contain" 
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                        Now Hiring
-                                    </span>
-                                    <span className="text-[8px] sm:text-[9px] font-bold text-zinc-400">SmartMenu Remote Sales</span>
-                                </div>
-                                <h3 className="text-base sm:text-2xl font-black text-white uppercase italic tracking-tight mt-0.5">
-                                    Apply as Sales Consultant
-                                </h3>
-                                <p className="text-zinc-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest mt-0.5">
-                                    Fill-Up Form: Profile • 10 Q&A • Interview Meeting
-                                </p>
-                            </div>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-black rounded-xl text-xs font-black uppercase tracking-wider group-hover:bg-emerald-400 transition-colors shrink-0 self-stretch sm:self-auto justify-center">
-                            <span>Apply Now</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                        </div>
-                    </motion.button>
 
                     <div className="mt-10 sm:mt-20 text-center">
                         <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">

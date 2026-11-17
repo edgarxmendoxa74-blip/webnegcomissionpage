@@ -14,6 +14,7 @@ import { DailyAuditPage } from './pages/DailyAuditPage';
 import { ExpensesPage } from './pages/Expenses';
 import { LoginPage } from './pages/Login';
 import { ApplicantsPage } from './pages/ApplicantsPage';
+import { ApplicantPortal } from './pages/ApplicantPortal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -489,7 +490,48 @@ const Dashboard = () => {
   );
 };
 
+const isHiringPath = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  return (
+    path === '/hiring' ||
+    path === '/hiring/' ||
+    path.startsWith('/hiring/') ||
+    hash === '#/hiring' ||
+    hash === '#hiring'
+  );
+};
+
 function App() {
+  const [isHiring, setIsHiring] = React.useState(isHiringPath);
+
+  React.useEffect(() => {
+    const handleLocationChange = () => {
+      setIsHiring(isHiringPath());
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  if (isHiring) {
+    return (
+      <ApplicantPortal
+        onBackToSelection={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = '/';
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <AuthProvider>
       <AppContent />

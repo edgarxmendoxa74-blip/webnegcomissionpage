@@ -25,7 +25,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ApplicantPortalProps {
-    onBackToSelection: () => void;
+    onBackToSelection?: () => void;
 }
 
 export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelection }) => {
@@ -151,11 +151,17 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
             <div className="max-w-4xl w-full mx-auto flex items-center justify-between py-1 mb-4 sm:mb-6">
                 <button
                     type="button"
-                    onClick={onBackToSelection}
+                    onClick={() => {
+                        if (onBackToSelection) {
+                            onBackToSelection();
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }}
                     className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-200/60 transition-all active:scale-95"
                 >
                     <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>Back to Portal</span>
+                    <span>Back to Home</span>
                 </button>
             </div>
 

@@ -22,7 +22,9 @@ import {
     X,
     Eye,
     MessageSquare,
-    Save
+    Save,
+    Link2,
+    Check
 } from 'lucide-react';
 
 export const ApplicantsPage: React.FC = () => {
@@ -38,6 +40,14 @@ export const ApplicantsPage: React.FC = () => {
     const [ownerNotes, setOwnerNotes] = useState('');
     const [savingReview, setSavingReview] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState(false);
+    const [copiedLink, setCopiedLink] = useState(false);
+
+    const handleCopyHiringLink = () => {
+        const url = `${window.location.origin}/hiring`;
+        navigator.clipboard.writeText(url);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -167,14 +177,26 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={loadData}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700 hover:text-black transition-all shadow-2xs self-start sm:self-auto"
-                >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                    <span>Refresh List</span>
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                        type="button"
+                        onClick={handleCopyHiringLink}
+                        title="Copy hiring page link to share with candidates"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                    >
+                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5 text-zinc-300" />}
+                        <span>{copiedLink ? 'Copied /hiring Link!' : 'Copy /hiring Link'}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={loadData}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700 hover:text-black transition-all shadow-2xs"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                        <span>Refresh List</span>
+                    </button>
+                </div>
             </div>
 
             {/* Top Metric Cards */}
