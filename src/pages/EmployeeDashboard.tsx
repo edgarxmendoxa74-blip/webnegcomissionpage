@@ -359,7 +359,17 @@ export const EmployeeDashboard: React.FC = () => {
         setIsSaving(true);
         try {
             const balance = editForm.deal_value - editForm.down_payment;
-            const proofUrl = proofFile ? await handleUpload(proofFile, 'payment-proofs') : (editForm.proof_image_url || null);
+            // Upload proof image - if no file selected, keep existing URL
+            let proofUrl = editForm.proof_image_url || null;
+            if (proofFile) {
+                try {
+                    proofUrl = await handleUpload(proofFile, 'proofs') || null;
+                } catch (uploadErr: any) {
+                    alert(`Error uploading proof image: ${uploadErr?.message || 'Upload failed. Please try again.'}`);
+                    setIsSaving(false);
+                    return;
+                }
+            }
             const { error } = await supabase
                 .from('leads')
                 .update({
@@ -389,8 +399,11 @@ export const EmployeeDashboard: React.FC = () => {
             setEditingId(null);
             setProofFile(null);
             fetchLeads();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error saving edit:', err);
+            if (err?.message && !err.message.includes('upload')) {
+                alert(`Error saving changes: ${err.message}`);
+            }
         } finally {
             setIsSaving(false);
         }
@@ -403,7 +416,7 @@ export const EmployeeDashboard: React.FC = () => {
             const balance = addForm.deal_value - addForm.down_payment;
             // Use the manual date or today's time
             const createdAt = new Date(addForm.date).toISOString();
-            const proofUrl = addProofFile ? await handleUpload(addProofFile, 'payment-proofs') : null;
+            const proofUrl = addProofFile ? await handleUpload(addProofFile, 'proofs') : null;
 
             const { error } = await supabase.from('leads').insert({
                 client_name: addForm.client_name,
@@ -509,12 +522,17 @@ export const EmployeeDashboard: React.FC = () => {
 
     const handleUpload = async (file: File, path: string) => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         const filePath = `${path}/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, file);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
-        return publicUrl;
+        try {
+            const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, file, { upsert: true });
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from('profiles').getPublicUrl(filePath);
+            return publicUrl;
+        } catch (err: any) {
+            const msg = (err && err.message) ? err.message : 'Upload failed. Check your internet connection and try again.';
+            throw new Error(msg);
+        }
     };
 
     const handleProfileSave = async () => {

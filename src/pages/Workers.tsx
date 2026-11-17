@@ -46,6 +46,7 @@ export const WorkersPage: React.FC = () => {
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
     const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<Worker | null>(null);
 
     useEffect(() => {
         fetchWorkers();
@@ -83,8 +84,8 @@ export const WorkersPage: React.FC = () => {
     };
 
     const deleteAccount = async (w: Worker) => {
-        if (!confirm(`Permanently delete the account of ${w.name}?\n\nTheir deals stay in the Master List but are unlinked from them. This cannot be undone.`)) return;
         setDeletingId(w.id);
+        setConfirmDelete(null);
         try {
             await supabase.from('leads').update({ worker_id: null }).eq('worker_id', w.id);
             await supabase.from('leads').update({ webdev_id: null }).eq('webdev_id', w.id);
@@ -196,7 +197,7 @@ export const WorkersPage: React.FC = () => {
                             <button
                                 type="button"
                                 disabled={deletingId === selectedWorker.id}
-                                onClick={() => deleteAccount(selectedWorker)}
+                                onClick={() => setConfirmDelete(selectedWorker)}
                                 className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl border border-red-100 text-red-500 hover:bg-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -332,7 +333,7 @@ export const WorkersPage: React.FC = () => {
                                         type="button"
                                         title="Delete account"
                                         disabled={deletingId === worker.id}
-                                        onClick={() => deleteAccount(worker)}
+                                        onClick={() => setConfirmDelete(worker)}
                                         className="p-1.5 rounded-lg text-zinc-300 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -351,6 +352,62 @@ export const WorkersPage: React.FC = () => {
                 </div>
             )}
             </>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {createPortal(
+                <AnimatePresence>
+                    {confirmDelete && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 modal-center">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                                onClick={() => setConfirmDelete(null)}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                transition={{ type: 'spring', duration: 0.4 }}
+                                className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 text-center space-y-4"
+                            >
+                                <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+                                    <Trash2 className="w-7 h-7 text-red-500" />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <h3 className="text-base font-black text-black tracking-tight">Are you sure you want to delete?</h3>
+                                    <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                                        This will permanently delete <strong className="text-black">{confirmDelete.name}</strong>'s account.
+                                        Their deals stay in the Master List but will be unlinked. This cannot be undone.
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-2 pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmDelete(null)}
+                                        className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-xs font-black uppercase tracking-wider text-zinc-600 hover:bg-zinc-50 transition-all active:scale-95"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={deletingId === confirmDelete.id}
+                                        onClick={() => deleteAccount(confirmDelete)}
+                                        className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        {deletingId === confirmDelete.id ? 'Deleting...' : 'Yes, Delete'}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
             )}
 
             {/* QR Code Scan Modal (portal so it centers on the screen, not inside the animated page) */}
