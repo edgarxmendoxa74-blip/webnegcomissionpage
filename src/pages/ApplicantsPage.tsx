@@ -22,11 +22,11 @@ import {
     UserCheck,
     PhoneCall,
     ArrowLeft,
-    Eye,
     MessageSquare,
     Save,
     Link2,
-    Check
+    Check,
+    ChevronRight
 } from 'lucide-react';
 
 export const ApplicantsPage: React.FC = () => {
@@ -694,8 +694,8 @@ export const ApplicantsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Applicants List / Table */}
-            <div className="bg-white border border-zinc-100 rounded-2xl shadow-xs overflow-hidden">
+            {/* Applicants — Responsive Card Grid */}
+            <div>
                 {loading ? (
                     <div className="py-16 text-center text-xs font-bold text-zinc-400 flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-zinc-500" />
@@ -710,155 +710,131 @@ export const ApplicantsPage: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-zinc-50/70 border-b border-zinc-100 text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                    <th className="px-4 py-3">Applicant Name</th>
-                                    <th className="px-4 py-3">Status & Code</th>
-                                    <th className="px-4 py-3">Scheduled Meeting</th>
-                                    <th className="px-4 py-3">Contact & Links</th>
-                                    <th className="px-4 py-3">Progress</th>
-                                    <th className="px-4 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-50 text-xs">
-                                {filteredApplicants.map((app) => {
-                                    const isDone = app.status === 'completed' || app.status === 'interview_scheduled' || app.status === 'hired';
-                                    const qCount = app.answers ? Object.keys(app.answers).filter(k => app.answers![k]?.trim()).length : 0;
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {filteredApplicants.map((app) => {
+                            const isDone = app.status === 'completed' || app.status === 'interview_scheduled' || app.status === 'hired' || app.status === 'reviewed';
+                            const isHired = app.status === 'hired';
+                            const qCount = app.answers ? Object.keys(app.answers).filter(k => app.answers![k]?.trim()).length : 0;
+                            const totalQ = SALES_QUESTIONS.length;
+                            const qPct = Math.round((qCount / totalQ) * 100);
 
-                                    return (
-                                        <tr key={app.id} className="hover:bg-zinc-50/60 transition-colors">
-                                            {/* Name & Date */}
-                                            <td className="px-4 py-3">
-                                                <div className="min-w-[160px]">
-                                                    <p className="font-black text-black text-xs leading-snug">{app.full_name}</p>
-                                                    <p className="text-[10px] text-zinc-400 font-medium truncate">{app.email}</p>
-                                                    <p className="text-[8px] text-zinc-400 mt-0.5">
-                                                        Applied: {app.created_at ? new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
-                                                    </p>
-                                                </div>
-                                            </td>
+                            const statusConfig: Record<string, { label: string; color: string }> = {
+                                completed:            { label: 'Completed', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+                                interview_scheduled:  { label: 'Interview Set', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+                                reviewed:             { label: 'Reviewed', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+                                hired:                { label: 'Hired 🎉', color: 'bg-purple-100 text-purple-900 border-purple-200' },
+                                rejected:             { label: 'Not Qualified', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+                                incomplete:           { label: 'Incomplete', color: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
+                            };
+                            const sc = statusConfig[app.status] ?? statusConfig.incomplete;
 
-                                            {/* Status & Code */}
-                                            <td className="px-4 py-3">
-                                                <div className="space-y-1">
-                                                    {isDone ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                            <CheckCircle2 className="w-3 h-3" />
-                                                            <span>Completed</span>
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
-                                                            <Clock className="w-3 h-3" />
-                                                            <span>Incomplete (Stage {app.current_stage || 1})</span>
-                                                        </span>
-                                                    )}
+                            return (
+                                <button
+                                    key={app.id}
+                                    type="button"
+                                    onClick={() => handleOpenDetail(app)}
+                                    className={`group w-full text-left bg-white border rounded-2xl p-4 shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-98 cursor-pointer ${isHired ? 'border-purple-200 ring-1 ring-purple-200' : isDone ? 'border-emerald-200/70' : 'border-zinc-100'}`}
+                                >
+                                    {/* Card Top Row: Avatar + Name + Status */}
+                                    <div className="flex items-start gap-3">
+                                        {/* Avatar Circle */}
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isHired ? 'bg-purple-100 text-purple-800' : isDone ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 text-zinc-600'}`}>
+                                            {(app.full_name || '?').charAt(0).toUpperCase()}
+                                        </div>
 
-                                                    {app.application_code && (
-                                                        <div className="font-mono font-bold text-[10px] text-black tracking-wider">
-                                                            {app.application_code}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-black text-sm text-black truncate leading-tight">
+                                                {app.full_name}
+                                            </p>
+                                            <p className="text-[10px] text-zinc-400 font-medium truncate">{app.email}</p>
+                                        </div>
 
-                                            {/* Scheduled Meeting */}
-                                            <td className="px-4 py-3">
-                                                {app.meeting_time ? (
-                                                    <div className="space-y-0.5">
-                                                        <span className={`inline-block px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                                                            app.meeting_time === '10:00 AM'
-                                                                ? 'bg-emerald-100 text-emerald-800'
-                                                                : app.meeting_time === '4:00 PM'
-                                                                ? 'bg-blue-100 text-blue-800'
-                                                                : 'bg-purple-100 text-purple-800'
-                                                        }`}>
-                                                            {app.meeting_time}
-                                                        </span>
-                                                        <p className="text-[10px] font-bold text-zinc-600">
-                                                            {app.meeting_date || 'Date Pending'}
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] text-zinc-400 italic">No schedule yet</span>
-                                                )}
-                                            </td>
+                                        <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-600 shrink-0 mt-0.5 transition-colors" />
+                                    </div>
 
-                                            {/* Contact & Links */}
-                                            <td className="px-4 py-3">
-                                                <div className="space-y-1">
-                                                    {app.phone_number && (
-                                                        <a
-                                                            href={`tel:${app.phone_number}`}
-                                                            className="flex items-center gap-1 text-[11px] font-bold text-black hover:underline"
-                                                        >
-                                                            <Phone className="w-3 h-3 text-zinc-400" />
-                                                            <span>{app.phone_number}</span>
-                                                        </a>
-                                                    )}
-                                                    <div className="flex items-center gap-2 pt-0.5">
-                                                        {app.resume_link && (
-                                                            <a
-                                                                href={app.resume_link}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-800"
-                                                                title="View Resume"
-                                                            >
-                                                                <FileText className="w-3 h-3" />
-                                                                <span>{app.resume_link.startsWith('data:image/') ? 'Resume (Image)' : 'Resume'}</span>
-                                                                <ExternalLink className="w-2.5 h-2.5" />
-                                                            </a>
-                                                        )}
-                                                        {app.fb_link && (
-                                                            <a
-                                                                href={app.fb_link}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-600 hover:text-indigo-800"
-                                                                title="View Facebook"
-                                                            >
-                                                                <Facebook className="w-3 h-3" />
-                                                                <span>FB</span>
-                                                                <ExternalLink className="w-2.5 h-2.5" />
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
+                                    {/* Status Badge Row */}
+                                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${sc.color}`}>
+                                            {isDone ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                                            {sc.label}
+                                        </span>
+                                        {app.application_code && (
+                                            <span className="font-mono text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-md">
+                                                {app.application_code}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                            {/* Q&A Progress */}
-                                            <td className="px-4 py-3">
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] font-bold text-zinc-600">
-                                                        {qCount} / 10 Q&A
-                                                    </span>
-                                                    <div className="w-20 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full ${qCount >= 10 ? 'bg-emerald-500' : 'bg-amber-400'}`}
-                                                            style={{ width: `${(qCount / 10) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </td>
+                                    {/* Divider */}
+                                    <div className="border-t border-zinc-100 my-3" />
 
-                                            {/* Action Button */}
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleOpenDetail(app)}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800 transition-all active:scale-95"
-                                                >
-                                                    <Eye className="w-3 h-3" />
-                                                    <span>View Details</span>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                    {/* Info Grid */}
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[10px]">
+                                        {/* Phone */}
+                                        <div className="flex items-center gap-1.5 text-zinc-600 font-semibold truncate">
+                                            <Phone className="w-3 h-3 text-zinc-400 shrink-0" />
+                                            <span className="truncate">{app.phone_number || '—'}</span>
+                                        </div>
+
+                                        {/* Meeting Time */}
+                                        <div className="flex items-center gap-1.5 font-semibold truncate">
+                                            <Calendar className="w-3 h-3 text-zinc-400 shrink-0" />
+                                            {app.meeting_time ? (
+                                                <span className={`font-black truncate ${
+                                                    app.meeting_time === '10:00 AM' ? 'text-emerald-700'
+                                                    : app.meeting_time === '4:00 PM' ? 'text-blue-700'
+                                                    : 'text-purple-700'
+                                                }`}>{app.meeting_time}</span>
+                                            ) : (
+                                                <span className="text-zinc-400 italic">No schedule</span>
+                                            )}
+                                        </div>
+
+                                        {/* Applied Date */}
+                                        <div className="flex items-center gap-1.5 text-zinc-400 font-medium">
+                                            <Clock className="w-3 h-3 shrink-0" />
+                                            <span>
+                                                {app.created_at
+                                                    ? new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                    : 'Recently'}
+                                            </span>
+                                        </div>
+
+                                        {/* Links: FB / Resume */}
+                                        <div className="flex items-center gap-2">
+                                            {app.fb_link && (
+                                                <span className="inline-flex items-center gap-0.5 text-blue-600 font-bold">
+                                                    <Facebook className="w-3 h-3" />
+                                                    <span>FB</span>
+                                                </span>
+                                            )}
+                                            {app.resume_link && (
+                                                <span className="inline-flex items-center gap-0.5 text-zinc-600 font-bold">
+                                                    <FileText className="w-3 h-3" />
+                                                    <span>Resume</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Q&A Progress Bar */}
+                                    <div className="mt-3 space-y-1">
+                                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-zinc-400">
+                                            <span>Assessment Progress</span>
+                                            <span className={qCount >= totalQ ? 'text-emerald-600' : 'text-amber-600'}>
+                                                {qCount}/{totalQ} Q&A
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all ${qCount >= totalQ ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                                                style={{ width: `${qPct}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
