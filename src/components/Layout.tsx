@@ -10,6 +10,7 @@ import {
     Wallet,
     Menu,
     LogOut,
+    UserCheck,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
@@ -59,6 +60,7 @@ interface LayoutProps {
 const navItems = [
     { icon: Target, label: 'Master List', short: 'Leads' },
     { icon: Users, label: 'Manage Team', short: 'Team' },
+    { icon: UserCheck, label: 'Applicants', short: 'Hiring' },
     { icon: Banknote, label: 'Receipts', short: 'Receipts' },
     { icon: ClipboardList, label: 'Daily Audit', short: 'Audit' },
     { icon: Eye, label: 'Monitoring', short: 'Monitoring' },

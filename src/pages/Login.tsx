@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint, Briefcase, ArrowRight } from 'lucide-react';
 import { LogoMark } from '../components/Logo';
 import { authenticateWithBiometrics, isBiometricsAvailable } from '../lib/biometrics';
+import { ApplicantPortal } from './ApplicantPortal';
 
 const OWNER_EMAIL = 'owner@webnegosyo.com';
 const REMEMBER_KEY = 'webnegosyo.remember';
@@ -39,7 +40,7 @@ const offerToSavePassword = async (id: string, password: string) => {
 };
 
 export const LoginPage: React.FC = () => {
-    const [portal, setPortal] = useState<'selection' | 'owner' | 'employee'>('selection');
+    const [portal, setPortal] = useState<'selection' | 'owner' | 'employee' | 'applicant'>('selection');
     const [isRegistering, setIsRegistering] = useState(false);
     const [remembered] = useState(readRemembered);
     const [rememberMe, setRememberMe] = useState(remembered.remember);
@@ -217,6 +218,10 @@ export const LoginPage: React.FC = () => {
         }
     };
 
+    if (portal === 'applicant') {
+        return <ApplicantPortal onBackToSelection={() => setPortal('selection')} />;
+    }
+
     if (portal === 'selection') {
         return (
             <div className="min-h-dvh flex items-center justify-center p-6">
@@ -258,6 +263,37 @@ export const LoginPage: React.FC = () => {
                             </p>
                         </motion.button>
                     </div>
+
+                    <motion.button
+                        whileHover={{ y: -6, scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setPortal('applicant')}
+                        className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-zinc-900 via-black to-zinc-900 text-white p-5 sm:p-7 rounded-[2rem] border border-zinc-800 text-left group transition-all shadow-xl shadow-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-black transition-all">
+                                <Briefcase className="w-6 h-6 text-white group-hover:text-black" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        Now Hiring
+                                    </span>
+                                    <span className="text-[9px] font-bold text-zinc-400">High-Commission Remote Sales</span>
+                                </div>
+                                <h3 className="text-lg sm:text-2xl font-black text-white uppercase italic tracking-tight mt-0.5">
+                                    Apply as Sales Consultant
+                                </h3>
+                                <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                                    Complete application (Profile, 10 Q&A, and Schedule 10AM/4PM/10PM Meeting)
+                                </p>
+                            </div>
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black rounded-xl text-xs font-black uppercase tracking-wider group-hover:bg-emerald-400 transition-colors shrink-0 self-start sm:self-auto">
+                            <span>Apply / Sign In</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                        </div>
+                    </motion.button>
 
                     <div className="mt-10 sm:mt-20 text-center">
                         <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">

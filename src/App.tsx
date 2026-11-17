@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   TrendingUp,
   Layers
@@ -13,6 +13,7 @@ import { MonitoringPage } from './pages/Monitoring';
 import { DailyAuditPage } from './pages/DailyAuditPage';
 import { ExpensesPage } from './pages/Expenses';
 import { LoginPage } from './pages/Login';
+import { ApplicantsPage } from './pages/ApplicantsPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +46,8 @@ function AppContent() {
         return <Dashboard />;
       case 'Manage Team':
         return <WorkersPage />;
+      case 'Applicants':
+        return <ApplicantsPage />;
       case 'Monitoring':
         return <MonitoringPage />;
       case 'Daily Audit':
