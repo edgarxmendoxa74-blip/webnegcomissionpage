@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint, Briefcase, ArrowRight } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint, ArrowRight } from 'lucide-react';
 import { LogoMark } from '../components/Logo';
 import { authenticateWithBiometrics, isBiometricsAvailable } from '../lib/biometrics';
 import { ApplicantPortal } from './ApplicantPortal';
@@ -268,29 +268,33 @@ export const LoginPage: React.FC = () => {
                         whileHover={{ y: -6, scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => setPortal('applicant')}
-                        className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-zinc-900 via-black to-zinc-900 text-white p-5 sm:p-7 rounded-[2rem] border border-zinc-800 text-left group transition-all shadow-xl shadow-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-zinc-900 via-black to-zinc-900 text-white p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border border-zinc-800 text-left group transition-all shadow-xl shadow-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-black transition-all">
-                                <Briefcase className="w-6 h-6 text-white group-hover:text-black" />
+                        <div className="flex items-center gap-3.5 sm:gap-4">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl p-1.5 flex items-center justify-center shrink-0 shadow-md overflow-hidden group-hover:scale-105 transition-transform">
+                                <img 
+                                    src="/smartmenu-logo.jpg" 
+                                    alt="SmartMenu Logo" 
+                                    className="w-full h-full object-contain" 
+                                />
                             </div>
-                            <div>
-                                <div className="flex items-center gap-2">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                         Now Hiring
                                     </span>
-                                    <span className="text-[9px] font-bold text-zinc-400">High-Commission Remote Sales</span>
+                                    <span className="text-[8px] sm:text-[9px] font-bold text-zinc-400">SmartMenu Remote Sales</span>
                                 </div>
-                                <h3 className="text-lg sm:text-2xl font-black text-white uppercase italic tracking-tight mt-0.5">
+                                <h3 className="text-base sm:text-2xl font-black text-white uppercase italic tracking-tight mt-0.5">
                                     Apply as Sales Consultant
                                 </h3>
-                                <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
-                                    Complete application (Profile, 10 Q&A, and Schedule 10AM/4PM/10PM Meeting)
+                                <p className="text-zinc-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest mt-0.5">
+                                    Fill-Up Form: Profile • 10 Q&A • Interview Meeting
                                 </p>
                             </div>
                         </div>
-                        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black rounded-xl text-xs font-black uppercase tracking-wider group-hover:bg-emerald-400 transition-colors shrink-0 self-start sm:self-auto">
-                            <span>Apply / Sign In</span>
+                        <div className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-black rounded-xl text-xs font-black uppercase tracking-wider group-hover:bg-emerald-400 transition-colors shrink-0 self-stretch sm:self-auto justify-center">
+                            <span>Apply Now</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                     </motion.button>
