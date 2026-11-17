@@ -277,19 +277,28 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             {/* Main Content Area */}
             <div className="max-w-xl w-full mx-auto flex-1 flex flex-col justify-center">
 
+                {/* Header Section with Official SmartMenu Logo */}
+                <div className="text-center space-y-1.5 mb-2.5 sm:mb-3 animate-in fade-in">
+                    <div className="inline-flex items-center justify-center p-2 sm:p-2.5 rounded-2xl bg-white shadow-md border border-amber-200/80 transition-transform hover:scale-105">
+                        <img
+                            src="/smartmenu-logo.jpg"
+                            alt="SmartMenu Logo"
+                            className="h-12 sm:h-14 w-auto object-contain rounded-lg"
+                        />
+                    </div>
+                    <div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-red-600 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                            <Sparkles className="w-3 h-3 text-amber-200" />
+                            <span>Sales Consultant Hiring</span>
+                        </span>
+                    </div>
+                </div>
+
                 {/* ============================================================== */}
                 {/* VIEW 1: HERO HOME PAGE (POSTER & DIRECT APPLY BUTTON)          */}
                 {/* ============================================================== */}
                 {!showApplicationForm ? (
                     <div className="space-y-3 sm:space-y-4 text-center animate-in fade-in duration-200">
-                        {/* Compact Top Header Badge */}
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-amber-200/80 shadow-2xs">
-                            <img src="/smartmenu-logo.jpg" alt="SmartMenu" className="h-4 w-auto object-contain" />
-                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-800">
-                                SmartMenu Careers
-                            </span>
-                        </div>
-
                         {/* HERO SLIDESHOW - Compact mobile-first hero */}
                         <div className="relative w-full max-w-[320px] sm:max-w-[360px] mx-auto">
                             <div className="relative aspect-square overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl border-2 border-white bg-white">
