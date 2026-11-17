@@ -12,6 +12,7 @@ import {
     Clock,
     Calendar,
     Phone,
+    Mail,
     FileText,
     Facebook,
     Search,
@@ -20,7 +21,7 @@ import {
     RefreshCw,
     UserCheck,
     PhoneCall,
-    X,
+    ArrowLeft,
     Eye,
     MessageSquare,
     Save,
@@ -82,12 +83,13 @@ export const ApplicantsPage: React.FC = () => {
         };
     }, []);
 
-    // Open detail modal and sync state
+    // Open detail page and sync state
     const handleOpenDetail = (app: Applicant) => {
         setSelectedApplicant(app);
         setReviewStatus(app.status);
         setOwnerNotes(app.owner_notes || '');
         setReviewSuccess(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleSaveReview = async () => {
@@ -159,6 +161,393 @@ export const ApplicantsPage: React.FC = () => {
             eveningCount
         };
     }, [applicants]);
+
+    // =========================================================================
+    // VIEW 2: APPLICANT DETAILS NEXT PAGE (FULL-PAGE DOSSIER VIEW)
+    // =========================================================================
+    if (selectedApplicant) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Top Navigation & Dossier Title Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedApplicant(null);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-zinc-300 hover:border-black rounded-xl text-xs font-black uppercase tracking-wider text-zinc-800 hover:text-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span>Back to Applicants</span>
+                        </button>
+                        <span className="text-zinc-300 hidden sm:inline">|</span>
+                        <div>
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 block">
+                                Candidate Dossier
+                            </span>
+                            <h2 className="text-xl sm:text-2xl font-black text-black">
+                                {selectedApplicant.full_name}
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                            selectedApplicant.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : selectedApplicant.status === 'hired'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : selectedApplicant.status === 'interview_scheduled'
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : selectedApplicant.status === 'reviewed'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : selectedApplicant.status === 'rejected'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-zinc-100 text-zinc-600'
+                        }`}>
+                            {selectedApplicant.status.replace('_', ' ')}
+                        </span>
+                        {selectedApplicant.application_code && (
+                            <div className="px-3 py-1 bg-black text-white rounded-xl text-xs font-mono font-black">
+                                Code: {selectedApplicant.application_code}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Candidate Overview & Quick Actions Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {/* Left: Contact & Profile Details */}
+                    <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                Contact & Application Information
+                            </h3>
+                            <span className="text-[9px] text-zinc-400 font-bold">
+                                Registered: {selectedApplicant.created_at ? new Date(selectedApplicant.created_at).toLocaleDateString() : 'N/A'}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Full Name</span>
+                                <p className="font-extrabold text-sm text-black">{selectedApplicant.full_name}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Email Address</span>
+                                <a
+                                    href={`mailto:${selectedApplicant.email}`}
+                                    className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
+                                >
+                                    <Mail className="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>{selectedApplicant.email}</span>
+                                </a>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Phone Number</span>
+                                <a
+                                    href={`tel:${selectedApplicant.phone_number}`}
+                                    className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
+                                >
+                                    <Phone className="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>{selectedApplicant.phone_number || 'None'}</span>
+                                </a>
+                            </div>
+
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Meeting Schedule</span>
+                                <p className="font-black text-emerald-700 flex items-center gap-1.5">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    <span>{selectedApplicant.meeting_time ? `${selectedApplicant.meeting_time} (${selectedApplicant.meeting_date})` : 'Not yet selected'}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Social Links & Direct Action Buttons */}
+                        <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center gap-2">
+                            {selectedApplicant.phone_number && (
+                                <a
+                                    href={`tel:${selectedApplicant.phone_number}`}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
+                                >
+                                    <Phone className="w-3.5 h-3.5" />
+                                    <span>Call Phone</span>
+                                </a>
+                            )}
+                            {selectedApplicant.email && (
+                                <a
+                                    href={`mailto:${selectedApplicant.email}`}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
+                                >
+                                    <Mail className="w-3.5 h-3.5" />
+                                    <span>Send Email</span>
+                                </a>
+                            )}
+                            {selectedApplicant.fb_link && (
+                                <a
+                                    href={selectedApplicant.fb_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
+                                >
+                                    <Facebook className="w-3.5 h-3.5" />
+                                    <span>Facebook Profile</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            )}
+                        </div>
+
+                        {selectedApplicant.other_socials && (
+                            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100 text-xs">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
+                                    Other Social Accounts / Links
+                                </span>
+                                <p className="font-semibold text-zinc-800 mt-0.5">{selectedApplicant.other_socials}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Owner Decision & Notes */}
+                    <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between space-y-4">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
+                                    <UserCheck className="w-4 h-4 text-black" />
+                                    <span>Owner Evaluation</span>
+                                </h3>
+                                {reviewSuccess && (
+                                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        Saved ✓
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
+                                    Applicant Status
+                                </label>
+                                <select
+                                    value={reviewStatus}
+                                    onChange={(e) => setReviewStatus(e.target.value as any)}
+                                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black focus:bg-white"
+                                >
+                                    <option value="completed">Completed (Pending Interview)</option>
+                                    <option value="interview_scheduled">Interview Scheduled</option>
+                                    <option value="reviewed">Reviewed / Shortlisted</option>
+                                    <option value="hired">Hired / Passed 🎉</option>
+                                    <option value="rejected">Not Qualified</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
+                                    Internal Owner Notes / Comments
+                                </label>
+                                <textarea
+                                    rows={4}
+                                    placeholder="Add evaluation comments, sales call impressions, next steps..."
+                                    value={ownerNotes}
+                                    onChange={(e) => setOwnerNotes(e.target.value)}
+                                    className="w-full p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-medium text-xs outline-none focus:border-black focus:bg-white resize-y"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled={savingReview}
+                            onClick={handleSaveReview}
+                            className="w-full py-2.5 bg-black hover:bg-zinc-800 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                        >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>{savingReview ? 'Saving...' : reviewSuccess ? 'Saved Successfully!' : 'Save Owner Evaluation'}</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Uploaded Resume Photo Card (Full Preview) */}
+                {selectedApplicant.resume_link && (
+                    <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs space-y-3">
+                        <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-black" />
+                                <span>Uploaded Resume Dossier</span>
+                            </h3>
+                            <a
+                                href={selectedApplicant.resume_link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
+                            >
+                                <span>Open Full Size</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
+
+                        {selectedApplicant.resume_link.startsWith('data:image/') ? (
+                            <div className="max-h-[600px] overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-2 flex justify-center">
+                                <img
+                                    src={selectedApplicant.resume_link}
+                                    alt="Candidate Resume"
+                                    className="max-w-full h-auto object-contain rounded-lg shadow-sm"
+                                />
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
+                                <span className="font-bold text-xs text-zinc-700">Resume Link: {selectedApplicant.resume_link}</span>
+                                <a
+                                    href={selectedApplicant.resume_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold inline-flex items-center gap-1"
+                                >
+                                    <span>Open Link</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Candidate Assessment Answers (2 Sections) */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs space-y-6">
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                        <div>
+                            <h3 className="text-sm font-black uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-black" />
+                                <span>Candidate Assessment ({SALES_QUESTIONS.length} Questions)</span>
+                            </h3>
+                            <p className="text-[10px] text-zinc-400 font-bold">
+                                Candidate's submitted answers to HR personality & sales call scenarios
+                            </p>
+                        </div>
+                        <span className="text-[10px] font-black text-zinc-800 bg-zinc-100 px-2.5 py-1 rounded-full border border-zinc-200">
+                            {Object.keys(selectedApplicant.answers || {}).length}/{SALES_QUESTIONS.length} Answered
+                        </span>
+                    </div>
+
+                    {/* SECTION 1: HR & Personality Interview */}
+                    <div className="space-y-3">
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <UserCheck className="w-4 h-4 text-amber-700" />
+                                <span className="font-black text-xs uppercase tracking-wider text-amber-950">
+                                    Section 1: HR & Personality Interview
+                                </span>
+                            </div>
+                            <span className="text-[9px] font-bold text-amber-800 bg-white/80 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                Strengths, Weaknesses & Contribution
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {SALES_QUESTIONS.filter(q => q.category === 'personality').map((q, idx) => {
+                                const answer = selectedApplicant.answers?.[q.id]
+                                    || (q.id === 'q_hr_background' ? selectedApplicant.answers?.['q1_background'] : undefined)
+                                    || (q.id === 'q_hr_motivation_goals' ? selectedApplicant.answers?.['q2_motivation'] : undefined)
+                                    || (q.id === 'q_hr_pressure_resilience' ? selectedApplicant.answers?.['q3_discipline'] : undefined)
+                                    || (q.id === 'q_hr_strengths_weaknesses' ? selectedApplicant.answers?.['q4_strengths'] : undefined);
+
+                                return (
+                                    <div key={q.id} className="p-4 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
+                                                Q{idx + 1}: {q.badge}
+                                            </span>
+                                            {!answer && (
+                                                <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                                                    Walang Sagot
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="font-extrabold text-black text-xs leading-snug">{q.question}</p>
+                                        <div className="p-3 bg-white rounded-lg border border-zinc-200 font-medium text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed shadow-2xs">
+                                            {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* SECTION 2: Sales Call Scenarios */}
+                    <div className="space-y-3 pt-2">
+                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <PhoneCall className="w-4 h-4 text-rose-700" />
+                                <span className="font-black text-xs uppercase tracking-wider text-rose-950">
+                                    Section 2: Sales Call Scenarios
+                                </span>
+                            </div>
+                            <span className="text-[9px] font-bold text-rose-800 bg-white/80 px-2.5 py-0.5 rounded-full border border-rose-200">
+                                Objections, Phone Pitch & Closing
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {SALES_QUESTIONS.filter(q => q.category === 'sales_call').map((q, idx) => {
+                                const answer = selectedApplicant.answers?.[q.id]
+                                    || (q.id === 'q_sales_first_minute' ? selectedApplicant.answers?.['q5_first_minute'] : undefined)
+                                    || (q.id === 'q_sales_price_objection' ? selectedApplicant.answers?.['q6_price_objection'] : undefined)
+                                    || (q.id === 'q_sales_busy_client' ? selectedApplicant.answers?.['q7_busy_client'] : undefined)
+                                    || (q.id === 'q_sales_think_about_it' ? selectedApplicant.answers?.['q8_think_about_it'] : undefined)
+                                    || (q.id === 'q_sales_closing_deal' ? selectedApplicant.answers?.['q9_closing_downpayment'] : undefined)
+                                    || (q.id === 'q_sales_rejection_resilience' ? selectedApplicant.answers?.['q10_rejection_resilience'] : undefined);
+
+                                return (
+                                    <div key={q.id} className="p-4 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-rose-800 bg-rose-100/70 px-2 py-0.5 rounded">
+                                                Q{SALES_QUESTIONS.filter(sq => sq.category === 'personality').length + idx + 1}: {q.badge}
+                                            </span>
+                                            {!answer && (
+                                                <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                                                    Walang Sagot
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="font-extrabold text-black text-xs leading-snug">{q.question}</p>
+                                        <div className="p-3 bg-white rounded-lg border border-zinc-200 font-medium text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed shadow-2xs">
+                                            {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Back Button & Save Action */}
+                <div className="pt-2 pb-6 flex items-center justify-between border-t border-zinc-200">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedApplicant(null);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-300 hover:border-black rounded-xl text-xs font-black uppercase tracking-wider text-zinc-800 hover:text-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Back to All Applicants</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={savingReview}
+                        onClick={handleSaveReview}
+                        className="px-6 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                    >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingReview ? 'Saving...' : reviewSuccess ? 'Saved!' : 'Save Owner Evaluation'}</span>
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -473,287 +862,6 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 )}
             </div>
-
-            {/* DETAILED APPLICANT MODAL */}
-            {selectedApplicant && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
-                    <div className="bg-white rounded-[2rem] border border-zinc-200 max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
-                        {/* Modal Header */}
-                        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
-                            <div>
-                                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                    Applicant File Dossier
-                                </span>
-                                <h3 className="text-lg font-black text-black">
-                                    {selectedApplicant.full_name}
-                                </h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedApplicant(null)}
-                                className="p-2 rounded-xl text-zinc-400 hover:text-black hover:bg-zinc-100 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Modal Scrollable Body */}
-                        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
-                            {/* Top Info Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
-                                <div className="space-y-2">
-                                    <div>
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Full Name</span>
-                                        <span className="font-extrabold text-black text-sm">{selectedApplicant.full_name}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Email Address</span>
-                                        <a href={`mailto:${selectedApplicant.email}`} className="font-bold text-zinc-700 hover:underline">{selectedApplicant.email}</a>
-                                    </div>
-                                    <div>
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Phone Number</span>
-                                        <a href={`tel:${selectedApplicant.phone_number}`} className="font-bold text-black hover:underline">{selectedApplicant.phone_number || 'None'}</a>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div>
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Application Code</span>
-                                        <span className="font-mono font-black text-black text-sm">
-                                            {selectedApplicant.application_code || 'Pending (Incomplete)'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Meeting Schedule</span>
-                                        <span className="font-black text-emerald-700">
-                                            {selectedApplicant.meeting_time ? `${selectedApplicant.meeting_time} (${selectedApplicant.meeting_date})` : 'Not yet selected'}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        {selectedApplicant.resume_link && (
-                                            <a
-                                                href={selectedApplicant.resume_link}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800"
-                                            >
-                                                <FileText className="w-3.5 h-3.5" />
-                                                <span>{selectedApplicant.resume_link.startsWith('data:image/') ? 'View Full Resume Image' : 'Open Resume'}</span>
-                                                <ExternalLink className="w-3 h-3" />
-                                            </a>
-                                        )}
-                                        {selectedApplicant.fb_link && (
-                                            <a
-                                                href={selectedApplicant.fb_link}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-700"
-                                            >
-                                                <Facebook className="w-3.5 h-3.5" />
-                                                <span>Facebook Profile</span>
-                                                <ExternalLink className="w-3 h-3" />
-                                            </a>
-                                        )}
-                                    </div>
-
-                                    {/* Uploaded Resume Photo Inline Preview */}
-                                    {selectedApplicant.resume_link && selectedApplicant.resume_link.startsWith('data:image/') && (
-                                        <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
-                                                    Uploaded Resume Photo
-                                                </span>
-                                                <a
-                                                    href={selectedApplicant.resume_link}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-[9px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
-                                                >
-                                                    <span>Open full size</span>
-                                                    <ExternalLink className="w-2.5 h-2.5" />
-                                                </a>
-                                            </div>
-                                            <div className="max-h-80 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-1 shadow-inner">
-                                                <img 
-                                                    src={selectedApplicant.resume_link} 
-                                                    alt="Applicant Resume" 
-                                                    className="w-full h-auto object-contain rounded"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Other Socials if present */}
-                            {selectedApplicant.other_socials && (
-                                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
-                                    <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Other Social Media Accounts</span>
-                                    <p className="font-medium text-black mt-0.5">{selectedApplicant.other_socials}</p>
-                                </div>
-                            )}
-
-                            {/* Candidate Assessment Answers */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                                    <h4 className="font-black text-sm uppercase tracking-wider text-black flex items-center gap-2">
-                                        <MessageSquare className="w-4 h-4 text-black" />
-                                        <span>Candidate Assessment ({SALES_QUESTIONS.length} Questions)</span>
-                                    </h4>
-                                    <span className="text-[10px] font-bold text-zinc-500">
-                                        {Object.keys(selectedApplicant.answers || {}).length} answered
-                                    </span>
-                                </div>
-
-                                {/* SECTION 1: HR & Personality Assessment */}
-                                <div className="space-y-3">
-                                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <UserCheck className="w-4 h-4 text-amber-700" />
-                                            <span className="font-black text-xs uppercase tracking-wider text-amber-950">
-                                                Section 1: HR & Personality Interview
-                                            </span>
-                                        </div>
-                                        <span className="text-[9px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200">
-                                            Strengths, Weaknesses & Contribution
-                                        </span>
-                                    </div>
-
-                                    {SALES_QUESTIONS.filter(q => q.category === 'personality').map((q, idx) => {
-                                        const answer = selectedApplicant.answers?.[q.id]
-                                            || (q.id === 'q_hr_background' ? selectedApplicant.answers?.['q1_background'] : undefined)
-                                            || (q.id === 'q_hr_motivation_goals' ? selectedApplicant.answers?.['q2_motivation'] : undefined)
-                                            || (q.id === 'q_hr_pressure_resilience' ? selectedApplicant.answers?.['q3_discipline'] : undefined)
-                                            || (q.id === 'q_hr_strengths_weaknesses' ? selectedApplicant.answers?.['q4_strengths'] : undefined);
-
-                                        return (
-                                            <div key={q.id} className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-1.5">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded">
-                                                        Q{idx + 1}: {q.badge}
-                                                    </span>
-                                                    {!answer && (
-                                                        <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                                                            Walang Sagot
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="font-extrabold text-black text-xs">{q.question}</p>
-                                                <div className="p-2.5 bg-white rounded-lg border border-zinc-200 font-medium text-zinc-800 whitespace-pre-wrap leading-relaxed">
-                                                    {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* SECTION 2: Sales Call Scenarios */}
-                                <div className="space-y-3 pt-2">
-                                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <PhoneCall className="w-4 h-4 text-rose-700" />
-                                            <span className="font-black text-xs uppercase tracking-wider text-rose-950">
-                                                Section 2: Sales Call Scenarios
-                                            </span>
-                                        </div>
-                                        <span className="text-[9px] font-bold text-rose-800 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
-                                            Objections, Phone Pitch & Closing
-                                        </span>
-                                    </div>
-
-                                    {SALES_QUESTIONS.filter(q => q.category === 'sales_call').map((q, idx) => {
-                                        const answer = selectedApplicant.answers?.[q.id]
-                                            || (q.id === 'q_sales_first_minute' ? selectedApplicant.answers?.['q5_first_minute'] : undefined)
-                                            || (q.id === 'q_sales_price_objection' ? selectedApplicant.answers?.['q6_price_objection'] : undefined)
-                                            || (q.id === 'q_sales_busy_client' ? selectedApplicant.answers?.['q7_busy_client'] : undefined)
-                                            || (q.id === 'q_sales_think_about_it' ? selectedApplicant.answers?.['q8_think_about_it'] : undefined)
-                                            || (q.id === 'q_sales_closing_deal' ? selectedApplicant.answers?.['q9_closing_downpayment'] : undefined)
-                                            || (q.id === 'q_sales_rejection_resilience' ? selectedApplicant.answers?.['q10_rejection_resilience'] : undefined);
-
-                                        return (
-                                            <div key={q.id} className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-1.5">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider text-rose-800 bg-rose-100/70 px-1.5 py-0.5 rounded">
-                                                        Q{SALES_QUESTIONS.filter(sq => sq.category === 'personality').length + idx + 1}: {q.badge}
-                                                    </span>
-                                                    {!answer && (
-                                                        <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                                                            Walang Sagot
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="font-extrabold text-black text-xs">{q.question}</p>
-                                                <div className="p-2.5 bg-white rounded-lg border border-zinc-200 font-medium text-zinc-800 whitespace-pre-wrap leading-relaxed">
-                                                    {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Owner Review & Notes Section */}
-                            <div className="p-4 bg-zinc-100/70 border border-zinc-200 rounded-2xl space-y-3">
-                                <h4 className="font-black text-xs uppercase tracking-wider text-black flex items-center gap-1.5">
-                                    <UserCheck className="w-4 h-4 text-black" />
-                                    <span>Owner Evaluation & Decision</span>
-                                </h4>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">Applicant Status</label>
-                                        <select
-                                            value={reviewStatus}
-                                            onChange={(e) => setReviewStatus(e.target.value as any)}
-                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-black"
-                                        >
-                                            <option value="completed">Completed (Pending Interview)</option>
-                                            <option value="interview_scheduled">Interview Scheduled</option>
-                                            <option value="reviewed">Reviewed / Shortlisted</option>
-                                            <option value="hired">Hired / Passed 🎉</option>
-                                            <option value="rejected">Not Qualified</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
-                                        Internal Owner Notes / Comments
-                                    </label>
-                                    <textarea
-                                        rows={2}
-                                        placeholder="Hal. Maganda ang delivery sa sales call scenario #6. Tawagan bukas 4 PM."
-                                        value={ownerNotes}
-                                        onChange={(e) => setOwnerNotes(e.target.value)}
-                                        className="w-full p-2.5 bg-white border border-zinc-200 rounded-xl font-medium text-xs outline-none focus:border-black"
-                                    />
-                                </div>
-
-                                <button
-                                    type="button"
-                                    disabled={savingReview}
-                                    onClick={handleSaveReview}
-                                    className="px-4 py-2 bg-black text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-zinc-800 transition-all flex items-center gap-2"
-                                >
-                                    <Save className="w-3.5 h-3.5" />
-                                    <span>{savingReview ? 'Saving...' : reviewSuccess ? 'Saved Successfully!' : 'Save Owner Evaluation'}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50 flex items-center justify-end shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => setSelectedApplicant(null)}
-                                className="px-4 py-1.5 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
