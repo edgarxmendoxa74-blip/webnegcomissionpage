@@ -27,7 +27,11 @@ import {
     ChevronLeft,
     ChevronRight,
     UserCheck,
-    PhoneCall
+    PhoneCall,
+    FileText,
+    GraduationCap,
+    Briefcase,
+    X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -79,11 +83,20 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     const [error, setError] = useState<string | null>(null);
     const [confirmedTerms, setConfirmedTerms] = useState(false);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [showJobDescModal, setShowJobDescModal] = useState(false);
     const [completedApplicant, setCompletedApplicant] = useState<Applicant | null>(null);
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
 
     const isCompleted = !!completedApplicant;
+
+    const handleCloseCompletionModal = () => {
+        setShowCompletionModal(false);
+        setShowApplicationForm(false);
+        setCurrentStep(1);
+        setCompletedApplicant(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const personalityQuestions = SALES_QUESTIONS.filter(q => q.category === 'personality');
     const salesQuestions = SALES_QUESTIONS.filter(q => q.category === 'sales_call');
@@ -91,11 +104,11 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     const personalityAnswered = personalityQuestions.filter(q => answers[q.id]?.trim()).length;
     const salesAnswered = salesQuestions.filter(q => answers[q.id]?.trim()).length;
 
-    // Autoplay slideshow on the home view
+    // Autoplay slideshow on the home view (3 slides)
     useEffect(() => {
         if (showApplicationForm) return;
         const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % 2);
+            setCurrentSlide((prev) => (prev + 1) % 3);
         }, 5000);
         return () => clearInterval(timer);
     }, [showApplicationForm]);
@@ -406,9 +419,27 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                             <div className="relative aspect-square overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl border-2 border-white bg-white">
                                 <AnimatePresence mode="wait">
                                     {currentSlide === 0 ? (
-                                        /* Slide 1: Official Hiring Poster */
+                                        /* Slide 1: Official Hiring Poster / Job Description */
                                         <motion.div
                                             key="slide-1"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="w-full h-full p-0.5 bg-white flex items-center justify-center cursor-pointer group"
+                                            onClick={() => setShowJobDescModal(true)}
+                                            title="Click to view full job description"
+                                        >
+                                            <img
+                                                src="/smartmenu-job-description.jpg"
+                                                alt="SmartMenu Sales Consultant Job Description"
+                                                className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
+                                            />
+                                        </motion.div>
+                                    ) : currentSlide === 1 ? (
+                                        /* Slide 2: Official Hiring Banner */
+                                        <motion.div
+                                            key="slide-2"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
@@ -422,9 +453,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             />
                                         </motion.div>
                                     ) : (
-                                        /* Slide 2: Key Highlights Card */
+                                        /* Slide 3: Key Highlights Card */
                                         <motion.div
-                                            key="slide-2"
+                                            key="slide-3"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
@@ -465,16 +496,16 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                 {/* Arrows */}
                                 <button
                                     type="button"
-                                    onClick={() => setCurrentSlide((prev) => (prev - 1 + 2) % 2)}
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all"
+                                    onClick={() => setCurrentSlide((prev) => (prev - 1 + 3) % 3)}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer"
                                     aria-label="Previous"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setCurrentSlide((prev) => (prev + 1) % 2)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all"
+                                    onClick={() => setCurrentSlide((prev) => (prev + 1) % 3)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer"
                                     aria-label="Next"
                                 >
                                     <ChevronRight className="w-4 h-4" />
@@ -483,12 +514,12 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
                             {/* Dots */}
                             <div className="flex items-center justify-center gap-1.5 mt-2">
-                                {[0, 1].map((idx) => (
+                                {[0, 1, 2].map((idx) => (
                                     <button
                                         key={idx}
                                         type="button"
                                         onClick={() => setCurrentSlide(idx)}
-                                        className={`transition-all rounded-full ${
+                                        className={`transition-all rounded-full cursor-pointer ${
                                             currentSlide === idx
                                                 ? 'w-5 h-1.5 bg-gradient-to-r from-red-600 to-amber-500'
                                                 : 'w-1.5 h-1.5 bg-zinc-300'
@@ -498,8 +529,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                             </div>
                         </div>
 
-                        {/* DIRECT "APPLY NOW" BUTTON */}
-                        <div className="pt-1">
+                        {/* CTA ACTION BUTTONS: Apply Now + View Job Description */}
+                        <div className="pt-1 max-w-[320px] sm:max-w-[360px] mx-auto space-y-2">
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
@@ -508,12 +539,109 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                     setShowApplicationForm(true);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
-                                className="w-full max-w-[320px] sm:max-w-[360px] mx-auto py-3.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                className="w-full py-3.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <Sparkles className="w-4 h-4 text-amber-200" />
                                 <span>Apply as Sales Consultant</span>
                                 <ArrowRight className="w-4 h-4" />
                             </motion.button>
+
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                type="button"
+                                onClick={() => setShowJobDescModal(true)}
+                                className="w-full py-2.5 bg-white hover:bg-amber-50/60 text-zinc-800 border-2 border-amber-300 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <FileText className="w-4 h-4 text-orange-600" />
+                                <span>Job Description & Qualifications</span>
+                            </motion.button>
+                        </div>
+
+                        {/* 3-STEP HIRING PROCESS ROADMAP (BAGO MATANGGAP) */}
+                        <div className="pt-2 max-w-[360px] sm:max-w-md mx-auto text-left">
+                            <div className="bg-white/95 backdrop-blur-xs border border-amber-200 rounded-2xl p-4 shadow-sm space-y-3">
+                                <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-600 to-amber-500 text-white flex items-center justify-center shadow-xs">
+                                            <Briefcase className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                                Hiring Process
+                                            </h3>
+                                            <p className="text-[10px] text-zinc-500 font-semibold">
+                                                Roadmap bago matanggap bilang Sales Consultant
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                        3 Steps
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2.5">
+                                    {/* Step 1 */}
+                                    <div className="flex items-start gap-3 p-2.5 rounded-xl bg-amber-50/60 border border-amber-200/70 transition-all hover:bg-amber-50">
+                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-amber-500 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
+                                            1
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="text-xs font-black text-zinc-900">
+                                                    Application & Scheduled Meeting
+                                                </h4>
+                                                <span className="text-[8px] font-bold text-red-700 bg-red-100/80 px-1.5 py-0.2 rounded">
+                                                    Step 1
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">
+                                                Kumpletuhin ang online application form at pumili ng interview schedule (10:00 AM, 4:00 PM, o 10:00 PM) para sa initial screening.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Step 2 */}
+                                    <div className="flex items-start gap-3 p-2.5 rounded-xl bg-orange-50/60 border border-orange-200/70 transition-all hover:bg-orange-50">
+                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
+                                            2
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="text-xs font-black text-zinc-900">
+                                                    3 Days Sales Training
+                                                </h4>
+                                                <span className="text-[8px] font-bold text-orange-700 bg-orange-100/80 px-1.5 py-0.2 rounded">
+                                                    Step 2
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">
+                                                Sasailalim sa 3-araw na komprehensibong remote training: sales calls, pitch scripts, objection handling, at pag-close ng SmartMenu deals.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Step 3 */}
+                                    <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/70 transition-all hover:bg-emerald-50">
+                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
+                                            3
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="text-xs font-black text-zinc-900">
+                                                    Onboarding & Signing Employee Certificate
+                                                </h4>
+                                                <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">
+                                                    Step 3
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">
+                                                Opisyal na onboarding, pagbibigay ng employee credentials sa sales dashboard, at pagpirma ng Sales Consultant Certificate bago mag-start.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -1077,6 +1205,17 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                 exit={{ scale: 0.9, opacity: 0 }}
                                 className="bg-white rounded-3xl border border-amber-200 p-5 sm:p-6 max-w-sm w-full shadow-2xl relative text-center space-y-3.5"
                             >
+                                {/* Top-right Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={handleCloseCompletionModal}
+                                    className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 flex items-center justify-center transition-all cursor-pointer"
+                                    aria-label="Close and return to hiring portal"
+                                    title="Close and return to hiring portal"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+
                                 <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
                                     <CheckCircle2 className="w-7 h-7" />
                                 </div>
@@ -1152,15 +1291,198 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
                                 <button
                                     type="button"
-                                    onClick={() => setShowCompletionModal(false)}
-                                    className="w-full py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                    onClick={handleCloseCompletionModal}
+                                    className="w-full py-2.5 bg-zinc-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
                                 >
-                                    Done / Close
+                                    Done / Back to Hiring Portal
                                 </button>
                             </motion.div>
                         </div>
                     );
                 })()}
+            </AnimatePresence>
+
+            {/* ===== JOB DESCRIPTION & QUALIFICATIONS MODAL ===== */}
+            <AnimatePresence>
+                {showJobDescModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+                        <motion.div
+                            initial={{ scale: 0.92, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.92, opacity: 0 }}
+                            className="bg-white rounded-3xl border border-amber-200 max-w-md w-full shadow-2xl relative overflow-hidden my-auto max-h-[92vh] flex flex-col"
+                        >
+                            {/* Modal Header */}
+                            <div className="p-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-white/20 rounded-lg">
+                                        <FileText className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="text-left">
+                                        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                                            Job Description & Qualifications
+                                        </h3>
+                                        <p className="text-[10px] text-amber-100 font-semibold">
+                                            SmartMenu Sales Consultant Position
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowJobDescModal(false)}
+                                    className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer"
+                                    aria-label="Close"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Modal Scrollable Body */}
+                            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-left">
+                                {/* Poster Image Preview */}
+                                <div className="rounded-2xl overflow-hidden border border-amber-200 shadow-sm bg-white">
+                                    <img
+                                        src="/smartmenu-job-description.jpg"
+                                        alt="SmartMenu We're Hiring Sales Consultant"
+                                        className="w-full h-auto object-contain"
+                                    />
+                                </div>
+
+                                {/* Key Highlights Tags */}
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                    <div className="p-2 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider shadow-xs">
+                                        Part-Time Online Job
+                                    </div>
+                                    <div className="p-2 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider shadow-xs">
+                                        Flexible Hours
+                                    </div>
+                                    <div className="p-2 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider shadow-xs">
+                                        Commission Based
+                                    </div>
+                                </div>
+
+                                {/* What You'll Do & Qualifications */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* What You'll Do */}
+                                    <div className="p-3 bg-red-50/70 border border-red-100 rounded-2xl space-y-2">
+                                        <h4 className="text-xs font-black uppercase text-red-700 tracking-wider flex items-center gap-1.5">
+                                            <Briefcase className="w-3.5 h-3.5 text-red-600" />
+                                            <span>What You'll Do</span>
+                                        </h4>
+                                        <ul className="space-y-1.5 text-xs text-zinc-800 font-bold">
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Sales calls</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Offer web services to local clients</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Assist clients</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    {/* Qualifications */}
+                                    <div className="p-3 bg-amber-50/70 border border-amber-100 rounded-2xl space-y-2">
+                                        <h4 className="text-xs font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
+                                            <GraduationCap className="w-3.5 h-3.5 text-amber-700" />
+                                            <span>Qualifications</span>
+                                        </h4>
+                                        <ul className="space-y-1.5 text-xs text-zinc-800 font-bold">
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Good communicator</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>At least High School graduate</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Good attitude</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                                                    ✓
+                                                </div>
+                                                <span>Willing to be trained</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* 3 Steps Hiring Roadmap summary */}
+                                <div className="p-3.5 bg-zinc-950 text-white rounded-2xl space-y-2">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
+                                        Hiring Process (Roadmap Bago Matanggap)
+                                    </span>
+                                    <div className="space-y-1.5 text-[11px] font-bold text-zinc-200">
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-amber-400 font-black">Step 1:</span>
+                                            <span>Kumpletuhin ang Application Form & Scheduled Meeting</span>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-amber-400 font-black">Step 2:</span>
+                                            <span>3 Days Sales Training (Remote coaching sa pitch at closing)</span>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-amber-400 font-black">Step 3:</span>
+                                            <span>Onboarding & Signing Employee Certificate bago mag-start</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Resume Destination Notice */}
+                                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                                    <span className="text-[10px] text-zinc-600 font-bold block">
+                                        Send your resume here:
+                                    </span>
+                                    <span className="text-xs font-black text-red-600 block">
+                                        webnegosyo3@gmail.com
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer CTA */}
+                            <div className="p-3.5 bg-zinc-50 border-t border-zinc-100 flex items-center gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowJobDescModal(false)}
+                                    className="px-4 py-2.5 bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowJobDescModal(false);
+                                        setShowApplicationForm(true);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="flex-1 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                                    <span>Apply as Sales Consultant Now</span>
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </AnimatePresence>
 
             {/* Footer */}
