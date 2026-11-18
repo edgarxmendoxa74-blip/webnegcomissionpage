@@ -77,6 +77,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     const [applicantId, setApplicantId] = useState<string>('');
     const [appCode, setAppCode] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
+    const [confirmedTerms, setConfirmedTerms] = useState(false);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [completedApplicant, setCompletedApplicant] = useState<Applicant | null>(null);
     const [copiedCode, setCopiedCode] = useState(false);
@@ -208,6 +209,10 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             setError('Please provide your Facebook profile link.');
             return;
         }
+        if (!otherSocials.trim()) {
+            setError('Please provide your other social/portfolio link (or enter "None" if you have none).');
+            return;
+        }
 
         setSavingStage(true);
         try {
@@ -233,12 +238,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Stage 2 → Stage 3 (AUTOMATICALLY SAVES Q&A ANSWERS!)
+    // Stage 2 → Stage 3 (ALL QUESTIONS STRICTLY REQUIRED!)
     const handleProceedToMeeting = async () => {
         setError(null);
-        const answeredTotal = Object.keys(answers).filter(k => answers[k]?.trim()).length;
-        if (answeredTotal < 5) {
-            setError(`Please answer at least 5 questions (${answeredTotal}/${SALES_QUESTIONS.length} answered).`);
+        const missing = SALES_QUESTIONS.filter(q => !answers[q.id]?.trim());
+        if (missing.length > 0) {
+            const firstMissingIdx = SALES_QUESTIONS.findIndex(q => q.id === missing[0].id) + 1;
+            setError(`All ${SALES_QUESTIONS.length} questions are required. Please answer Question #${firstMissingIdx} before proceeding (${SALES_QUESTIONS.length - missing.length}/${SALES_QUESTIONS.length} answered).`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -272,11 +279,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         return { gmailUrl, mailtoUrl };
     };
 
-    // Stage 3 → Submit & Redirect
+    // Stage 3 → Submit & Redirect (ALL FIELDS & CONFIRMATION REQUIRED!)
     const handleCompleteApplication = async () => {
         setError(null);
         if (!meetingDate) {
-            setError('Please choose a meeting date.');
+            setError('Please choose your interview meeting date.');
+            return;
+        }
+        if (!meetingTime) {
+            setError('Please select an interview time slot.');
+            return;
+        }
+        if (!confirmedTerms) {
+            setError('Please check the confirmation box to confirm your scheduled interview attendance.');
             return;
         }
 
@@ -693,13 +708,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">
-                                            Other Socials (Optional)
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600">
+                                            Other Socials / Online Link *
                                         </label>
                                         <div className="relative">
                                             <input
                                                 type="text"
-                                                placeholder="e.g. TikTok, LinkedIn, IG"
+                                                required
+                                                placeholder="e.g. TikTok, LinkedIn, Instagram, or type 'None'"
                                                 value={otherSocials}
                                                 onChange={(e) => setOtherSocials(e.target.value)}
                                                 className="w-full pl-8 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-red-500"
@@ -723,17 +739,26 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                         {/* ===== STAGE 2: Q&A ASSESSMENT (PERSONALITY & SALES SECTIONS) ===== */}
                         {currentStep === 2 && (
                             <div className="bg-white/95 border border-amber-100 rounded-2xl p-3 sm:p-5 shadow-md shadow-orange-500/5 space-y-4">
-                                <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-zinc-100">
                                     <div>
-                                        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
-                                            Candidate Assessment
-                                        </h3>
-                                        <p className="text-[10px] text-zinc-500 font-bold">
-                                            2 Sections • {SALES_QUESTIONS.length} Questions
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                                Candidate Assessment
+                                            </h3>
+                                            <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">
+                                                All Questions Required *
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-500 font-bold mt-0.5">
+                                            2 Sections • {SALES_QUESTIONS.length} Questions (Kailangang masagutan lahat)
                                         </p>
                                     </div>
-                                    <span className="text-[10px] font-black text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                                        {answeredCount}/{SALES_QUESTIONS.length} answered
+                                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${
+                                        answeredCount === SALES_QUESTIONS.length
+                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                            : 'bg-amber-50 text-amber-900 border-amber-200'
+                                    }`}>
+                                        {answeredCount}/{SALES_QUESTIONS.length} Answered
                                     </span>
                                 </div>
 
@@ -746,46 +771,69 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             </div>
                                             <div>
                                                 <h4 className="text-[11px] font-black uppercase text-amber-950 leading-tight">
-                                                    Section 1: HR & Personality Interview
+                                                    Section 1: HR & Personality Interview *
                                                 </h4>
                                                 <p className="text-[9px] text-amber-800 font-medium">
                                                     Strengths, weaknesses & company value
                                                 </p>
                                             </div>
                                         </div>
-                                        <span className="text-[9px] font-black text-amber-900 bg-white/90 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
+                                            personalityAnswered === personalityQuestions.length
+                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                                : 'bg-white/90 text-amber-900 border-amber-200/80'
+                                        }`}>
                                             {personalityAnswered}/{personalityQuestions.length}
                                         </span>
                                     </div>
 
                                     <div className="space-y-2.5">
-                                        {personalityQuestions.map((q, idx) => (
-                                            <div
-                                                key={q.id}
-                                                className="bg-zinc-50/90 border border-zinc-200/80 rounded-xl p-3 space-y-1.5"
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
-                                                        {q.badge}
-                                                    </span>
-                                                    <span className="text-[9px] font-bold text-zinc-400">
-                                                        #{idx + 1}
-                                                    </span>
+                                        {personalityQuestions.map((q, idx) => {
+                                            const isAnswered = !!answers[q.id]?.trim();
+                                            return (
+                                                <div
+                                                    key={q.id}
+                                                    className={`rounded-xl p-3 space-y-1.5 transition-all border ${
+                                                        isAnswered
+                                                            ? 'bg-emerald-50/20 border-emerald-200'
+                                                            : 'bg-zinc-50/90 border-zinc-200/80'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                                            {q.badge}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                                isAnswered
+                                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                                    : 'bg-rose-100 text-rose-700 border border-rose-200'
+                                                            }`}>
+                                                                {isAnswered ? 'Answered ✓' : 'Required *'}
+                                                            </span>
+                                                            <span className="text-[9px] font-bold text-zinc-400">
+                                                                #{idx + 1}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="font-extrabold text-xs text-zinc-900 leading-snug">
+                                                        {q.question} <span className="text-red-500">*</span>
+                                                    </p>
+
+                                                    <textarea
+                                                        required
+                                                        rows={2}
+                                                        placeholder="Required: Write your answer here..."
+                                                        value={answers[q.id] || ''}
+                                                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                                                        className={`w-full p-2 bg-white border rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px] ${
+                                                            isAnswered ? 'border-emerald-300' : 'border-zinc-200'
+                                                        }`}
+                                                    />
                                                 </div>
-
-                                                <p className="font-extrabold text-xs text-zinc-900 leading-snug">
-                                                    {q.question}
-                                                </p>
-
-                                                <textarea
-                                                    rows={2}
-                                                    placeholder="Your answer..."
-                                                    value={answers[q.id] || ''}
-                                                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                                                    className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px]"
-                                                />
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -798,46 +846,69 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             </div>
                                             <div>
                                                 <h4 className="text-[11px] font-black uppercase text-rose-950 leading-tight">
-                                                    Section 2: Sales Call Scenarios
+                                                    Section 2: Sales Call Scenarios *
                                                 </h4>
                                                 <p className="text-[9px] text-rose-800 font-medium">
                                                     Live pitching, price objections & closing deals
                                                 </p>
                                             </div>
                                         </div>
-                                        <span className="text-[9px] font-black text-rose-900 bg-white/90 px-2 py-0.5 rounded-full border border-rose-200/80 shrink-0">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
+                                            salesAnswered === salesQuestions.length
+                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                                : 'bg-white/90 text-rose-900 border-rose-200/80'
+                                        }`}>
                                             {salesAnswered}/{salesQuestions.length}
                                         </span>
                                     </div>
 
                                     <div className="space-y-2.5">
-                                        {salesQuestions.map((q, idx) => (
-                                            <div
-                                                key={q.id}
-                                                className="bg-zinc-50/90 border border-zinc-200/80 rounded-xl p-3 space-y-1.5"
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-100 text-rose-900">
-                                                        {q.badge}
-                                                    </span>
-                                                    <span className="text-[9px] font-bold text-zinc-400">
-                                                        #{personalityQuestions.length + idx + 1}
-                                                    </span>
+                                        {salesQuestions.map((q, idx) => {
+                                            const isAnswered = !!answers[q.id]?.trim();
+                                            return (
+                                                <div
+                                                    key={q.id}
+                                                    className={`rounded-xl p-3 space-y-1.5 transition-all border ${
+                                                        isAnswered
+                                                            ? 'bg-emerald-50/20 border-emerald-200'
+                                                            : 'bg-zinc-50/90 border-zinc-200/80'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-100 text-rose-900">
+                                                            {q.badge}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                                isAnswered
+                                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                                    : 'bg-rose-100 text-rose-700 border border-rose-200'
+                                                            }`}>
+                                                                {isAnswered ? 'Answered ✓' : 'Required *'}
+                                                            </span>
+                                                            <span className="text-[9px] font-bold text-zinc-400">
+                                                                #{personalityQuestions.length + idx + 1}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="font-extrabold text-xs text-zinc-900 leading-snug">
+                                                        {q.question} <span className="text-red-500">*</span>
+                                                    </p>
+
+                                                    <textarea
+                                                        required
+                                                        rows={2}
+                                                        placeholder="Required: Write your answer here..."
+                                                        value={answers[q.id] || ''}
+                                                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                                                        className={`w-full p-2 bg-white border rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px] ${
+                                                            isAnswered ? 'border-emerald-300' : 'border-zinc-200'
+                                                        }`}
+                                                    />
                                                 </div>
-
-                                                <p className="font-extrabold text-xs text-zinc-900 leading-snug">
-                                                    {q.question}
-                                                </p>
-
-                                                <textarea
-                                                    rows={2}
-                                                    placeholder="Your answer..."
-                                                    value={answers[q.id] || ''}
-                                                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                                                    className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px]"
-                                                />
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -864,18 +935,24 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
                         {/* ===== STAGE 3: SCHEDULE ===== */}
                         {currentStep === 3 && (
-                            <div className="bg-white/95 border border-amber-100 rounded-2xl p-4 sm:p-5 shadow-md shadow-orange-500/5 space-y-3.5">
-                                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 pb-1.5 border-b border-zinc-100">
-                                    Select Meeting Schedule
-                                </h3>
+                            <div className="bg-white/95 border border-amber-100 rounded-2xl p-4 sm:p-5 shadow-md shadow-orange-500/5 space-y-4">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100">
+                                    <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                        Select Meeting Schedule *
+                                    </h3>
+                                    <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                        Final Step
+                                    </span>
+                                </div>
 
                                 <div className="space-y-1">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1">
                                         <Calendar className="w-3 h-3 text-orange-600" />
-                                        <span>Date</span>
+                                        <span>Interview Date *</span>
                                     </label>
                                     <input
                                         type="date"
+                                        required
                                         min={new Date().toISOString().split('T')[0]}
                                         value={meetingDate}
                                         onChange={(e) => setMeetingDate(e.target.value)}
@@ -886,7 +963,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1">
                                         <Clock className="w-3 h-3 text-orange-600" />
-                                        <span>Time Slot</span>
+                                        <span>Interview Time Slot *</span>
                                     </label>
 
                                     <div className="grid grid-cols-3 gap-1.5">
@@ -903,7 +980,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                                     onClick={() => setMeetingTime(slot.time)}
                                                     className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                                                         isSelected
-                                                            ? 'bg-zinc-950 text-white border-amber-400 shadow-md'
+                                                            ? 'bg-zinc-950 text-white border-amber-400 shadow-md ring-2 ring-amber-400/30'
                                                             : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-800'
                                                     }`}
                                                 >
@@ -918,7 +995,23 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                     </div>
                                 </div>
 
-                                <div className="pt-2 flex items-center justify-between gap-2">
+                                {/* Required Attendance Confirmation Box */}
+                                <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
+                                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            required
+                                            checked={confirmedTerms}
+                                            onChange={(e) => setConfirmedTerms(e.target.checked)}
+                                            className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-bold text-zinc-900 leading-snug">
+                                            I confirm that I will attend the scheduled interview on <strong className="text-red-700">{meetingDate || 'the selected date'}</strong> at <strong className="text-red-700">{meetingTime}</strong> and that all information I provided is accurate and true. <span className="text-red-600 font-black">*</span>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
                                     <button
                                         type="button"
                                         onClick={() => { setCurrentStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -929,7 +1022,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
                                     <button
                                         type="button"
-                                        disabled={loading}
+                                        disabled={loading || !confirmedTerms}
                                         onClick={handleCompleteApplication}
                                         className="px-5 py-3 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                     >
@@ -938,7 +1031,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                         ) : (
                                             <>
                                                 <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                                                <span>Confirm & Send Code</span>
+                                                <span>Confirm & Send Application</span>
                                             </>
                                         )}
                                     </button>
