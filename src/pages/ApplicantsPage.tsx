@@ -63,8 +63,8 @@ export const ApplicantsPage: React.FC = () => {
         setTimeout(() => setCopiedSql(false), 2500);
     };
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const tableStatus = await checkApplicantsTable();
             setTableMissing(!tableStatus.exists);
@@ -74,26 +74,38 @@ export const ApplicantsPage: React.FC = () => {
         } catch (err) {
             console.error('Error loading applicants:', err);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadData();
+        loadData(false);
 
         // Subscribe to real-time changes
         const channel = supabase
-            .channel('applicants_realtime_changes')
+            .channel(`applicants_realtime_${Date.now()}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'applicants' },
                 () => {
-                    loadData();
+                    loadData(true);
                 }
             )
             .subscribe();
 
+        // High frequency auto-sync (every 5 seconds) & on window focus
+        const autoSyncInterval = setInterval(() => {
+            loadData(true);
+        }, 5000);
+
+        const handleFocus = () => {
+            loadData(true);
+        };
+        window.addEventListener('focus', handleFocus);
+
         return () => {
+            clearInterval(autoSyncInterval);
+            window.removeEventListener('focus', handleFocus);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -595,7 +607,7 @@ export const ApplicantsPage: React.FC = () => {
 
                     <button
                         type="button"
-                        onClick={loadData}
+                        onClick={() => loadData(false)}
                         className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700 hover:text-black transition-all shadow-2xs"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -648,7 +660,7 @@ export const ApplicantsPage: React.FC = () => {
 
                         <button
                             type="button"
-                            onClick={loadData}
+                            onClick={() => loadData(false)}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 sm:ml-auto"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

@@ -263,15 +263,24 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
 
     // Generate Gmail URLs
     const getEmailUrls = (app: Applicant) => {
-        const subject = `SmartMenu Sales Consultant Application Code: ${app.application_code}`;
+        const subject = `SmartMenu Sales Consultant Application Code: ${app.application_code} - ${app.full_name}`;
         const body =
             `Hi WebNegosyo / SmartMenu Team,\n\n` +
-            `My name is ${app.full_name}.\n` +
-            `Application Code: ${app.application_code}\n\n` +
-            `Scheduled Interview: ${app.meeting_date} at ${app.meeting_time}\n` +
-            `Phone: ${app.phone_number}\n` +
-            `Email: ${app.email}\n\n` +
-            `Thank you!`;
+            `I have officially submitted my application for the Sales Consultant position.\n\n` +
+            `📋 APPLICANT DETAILS:\n` +
+            `• Full Name: ${app.full_name}\n` +
+            `• Application Code: ${app.application_code}\n` +
+            `• Phone Number: ${app.phone_number}\n` +
+            `• Email: ${app.email}\n` +
+            `• Facebook Profile: ${app.fb_link || 'N/A'}\n` +
+            `• Other Socials / Online: ${app.other_socials || 'N/A'}\n\n` +
+            `📅 SCHEDULED INTERVIEW:\n` +
+            `• Date: ${app.meeting_date}\n` +
+            `• Time Slot: ${app.meeting_time}\n\n` +
+            (app.resume_link && !app.resume_link.startsWith('data:') ? `📎 Resume Link: ${app.resume_link}\n\n` : '') +
+            `Please confirm my interview schedule. Thank you!\n\n` +
+            `Respectfully,\n` +
+            `${app.full_name}`;
 
         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${TARGET_EMAIL}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         const mailtoUrl = `mailto:${TARGET_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -279,7 +288,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         return { gmailUrl, mailtoUrl };
     };
 
-    // Stage 3 → Submit & Redirect (ALL FIELDS & CONFIRMATION REQUIRED!)
+    // Stage 3 → Submit & Redirect (AUTOMATIC GMAIL REDIRECT + AUTO SYNC TO OWNER PORTAL)
     const handleCompleteApplication = async () => {
         setError(null);
         if (!meetingDate) {
@@ -314,15 +323,29 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             setCompletedApplicant(result);
             setShowCompletionModal(true);
 
-            // Automatically open Gmail
+            // Automatically open Gmail to send details!
             const { gmailUrl, mailtoUrl } = getEmailUrls(result);
+
+            // Try opening in new tab first (for desktop browsers)
+            let openedInNewTab = false;
             try {
-                const opened = window.open(gmailUrl, '_blank');
-                if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-                    window.location.href = mailtoUrl;
+                const newWin = window.open(gmailUrl, '_blank');
+                if (newWin && !newWin.closed && typeof newWin.closed !== 'undefined') {
+                    openedInNewTab = true;
                 }
             } catch {
-                window.location.href = mailtoUrl;
+                openedInNewTab = false;
+            }
+
+            // If popup was blocked or on mobile device, automatically redirect after brief 1s
+            if (!openedInNewTab) {
+                setTimeout(() => {
+                    try {
+                        window.location.href = gmailUrl;
+                    } catch {
+                        window.location.href = mailtoUrl;
+                    }
+                }, 1200);
             }
         } catch (err: any) {
             setError(err?.message || 'Submission failed. Please try again.');
@@ -1045,32 +1068,35 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             {/* ===== COMPACT COMPLETION MODAL ===== */}
             <AnimatePresence>
                 {showCompletionModal && completedApplicant?.application_code && (() => {
-                    const { gmailUrl } = getEmailUrls(completedApplicant);
+                    const { gmailUrl, mailtoUrl } = getEmailUrls(completedApplicant);
                     return (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-sm animate-in fade-in">
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
-                                className="bg-white rounded-2xl border border-amber-100 p-4 sm:p-6 max-w-sm w-full shadow-2xl relative text-center space-y-3"
+                                className="bg-white rounded-3xl border border-amber-200 p-5 sm:p-6 max-w-sm w-full shadow-2xl relative text-center space-y-3.5"
                             >
-                                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                                    <CheckCircle2 className="w-6 h-6" />
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                                    <CheckCircle2 className="w-7 h-7" />
                                 </div>
 
                                 <div>
-                                    <h3 className="text-base font-black text-zinc-950">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                        ✓ Saved to Database & Owner Portal
+                                    </span>
+                                    <h3 className="text-base sm:text-lg font-black text-zinc-950 mt-1">
                                         Application Submitted!
                                     </h3>
-                                    <p className="text-[10px] text-zinc-500 mt-0.5">
-                                        {completedApplicant.meeting_date} at {completedApplicant.meeting_time}
+                                    <p className="text-[10px] text-zinc-500 mt-0.5 font-medium">
+                                        Interview: {completedApplicant.meeting_date} at {completedApplicant.meeting_time}
                                     </p>
                                 </div>
 
                                 {/* Code Box */}
-                                <div className="p-3 bg-zinc-950 text-white rounded-xl space-y-1">
+                                <div className="p-3 bg-zinc-950 text-white rounded-2xl space-y-1 shadow-sm">
                                     <span className="text-[8px] font-black uppercase tracking-wider text-amber-300 block">
-                                        Your Code
+                                        Your Application Code
                                     </span>
                                     <div className="text-xl font-black font-mono text-amber-400">
                                         {completedApplicant.application_code}
@@ -1078,45 +1104,58 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                     <button
                                         type="button"
                                         onClick={handleCopyCode}
-                                        className="text-[9px] font-bold text-zinc-300 hover:text-white underline pt-0.5"
+                                        className="text-[9px] font-bold text-zinc-300 hover:text-white underline pt-0.5 cursor-pointer"
                                     >
-                                        {copiedCode ? '✓ Copied' : 'Copy Code'}
+                                        {copiedCode ? '✓ Copied to Clipboard' : 'Copy Application Code'}
                                     </button>
                                 </div>
 
-                                {/* Instructions */}
-                                <div className="p-2.5 bg-amber-50 rounded-xl text-left text-xs space-y-2">
-                                    <p className="text-[10px] text-amber-900 font-bold leading-tight">
-                                        Send code to <strong className="font-mono">{TARGET_EMAIL}</strong> to confirm interview.
-                                    </p>
+                                {/* Auto-Redirect Notice & Send Buttons */}
+                                <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-left text-xs space-y-2.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <p className="text-[10px] text-zinc-800 font-bold leading-tight">
+                                            Redirecting to Gmail to send your application details...
+                                        </p>
+                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-1.5">
+                                    <div className="space-y-1.5">
                                         <a
                                             href={gmailUrl}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="py-2 px-2 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase text-center flex items-center justify-center gap-1 shadow-xs"
+                                            className="w-full py-2.5 px-3 bg-gradient-to-r from-red-600 to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-md hover:from-red-700 hover:to-amber-700 active:scale-95 transition-all"
                                         >
-                                            <Send className="w-3 h-3" />
-                                            <span>Open Gmail</span>
+                                            <Send className="w-3.5 h-3.5" />
+                                            <span>Send Details via Gmail Web</span>
                                         </a>
 
-                                        <button
-                                            type="button"
-                                            onClick={handleCopyEmail}
-                                            className="py-2 px-2 bg-white border border-amber-200 text-amber-950 rounded-lg text-[9px] font-black uppercase text-center"
-                                        >
-                                            {copiedEmail ? '✓ Copied' : 'Copy Email'}
-                                        </button>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <a
+                                                href={mailtoUrl}
+                                                className="py-2 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center flex items-center justify-center gap-1 active:scale-95 transition-all"
+                                            >
+                                                <Mail className="w-3 h-3 text-zinc-500" />
+                                                <span>Open Mail App</span>
+                                            </a>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleCopyEmail}
+                                                className="py-2 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center active:scale-95 transition-all cursor-pointer"
+                                            >
+                                                {copiedEmail ? '✓ Copied Email' : 'Copy Email'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <button
                                     type="button"
                                     onClick={() => setShowCompletionModal(false)}
-                                    className="w-full py-2 bg-zinc-100 text-zinc-800 rounded-lg text-xs font-bold"
+                                    className="w-full py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
                                 >
-                                    Close
+                                    Done / Close
                                 </button>
                             </motion.div>
                         </div>
