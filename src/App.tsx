@@ -494,12 +494,15 @@ const isHiringPath = (): boolean => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
+  const search = window.location.search.toLowerCase();
   return (
     path === '/hiring' ||
     path === '/hiring/' ||
     path.startsWith('/hiring/') ||
     hash === '#/hiring' ||
-    hash === '#hiring'
+    hash === '#hiring' ||
+    search.includes('portal=hiring') ||
+    search.includes('hiring')
   );
 };
 
@@ -518,8 +521,13 @@ function App() {
     };
   }, []);
 
+  const handleBackToSelection = () => {
+    window.history.pushState({}, '', '/');
+    setIsHiring(false);
+  };
+
   if (isHiring) {
-    return <ApplicantPortal />;
+    return <ApplicantPortal onBackToSelection={handleBackToSelection} />;
   }
 
   return (

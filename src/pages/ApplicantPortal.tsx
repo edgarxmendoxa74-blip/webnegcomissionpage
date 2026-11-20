@@ -52,7 +52,7 @@ interface ApplicantPortalProps {
     onBackToSelection?: () => void;
 }
 
-export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
+export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelection }) => {
     // false = Home view (Poster & Apply button), true = Fill-up forms
     const [showApplicationForm, setShowApplicationForm] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -511,7 +511,18 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             <div className="max-w-xl w-full mx-auto flex-1 flex flex-col justify-center">
 
                 {/* Header Section with Official SmartMenu Logo */}
-                <div className="text-center space-y-1.5 mb-2.5 sm:mb-3 animate-in fade-in">
+                <div className="text-center space-y-1.5 mb-2.5 sm:mb-3 animate-in fade-in relative">
+                    {onBackToSelection && (
+                        <button
+                            type="button"
+                            onClick={onBackToSelection}
+                            className="absolute left-0 top-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-800 bg-white/80 hover:bg-white border border-amber-200/80 px-2.5 py-1 rounded-lg transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                            title="Go to WebNegosyo portals"
+                        >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">WebNegosyo</span>
+                        </button>
+                    )}
                     <div className="inline-flex items-center justify-center p-2 sm:p-2.5 rounded-2xl bg-white shadow-md border border-amber-200/80 transition-transform hover:scale-105">
                         <img
                             src="/smartmenu-logo.jpg"

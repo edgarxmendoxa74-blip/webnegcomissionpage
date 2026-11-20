@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, User, Eye, EyeOff, CheckCircle, PartyPopper, ArrowLeft, Check, Fingerprint, Sparkles, ArrowRight } from 'lucide-react';
 import { LogoMark } from '../components/Logo';
 import { authenticateWithBiometrics, isBiometricsAvailable } from '../lib/biometrics';
 
@@ -232,7 +232,7 @@ export const LoginPage: React.FC = () => {
                             whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('owner')}
-                            className="bg-ink p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20"
+                            className="bg-ink p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-2xl shadow-black/20 cursor-pointer"
                         >
                             <div className="w-11 h-11 sm:w-16 sm:h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-4 sm:mb-8 mx-auto md:mx-0 group-hover:bg-white group-hover:text-black transition-colors">
                                 <Lock className="w-5 h-5 sm:w-8 sm:h-8 text-white group-hover:text-black" />
@@ -247,7 +247,7 @@ export const LoginPage: React.FC = () => {
                             whileHover={{ y: -8, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setPortal('employee')}
-                            className="bg-white border border-zinc-200 p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-xl shadow-black/5"
+                            className="bg-white border border-zinc-200 p-5 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-center md:text-left group transition-all shadow-xl shadow-black/5 cursor-pointer"
                         >
                             <div className="w-11 h-11 sm:w-16 sm:h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 sm:mb-8 mx-auto md:mx-0 group-hover:bg-black transition-colors">
                                 <User className="w-5 h-5 sm:w-8 sm:h-8 text-black group-hover:text-white" />
@@ -258,6 +258,41 @@ export const LoginPage: React.FC = () => {
                             </p>
                         </motion.button>
                     </div>
+
+                    {/* Applicant & Sales Hiring Portal Banner */}
+                    <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className="mt-6 p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white shadow-xl shadow-rose-600/20 flex flex-col sm:flex-row items-center justify-between gap-4 border border-red-400/40 cursor-pointer"
+                        onClick={() => {
+                            window.history.pushState({}, '', '/hiring');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                        }}
+                    >
+                        <div className="flex items-center gap-4 text-center sm:text-left">
+                            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+                                <Sparkles className="w-6 h-6 text-amber-200" />
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/25 text-amber-200 text-[9px] font-black uppercase tracking-wider mb-1">
+                                    <span>We're Hiring</span>
+                                    <span>•</span>
+                                    <span>SmartMenu</span>
+                                </div>
+                                <h4 className="text-lg sm:text-xl font-black uppercase italic tracking-tight">
+                                    Sales Consultant Hiring Portal
+                                </h4>
+                                <p className="text-xs text-rose-100 font-semibold mt-0.5">
+                                    Part-Time Online • Flexible Hours • High Commission Based
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="px-5 py-2.5 bg-white text-zinc-950 hover:bg-amber-100 rounded-xl font-black text-xs uppercase tracking-wider shadow-md flex items-center gap-2 shrink-0 transition-colors">
+                            <span>Open Hiring Page</span>
+                            <ArrowRight className="w-4 h-4 text-red-600" />
+                        </div>
+                    </motion.div>
 
                     <div className="mt-10 sm:mt-20 text-center">
                         <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">
