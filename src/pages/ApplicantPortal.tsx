@@ -1400,7 +1400,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
                                         </button>
 
-                                        {activeTrainingTab < 3 ? (
+                                        {activeTrainingTab < 3 && (
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
@@ -1409,42 +1409,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                                 <span>Training {activeTrainingTab + 1}</span>
                                                 <ChevronRight className="w-3.5 h-3.5" />
                                             </button>
-                                        ) : (
-                                            allWatched && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCompleteTrainingApplication}
-                                                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
-                                                >
-                                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                                                    <span>Complete & Send Message</span>
-                                                </button>
-                                            )
                                         )}
                                     </div>
-
-                                    {/* 100% Completed Banner inside Step 3 */}
-                                    {allWatched && (
-                                        <div className="p-4 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-300 rounded-2xl text-center space-y-2 animate-in fade-in">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-0.5 rounded-full inline-block">
-                                                🎉 All 3 Training Videos Watched!
-                                            </span>
-                                            <h4 className="text-sm font-black text-zinc-900">
-                                                Congratulations! Nakapasa ka na sa Training!
-                                            </h4>
-                                            <p className="text-xs text-zinc-700 font-medium">
-                                                Kumpleto mo nang napanood ang Training 1, 2, at 3. Ipadala na ang iyong detalye sa pamamagitan ng button sa ibaba.
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={handleCompleteTrainingApplication}
-                                                className="w-full py-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
-                                            >
-                                                <Send className="w-4 h-4 text-amber-200" />
-                                                <span>Send Message Here (webnegosyo3@gmail.com)</span>
-                                            </button>
-                                        </div>
-                                    )}
 
                                     {/* Bottom Navigation */}
                                     <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
@@ -1461,14 +1427,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                                 type="button"
                                                 disabled={loading}
                                                 onClick={handleCompleteTrainingApplication}
-                                                className="px-5 py-3 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                                             >
                                                 {loading ? (
                                                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                                 ) : (
                                                     <>
-                                                        <Send className="w-3.5 h-3.5 text-amber-200" />
-                                                        <span>Send Message Here</span>
+                                                        <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                                                        <span>View Congratulations</span>
                                                     </>
                                                 )}
                                             </button>
@@ -1791,7 +1757,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                         )
                     );
                     const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
-                    const allWatched = watchedVideoIds.length === 3;
 
                     return (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-in fade-in overflow-y-auto">
@@ -1989,7 +1954,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
                                         </button>
 
-                                        {activeTrainingTab < 3 ? (
+                                        {activeTrainingTab < 3 && (
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
@@ -1998,39 +1963,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                                 <span>Training {activeTrainingTab + 1}</span>
                                                 <ChevronRight className="w-3.5 h-3.5" />
                                             </button>
-                                        ) : (
-                                            allWatched && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowTrainingCompleteModal(true)}
-                                                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
-                                                >
-                                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                                                    <span>Send Confirmation</span>
-                                                </button>
-                                            )
                                         )}
                                     </div>
-
-                                    {/* 100% Completed Banner inside modal */}
-                                    {allWatched && (
-                                        <div className="p-3.5 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-300 rounded-2xl text-center space-y-2 animate-in fade-in">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
-                                                🎉 All 3 Training Videos Watched!
-                                            </span>
-                                            <p className="text-xs font-bold text-zinc-800">
-                                                Kumpleto mo nang napanood ang Training 1, 2, at 3! Ipadala na ang iyong completion confirmation via email sa management.
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowTrainingCompleteModal(true)}
-                                                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
-                                            >
-                                                <Send className="w-3.5 h-3.5" />
-                                                <span>Send Email Confirmation Now</span>
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Modal Footer */}
