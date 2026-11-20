@@ -544,15 +544,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
                                             transition={{ duration: 0.3 }}
-                                            className="w-full h-full p-0.5 bg-white flex items-center justify-center cursor-pointer group"
+                                            className="w-full h-full p-0 bg-white flex items-center justify-center cursor-pointer group relative"
                                             onClick={() => setShowJobDescModal(true)}
                                             title="Click to view full job description"
                                         >
                                             <img
                                                 src="/smartmenu-job-description.jpg"
-                                                alt="SmartMenu Sales Consultant Job Description"
-                                                className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
+                                                alt="SmartMenu Sales Consultant — We're Hiring!"
+                                                className="w-full h-full object-cover rounded-2xl transition-transform group-hover:scale-[1.02]"
                                             />
+                                            {/* Click-to-view overlay hint */}
+                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                                Tap to view details
+                                            </div>
                                         </motion.div>
                                     ) : currentSlide === 1 ? (
                                         /* Slide 2: Official Hiring Banner */
@@ -562,12 +566,13 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
                                             transition={{ duration: 0.3 }}
-                                            className="w-full h-full p-0.5 bg-white flex items-center justify-center"
+                                            className="w-full h-full p-0 bg-white flex items-center justify-center cursor-pointer group"
+                                            onClick={() => setShowJobDescModal(true)}
                                         >
                                             <img
                                                 src="/smartmenu-hiring-banner.jpg"
-                                                alt="We're Hiring Sales Consultant"
-                                                className="w-full h-full object-contain rounded-xl"
+                                                alt="SmartMenu — We're Hiring Sales Consultant"
+                                                className="w-full h-full object-cover rounded-2xl"
                                             />
                                         </motion.div>
                                     ) : (
@@ -1502,6 +1507,15 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                     </div>
                                 </div>
 
+                                {/* WE'RE HIRING headline */}
+                                <div className="text-center space-y-0.5">
+                                    <span className="inline-block px-4 py-1 bg-gradient-to-r from-red-600 to-red-700 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                                        We're Hiring!
+                                    </span>
+                                    <h2 className="text-xl font-black text-zinc-950 leading-tight">Sales Consultant</h2>
+                                    <p className="text-[10px] text-zinc-500 font-bold">SmartMenu · Growing Restaurants. Together.</p>
+                                </div>
+
                                 {/* What You'll Do & Qualifications */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {/* What You'll Do */}
@@ -1511,24 +1525,16 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             <span>What You'll Do</span>
                                         </h4>
                                         <ul className="space-y-1.5 text-xs text-zinc-800 font-bold">
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Sales calls</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Offer web services to local clients</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Assist clients</span>
-                                            </li>
+                                            {[
+                                                'Sales calls',
+                                                'Offer web services to local clients',
+                                                'Assist clients',
+                                            ].map((item) => (
+                                                <li key={item} className="flex items-center gap-2">
+                                                    <div className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-black">✓</div>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
                                         </ul>
                                     </div>
 
@@ -1539,62 +1545,61 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                             <span>Qualifications</span>
                                         </h4>
                                         <ul className="space-y-1.5 text-xs text-zinc-800 font-bold">
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Good communicator</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>At least High School graduate</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Good attitude</span>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                                                    ✓
-                                                </div>
-                                                <span>Willing to be trained</span>
-                                            </li>
+                                            {[
+                                                'Good communicator',
+                                                'At least High School graduate',
+                                                'Good attitude',
+                                                'Willing to be trained',
+                                            ].map((item) => (
+                                                <li key={item} className="flex items-center gap-2">
+                                                    <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center shrink-0 text-[10px] font-black">✓</div>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
                                         </ul>
                                     </div>
                                 </div>
 
                                 {/* 3 Steps Hiring Roadmap summary */}
-                                <div className="p-3.5 bg-zinc-950 text-white rounded-2xl space-y-2">
+                                <div className="p-3.5 bg-zinc-950 text-white rounded-2xl space-y-2.5">
                                     <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block">
-                                        Hiring Process (Roadmap Bago Matanggap)
+                                        📋 Hiring Process — Roadmap Bago Matanggap
                                     </span>
-                                    <div className="space-y-1.5 text-[11px] font-bold text-zinc-200">
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-amber-400 font-black">Step 1:</span>
-                                            <span>Kumpletuhin ang Application Form & Scheduled Meeting</span>
+                                    <div className="space-y-2 text-[11px] font-bold text-zinc-200">
+                                        <div className="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
+                                            <span className="w-5 h-5 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-black text-[9px] shrink-0 mt-0.5">1</span>
+                                            <div>
+                                                <span className="text-amber-300 font-black block text-[10px]">Application &amp; Scheduled Meeting</span>
+                                                <span className="text-zinc-400 text-[10px] font-medium">Kumpletuhin ang online application at pumili ng interview schedule.</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-amber-400 font-black">Step 2:</span>
-                                            <span>3 Days Sales Training (Remote coaching sa pitch at closing)</span>
+                                        <div className="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
+                                            <span className="w-5 h-5 rounded-full bg-orange-500 text-zinc-950 flex items-center justify-center font-black text-[9px] shrink-0 mt-0.5">2</span>
+                                            <div>
+                                                <span className="text-orange-300 font-black block text-[10px]">3 Days Sales Training</span>
+                                                <span className="text-zinc-400 text-[10px] font-medium">Remote coaching — sales pitch, objection handling, at closing ng SmartMenu deals.</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-amber-400 font-black">Step 3:</span>
-                                            <span>Watch 3 Videos for Training (Panoorin ang Training 1, 2, at 3)</span>
+                                        <div className="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
+                                            <span className="w-5 h-5 rounded-full bg-emerald-500 text-zinc-950 flex items-center justify-center font-black text-[9px] shrink-0 mt-0.5">3</span>
+                                            <div>
+                                                <span className="text-emerald-300 font-black block text-[10px]">Watch 3 Videos for Training</span>
+                                                <span className="text-zinc-400 text-[10px] font-medium">Panoorin ang Training 1, 2, at 3 — pagkatapos ay mag-send ng email confirmation sa management.</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Resume Destination Notice */}
-                                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl text-center space-y-0.5 shadow-xs">
                                     <span className="text-[10px] text-zinc-600 font-bold block">
-                                        Send your resume here:
+                                        📧 Interested? Send your resume here:
                                     </span>
-                                    <span className="text-xs font-black text-red-600 block">
+                                    <span className="text-sm font-black text-red-600 block">
                                         webnegosyo3@gmail.com
+                                    </span>
+                                    <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">
+                                        SmartMenu · Growing Restaurants. Together.
                                     </span>
                                 </div>
                             </div>
@@ -1988,8 +1993,13 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
             </AnimatePresence>
 
             {/* Footer */}
-            <div className="text-center py-2 mt-4 text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
-                SmartMenu • WebNegosyo 2026
+            <div className="text-center py-3 mt-4 space-y-1">
+                <p className="text-xs font-black text-zinc-800 uppercase tracking-wider">
+                    Interested? Message us to apply!
+                </p>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
+                    SmartMenu · Growing Restaurants. Together.
+                </p>
             </div>
         </div>
     );
