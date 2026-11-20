@@ -16,54 +16,70 @@ window.addEventListener('unhandledrejection', (e) => showFatal(String(e.reason))
 // Service worker is for the web/PWA only; inside the Capacitor app it can serve stale assets
 const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
 
-// Enhanced PWA Service Worker Registration
+// Enhanced PWA Service Worker Registration (Only in Production to prevent breaking Vite dev modules)
 if ('serviceWorker' in navigator && !isNative) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register(`${import.meta.env.BASE_URL}sw.js`)
-      .then((registration) => {
-        console.log('[PWA] Service Worker registered successfully:', registration.scope);
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register(`${import.meta.env.BASE_URL}sw.js`)
+        .then((registration) => {
+          console.log('[PWA] Service Worker registered successfully:', registration.scope);
 
-        // Check for updates periodically (every hour)
-        setInterval(() => {
-          registration.update();
-        }, 60 * 60 * 1000);
+          // Check for updates periodically (every hour)
+          setInterval(() => {
+            registration.update();
+          }, 60 * 60 * 1000);
 
-        // Handle service worker updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker available, notify user
-                console.log('[PWA] New version available! Refresh to update.');
-                
-                // Optional: Show update notification
-                if (confirm('May bagong update ang app! I-refresh para sa latest version?')) {
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  window.location.reload();
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] New version available! Refresh to update.');
+                  if (confirm('May bagong update ang app! I-refresh para sa latest version?')) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    window.location.reload();
+                  }
                 }
-              }
-            });
-          }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.error('[PWA] Service Worker registration failed:', error);
         });
-      })
-      .catch((error) => {
-        console.error('[PWA] Service Worker registration failed:', error);
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[PWA] New service worker activated');
       });
-
-    // Handle controller change (new service worker activated)
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('[PWA] New service worker activated');
     });
-  });
 
-  // Listen for messages from service worker
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-      console.log('[PWA] Update available');
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+        console.log('[PWA] Update available');
+      }
+    });
+  } else {
+    // In development mode, auto-unregister any active service workers and clear caches
+    // so Vite's TypeScript modules (.ts/.tsx) are never intercepted with text/html MIME type
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        reg.unregister().then(() => {
+          console.log('[Dev] Unregistered stale service worker');
+        });
+      }
+    });
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        for (const key of keys) {
+          if (key.startsWith('webnegosyo-')) {
+            caches.delete(key);
+          }
+        }
+      });
     }
-  });
+  }
 }
 
 // PWA install prompt handling
