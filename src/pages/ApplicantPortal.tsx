@@ -13,8 +13,6 @@ import {
     Phone,
     Facebook,
     Share2,
-    Calendar,
-    Clock,
     CheckCircle2,
     Check,
     ArrowRight,
@@ -78,22 +76,12 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     // Stage 2: Q&A Answers
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
 
-    // Stage 3: Meeting Schedule
-    const tomorrowStr = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().split('T')[0];
-    };
-    const [meetingDate, setMeetingDate] = useState(tomorrowStr);
-    const [meetingTime, setMeetingTime] = useState<'10:00 AM' | '4:00 PM' | '10:00 PM'>('10:00 AM');
-
     // UI State
     const [loading, setLoading] = useState(false);
     const [savingStage, setSavingStage] = useState(false);
     const [applicantId, setApplicantId] = useState<string>('');
     const [appCode, setAppCode] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
-    const [confirmedTerms, setConfirmedTerms] = useState(false);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [showJobDescModal, setShowJobDescModal] = useState(false);
     const [completedApplicant, setCompletedApplicant] = useState<Applicant | null>(null);
@@ -406,6 +394,60 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleCompleteTrainingApplication = async () => {
+        if (watchedVideoIds.length < 3) {
+            setError(`Pakipanuod po muna ang lahat ng 3 training videos bago mag-send ng application (${watchedVideoIds.length}/3 complete).`);
+            return;
+        }
+        setError(null);
+        setLoading(true);
+        try {
+            const result = await submitApplication({
+                applicantId: applicantId || undefined,
+                applicationCode: appCode || undefined,
+                fullName: fullName || applicantTrainingName,
+                email,
+                phoneNumber,
+                resumeLink,
+                fbLink,
+                otherSocials,
+                answers,
+                meetingDate: new Date().toISOString().split('T')[0],
+                meetingTime: '10:00 AM'
+            });
+            setCompletedApplicant(result);
+            setShowTrainingCompleteModal(true);
+        } catch (err: any) {
+            console.warn('Fallback submit application:', err);
+            setShowTrainingCompleteModal(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSendTrainingMessage = async () => {
+        if (applicantId && !completedApplicant) {
+            try {
+                const res = await submitApplication({
+                    applicantId,
+                    applicationCode: appCode || undefined,
+                    fullName: fullName || applicantTrainingName,
+                    email,
+                    phoneNumber,
+                    resumeLink,
+                    fbLink,
+                    otherSocials,
+                    answers,
+                    meetingDate: new Date().toISOString().split('T')[0],
+                    meetingTime: '10:00 AM'
+                });
+                setCompletedApplicant(res);
+            } catch (e) {
+                console.warn('Silent save on training send:', e);
+            }
+        }
+    };
+
     // Generate Gmail URLs
     const getEmailUrls = (app: Applicant) => {
         const subject = `SmartMenu Sales Consultant Application Code: ${app.application_code} - ${app.full_name}`;
@@ -433,71 +475,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
         return { gmailUrl, mailtoUrl };
     };
 
-    // Stage 3 → Submit & Redirect (AUTOMATIC GMAIL REDIRECT + AUTO SYNC TO OWNER PORTAL)
-    const handleCompleteApplication = async () => {
-        setError(null);
-        if (!meetingDate) {
-            setError('Please choose your interview meeting date.');
-            return;
-        }
-        if (!meetingTime) {
-            setError('Please select an interview time slot.');
-            return;
-        }
-        if (!confirmedTerms) {
-            setError('Please check the confirmation box to confirm your scheduled interview attendance.');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const result = await submitApplication({
-                applicantId: applicantId || undefined,
-                applicationCode: appCode || undefined,
-                fullName,
-                email,
-                phoneNumber,
-                resumeLink,
-                fbLink,
-                otherSocials,
-                answers,
-                meetingDate,
-                meetingTime
-            });
-
-            setCompletedApplicant(result);
-            setShowCompletionModal(true);
-
-            // Automatically open Gmail to send details!
-            const { gmailUrl, mailtoUrl } = getEmailUrls(result);
-
-            // Try opening in new tab first (for desktop browsers)
-            let openedInNewTab = false;
-            try {
-                const newWin = window.open(gmailUrl, '_blank');
-                if (newWin && !newWin.closed && typeof newWin.closed !== 'undefined') {
-                    openedInNewTab = true;
-                }
-            } catch {
-                openedInNewTab = false;
-            }
-
-            // If popup was blocked or on mobile device, automatically redirect after brief 1s
-            if (!openedInNewTab) {
-                setTimeout(() => {
-                    try {
-                        window.location.href = gmailUrl;
-                    } catch {
-                        window.location.href = mailtoUrl;
-                    }
-                }, 1200);
-            }
-        } catch (err: any) {
-            setError(err?.message || 'Submission failed. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleCopyCode = () => {
         if (!completedApplicant?.application_code) return;
@@ -817,7 +794,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 {[
                                     { num: 1, label: 'Profile' },
                                     { num: 2, label: 'Q&A' },
-                                    { num: 3, label: 'Meeting' }
+                                    { num: 3, label: 'Training' }
                                 ].map((step) => {
                                     const isDone = currentStep > step.num || isCompleted;
                                     const isCurrent = currentStep === step.num && !isCompleted;
@@ -1226,118 +1203,329 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         onClick={handleProceedToMeeting}
                                         className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer"
                                     >
-                                        <span>Next: Schedule</span>
+                                        <span>Next: Training Videos</span>
                                         <ArrowRight className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* ===== STAGE 3: SCHEDULE ===== */}
-                        {currentStep === 3 && (
-                            <div className="bg-white/95 border border-amber-100 rounded-2xl p-4 sm:p-5 shadow-md shadow-orange-500/5 space-y-4">
-                                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100">
-                                    <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
-                                        Select Meeting Schedule *
-                                    </h3>
-                                    <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                                        Final Step
-                                    </span>
-                                </div>
+                        {/* ===== STAGE 3: TRAINING VIDEOS ===== */}
+                        {currentStep === 3 && (() => {
+                            const activeVideo = trainingVideos.find(v => v.id === activeTrainingTab) || DEFAULT_TRAINING_VIDEOS[activeTrainingTab - 1];
+                            const youtubeEmbed = getYouTubeEmbedUrl(activeVideo.video_url);
+                            const driveEmbed = getDriveEmbedUrl(activeVideo.video_url);
+                            const isDirectVideoFile = Boolean(
+                                activeVideo.video_url && (
+                                    activeVideo.file_name ||
+                                    activeVideo.video_url.includes('/storage/v1/object/public/') ||
+                                    activeVideo.video_url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)
+                                )
+                            );
+                            const isLinkOnly = Boolean(
+                                activeVideo.video_url && (
+                                    !activeVideo.file_name ||
+                                    youtubeEmbed ||
+                                    driveEmbed ||
+                                    !isDirectVideoFile
+                                )
+                            );
+                            const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
+                            const allWatched = watchedVideoIds.length === 3;
 
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-orange-600" />
-                                        <span>Interview Date *</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        required
-                                        min={new Date().toISOString().split('T')[0]}
-                                        value={meetingDate}
-                                        onChange={(e) => setMeetingDate(e.target.value)}
-                                        className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-red-500"
-                                    />
-                                </div>
+                            return (
+                                <div className="bg-white/95 border border-emerald-100 rounded-2xl p-4 sm:p-5 shadow-md shadow-emerald-500/5 space-y-4 text-left">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between pb-2 border-b border-zinc-100 flex-wrap gap-2">
+                                        <div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Video className="w-4 h-4 text-emerald-600" />
+                                                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
+                                                    Step 3: Watch 3 Training Videos *
+                                                </h3>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">
+                                                Panoorin ang 3 Video Modules para makapasa sa application
+                                            </p>
+                                        </div>
+                                        <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                                            allWatched
+                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                                        }`}>
+                                            {watchedVideoIds.length}/3 Videos Completed
+                                        </span>
+                                    </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-orange-600" />
-                                        <span>Interview Time Slot *</span>
-                                    </label>
+                                    {/* Progress Bar */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[9px] font-black uppercase text-zinc-400">
+                                            <span>Training Progress</span>
+                                            <span className={allWatched ? 'text-emerald-600 font-bold' : 'text-amber-600'}>
+                                                {Math.round((watchedVideoIds.length / 3) * 100)}%
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                                                style={{ width: `${(watchedVideoIds.length / 3) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
 
+                                    {/* Module Selector Tabs (Training 1, 2, 3) */}
                                     <div className="grid grid-cols-3 gap-1.5">
-                                        {[
-                                            { time: '10:00 AM' as const, label: 'Morning', icon: '🌅' },
-                                            { time: '4:00 PM' as const, label: 'Afternoon', icon: '☀️' },
-                                            { time: '10:00 PM' as const, label: 'Evening', icon: '🌙' }
-                                        ].map((slot) => {
-                                            const isSelected = meetingTime === slot.time;
+                                        {[1, 2, 3].map((num) => {
+                                            const isTabActive = activeTrainingTab === num;
+                                            const isTabWatched = watchedVideoIds.includes(num);
                                             return (
                                                 <button
-                                                    key={slot.time}
+                                                    key={num}
                                                     type="button"
-                                                    onClick={() => setMeetingTime(slot.time)}
-                                                    className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                                                        isSelected
-                                                            ? 'bg-zinc-950 text-white border-amber-400 shadow-md ring-2 ring-amber-400/30'
-                                                            : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-800'
+                                                    onClick={() => setActiveTrainingTab(num as 1 | 2 | 3)}
+                                                    className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                                                        isTabActive
+                                                            ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40'
+                                                            : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700'
                                                     }`}
                                                 >
-                                                    <span className="text-sm block">{slot.icon}</span>
-                                                    <span className="text-xs font-black block mt-0.5">{slot.time}</span>
-                                                    <span className={`text-[8px] font-bold block ${isSelected ? 'text-amber-300' : 'text-zinc-400'}`}>
-                                                        {slot.label}
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider block">
+                                                            Training {num}
+                                                        </span>
+                                                        {isTabWatched ? (
+                                                            <span className="text-[9px] text-emerald-400 font-black">✓</span>
+                                                        ) : (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                        )}
+                                                    </div>
+                                                    <span className={`text-[9px] font-bold block truncate mt-0.5 ${
+                                                        isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
+                                                    }`}>
+                                                        {isTabWatched ? '✓ Watched' : 'Watch Now'}
                                                     </span>
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                </div>
 
-                                {/* Required Attendance Confirmation Box */}
-                                <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
-                                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            required
-                                            checked={confirmedTerms}
-                                            onChange={(e) => setConfirmedTerms(e.target.checked)}
-                                            className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500 cursor-pointer"
-                                        />
-                                        <span className="text-xs font-bold text-zinc-900 leading-snug">
-                                            I confirm that I will attend the scheduled interview on <strong className="text-red-700">{meetingDate || 'the selected date'}</strong> at <strong className="text-red-700">{meetingTime}</strong> and that all information I provided is accurate and true. <span className="text-red-600 font-black">*</span>
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => { setCurrentStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                        className="text-xs font-bold text-zinc-600 py-1"
-                                    >
-                                        ← Q&A
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        disabled={loading || !confirmedTerms}
-                                        onClick={handleCompleteApplication}
-                                        className="px-5 py-3 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                    >
-                                        {loading ? (
-                                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    {/* Video Player Display */}
+                                    <div className="rounded-2xl overflow-hidden border border-zinc-300 bg-black aspect-video relative flex items-center justify-center shadow-inner">
+                                        {youtubeEmbed ? (
+                                            <iframe
+                                                src={youtubeEmbed}
+                                                title={activeVideo.title}
+                                                className="w-full h-full border-0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        ) : driveEmbed ? (
+                                            <iframe
+                                                src={driveEmbed}
+                                                title={activeVideo.title}
+                                                className="w-full h-full border-0"
+                                                allow="autoplay"
+                                                allowFullScreen
+                                            />
+                                        ) : isDirectVideoFile ? (
+                                            <video
+                                                key={activeVideo.video_url}
+                                                src={activeVideo.video_url}
+                                                controls
+                                                playsInline
+                                                onEnded={() => handleMarkWatched(activeTrainingTab)}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : activeVideo.video_url ? (
+                                            <div className="p-6 text-center text-zinc-300 space-y-3">
+                                                <Video className="w-10 h-10 mx-auto text-amber-400" />
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-white">
+                                                        Training Video Link Available
+                                                    </p>
+                                                    <p className="text-[10px] text-zinc-400 max-w-xs mx-auto truncate">
+                                                        {activeVideo.video_url}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
+                                                        handleMarkWatched(activeTrainingTab);
+                                                    }}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all cursor-pointer"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                    <span>Click the Video Link to Continue</span>
+                                                </button>
+                                            </div>
                                         ) : (
-                                            <>
-                                                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                                                <span>Confirm & Send Application</span>
-                                            </>
+                                            <div className="p-6 text-center text-zinc-400 space-y-2">
+                                                <Video className="w-10 h-10 mx-auto text-zinc-500" />
+                                                <p className="text-xs font-bold text-zinc-300">
+                                                    Video is being updated by Management
+                                                </p>
+                                                <p className="text-[10px] text-zinc-400 max-w-xs mx-auto">
+                                                    Maaari mong basahin ang module description sa ibaba at i-click ang button sa ibaba upang i-mark bilang watched.
+                                                </p>
+                                            </div>
                                         )}
-                                    </button>
+                                    </div>
+
+                                    {/* Action Banner: Click the Video Link to Continue (if link lang ang inupload na video) */}
+                                    {isLinkOnly && activeVideo.video_url && (
+                                        <motion.button
+                                            whileHover={{ scale: 1.01 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            type="button"
+                                            onClick={() => {
+                                                window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
+                                                handleMarkWatched(activeTrainingTab);
+                                            }}
+                                            className="w-full p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-700/25 flex items-center justify-between gap-3 transition-all cursor-pointer border border-emerald-400/40 group text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                                                    <ExternalLink className="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-black text-white text-xs">
+                                                            Click the Video Link to Continue
+                                                        </span>
+                                                        <span className="text-[9px] bg-white text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">
+                                                            Module {activeTrainingTab}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] text-emerald-100/90 font-normal normal-case">
+                                                        Buksan ang video link sa bagong tab at i-mark bilang complete
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 bg-black/25 px-3 py-1.5 rounded-xl text-[10px] text-emerald-100 font-bold shrink-0 group-hover:bg-black/35 transition-colors">
+                                                <span>{isCurrentWatched ? '✓ Watched' : 'Watch & Continue'}</span>
+                                                <ArrowRight className="w-3.5 h-3.5 text-emerald-300" />
+                                            </div>
+                                        </motion.button>
+                                    )}
+
+                                    {/* Module Information */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                Module {activeTrainingTab} of 3
+                                            </span>
+                                            {isCurrentWatched && (
+                                                <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                    <span>Completed</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h4 className="text-sm font-black text-zinc-900 leading-snug">
+                                            {activeVideo.title}
+                                        </h4>
+                                        <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                                            {activeVideo.description}
+                                        </p>
+                                    </div>
+
+                                    {/* Mark as Watched & Next Module */}
+                                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-between gap-2 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMarkWatched(activeTrainingTab)}
+                                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                                                isCurrentWatched
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+                                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
+                                            }`}
+                                        >
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
+                                        </button>
+
+                                        {activeTrainingTab < 3 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
+                                                className="px-3.5 py-2 bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                            >
+                                                <span>Training {activeTrainingTab + 1}</span>
+                                                <ChevronRight className="w-3.5 h-3.5" />
+                                            </button>
+                                        ) : (
+                                            allWatched && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCompleteTrainingApplication}
+                                                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                                                >
+                                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                                                    <span>Complete & Send Message</span>
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* 100% Completed Banner inside Step 3 */}
+                                    {allWatched && (
+                                        <div className="p-4 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-300 rounded-2xl text-center space-y-2 animate-in fade-in">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-0.5 rounded-full inline-block">
+                                                🎉 All 3 Training Videos Watched!
+                                            </span>
+                                            <h4 className="text-sm font-black text-zinc-900">
+                                                Congratulations! Nakapasa ka na sa Training!
+                                            </h4>
+                                            <p className="text-xs text-zinc-700 font-medium">
+                                                Kumpleto mo nang napanood ang Training 1, 2, at 3. Ipadala na ang iyong detalye sa pamamagitan ng button sa ibaba.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleCompleteTrainingApplication}
+                                                className="w-full py-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
+                                            >
+                                                <Send className="w-4 h-4 text-amber-200" />
+                                                <span>Send Message Here (webnegosyo3@gmail.com)</span>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Bottom Navigation */}
+                                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setCurrentStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                            className="text-xs font-bold text-zinc-600 py-1 cursor-pointer hover:text-zinc-900"
+                                        >
+                                            ← Back to Q&A
+                                        </button>
+
+                                        {allWatched ? (
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                onClick={handleCompleteTrainingApplication}
+                                                className="px-5 py-3 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                {loading ? (
+                                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <Send className="w-3.5 h-3.5 text-amber-200" />
+                                                        <span>Send Message Here</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-zinc-400">
+                                                {3 - watchedVideoIds.length} video(s) remaining
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 )}
             </div>
@@ -1987,10 +2175,10 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         ✓ 100% Training Completed
                                     </span>
                                     <h3 className="text-base sm:text-lg font-black text-zinc-950 mt-1">
-                                        Congratulations! You Complete the Training!
+                                        Congratulations! Nakapasa ka na!
                                     </h3>
                                     <p className="text-[10px] text-zinc-600 mt-1 font-medium leading-relaxed">
-                                        Matagumpay mong natapos panoorin ang lahat ng 3 Training Videos para sa posisyong <strong>Sales Consultant</strong>!
+                                        Matagumpay mong natapos panoorin ang lahat ng 3 Training Videos para sa posisyong <strong>Sales Consultant</strong>! Pindutin ang button sa ibaba upang ipadala ang iyong mensahe.
                                     </p>
                                 </div>
 
@@ -2035,15 +2223,16 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         </span>
                                     </div>
 
-                                    {/* Primary CTA: SEND THE MESSAGE THRU EMAIL (Direct Gmail Link) */}
+                                    {/* Primary CTA: SEND MESSAGE HERE (Direct Gmail Link) */}
                                     <a
                                         href={gmailUrl}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="w-full py-3 px-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
+                                        onClick={handleSendTrainingMessage}
+                                        className="w-full py-3.5 px-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
                                     >
                                         <Send className="w-4 h-4 text-amber-200" />
-                                        <span>Send the Message Thru Email</span>
+                                        <span>Send Message Here</span>
                                     </a>
 
                                     {/* Helper options */}
