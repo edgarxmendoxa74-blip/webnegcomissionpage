@@ -6,7 +6,8 @@ import {
     fetchAllApplicants,
     updateApplicantReview,
     checkApplicantsTable,
-    APPLICANTS_SQL_SETUP
+    APPLICANTS_SQL_SETUP,
+    deleteApplicant
 } from '../lib/applicants';
 import {
     Users,
@@ -31,9 +32,8 @@ import {
     ChevronRight,
     AlertTriangle,
     Copy,
-    Video
+    Trash2
 } from 'lucide-react';
-import { TrainingVideoManager } from '../components/TrainingVideoManager';
 
 export const ApplicantsPage: React.FC = () => {
     const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -51,7 +51,9 @@ export const ApplicantsPage: React.FC = () => {
     const [copiedLink, setCopiedLink] = useState(false);
     const [tableMissing, setTableMissing] = useState(false);
     const [copiedSql, setCopiedSql] = useState(false);
-    const [showTrainingManager, setShowTrainingManager] = useState(false);
+    const [deletingApplicantId, setDeletingApplicantId] = useState<string | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [deleteSuccess, setDeleteSuccess] = useState(false);
 
     const handleCopyHiringLink = () => {
         const url = `${window.location.origin}/hiring`;
@@ -64,6 +66,22 @@ export const ApplicantsPage: React.FC = () => {
         navigator.clipboard.writeText(APPLICANTS_SQL_SETUP);
         setCopiedSql(true);
         setTimeout(() => setCopiedSql(false), 2500);
+    };
+
+    const handleDeleteApplicant = async (id: string) => {
+        setDeletingApplicantId(id);
+        try {
+            await deleteApplicant(id);
+            setApplicants(prev => prev.filter(a => a.id !== id));
+            setConfirmDeleteId(null);
+            if (selectedApplicant?.id === id) setSelectedApplicant(null);
+            setDeleteSuccess(true);
+            setTimeout(() => setDeleteSuccess(false), 2500);
+        } catch (err) {
+            console.error('Delete applicant error:', err);
+        } finally {
+            setDeletingApplicantId(null);
+        }
     };
 
     const loadData = async (isBackground = false) => {
@@ -600,16 +618,6 @@ export const ApplicantsPage: React.FC = () => {
                 <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
                     <button
                         type="button"
-                        onClick={() => setShowTrainingManager(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
-                        title="Upload at i-manage ang Training Videos 1, 2, at 3 para sa mga aplikante"
-                    >
-                        <Video className="w-3.5 h-3.5 text-amber-200" />
-                        <span>Training Videos (1, 2, 3)</span>
-                    </button>
-
-                    <button
-                        type="button"
                         onClick={handleCopyHiringLink}
                         title="Copy hiring page link to share with candidates"
                         className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
@@ -926,6 +934,40 @@ export const ApplicantsPage: React.FC = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Delete Button */}
+                                    <div className="mt-3 flex justify-end">
+                                        {confirmDeleteId === app.id ? (
+                                            <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                                                <span className="text-[9px] font-black text-red-600 uppercase tracking-wide">Sigurado ka?</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={e => { e.stopPropagation(); handleDeleteApplicant(app.id!); }}
+                                                    disabled={deletingApplicantId === app.id}
+                                                    className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wide cursor-pointer disabled:opacity-60"
+                                                >
+                                                    {deletingApplicantId === app.id ? 'Deleting...' : 'Oo, Delete'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                                    className="px-2 py-0.5 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 rounded-lg text-[9px] font-black uppercase tracking-wide cursor-pointer"
+                                                >
+                                                    Hindi
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); setConfirmDeleteId(app.id!); }}
+                                                className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-wide border border-red-200 cursor-pointer transition-colors"
+                                                title="Delete applicant"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                                <span>Delete</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </button>
                             );
                         })}
@@ -933,11 +975,13 @@ export const ApplicantsPage: React.FC = () => {
                 )}
             </div>
 
-            {/* Training Video Manager Modal for Owner */}
-            <TrainingVideoManager
-                isOpen={showTrainingManager}
-                onClose={() => setShowTrainingManager(false)}
-            />
+            {/* Delete Success Toast */}
+            {deleteSuccess && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-emerald-600 text-white rounded-2xl shadow-xl text-sm font-black flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Applicant deleted successfully!</span>
+                </div>
+            )}
         </div>
     );
 };
