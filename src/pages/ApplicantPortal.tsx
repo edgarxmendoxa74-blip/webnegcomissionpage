@@ -1222,14 +1222,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     activeVideo.video_url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)
                                 )
                             );
-                            const isLinkOnly = Boolean(
-                                activeVideo.video_url && (
-                                    !activeVideo.file_name ||
-                                    youtubeEmbed ||
-                                    driveEmbed ||
-                                    !isDirectVideoFile
-                                )
-                            );
                             const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
                             const allWatched = watchedVideoIds.length === 3;
 
@@ -1371,43 +1363,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Action Banner: Click the Video Link to Continue (if link lang ang inupload na video) */}
-                                    {isLinkOnly && activeVideo.video_url && (
-                                        <motion.button
-                                            whileHover={{ scale: 1.01 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            type="button"
-                                            onClick={() => {
-                                                window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
-                                                handleMarkWatched(activeTrainingTab);
-                                            }}
-                                            className="w-full p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-700/25 flex items-center justify-between gap-3 transition-all cursor-pointer border border-emerald-400/40 group text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                                                    <ExternalLink className="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-black text-white text-xs">
-                                                            Click the Video Link to Continue
-                                                        </span>
-                                                        <span className="text-[9px] bg-white text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">
-                                                            Module {activeTrainingTab}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[10px] text-emerald-100/90 font-normal normal-case">
-                                                        Buksan ang video link sa bagong tab at i-mark bilang complete
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 bg-black/25 px-3 py-1.5 rounded-xl text-[10px] text-emerald-100 font-bold shrink-0 group-hover:bg-black/35 transition-colors">
-                                                <span>{isCurrentWatched ? '✓ Watched' : 'Watch & Continue'}</span>
-                                                <ArrowRight className="w-3.5 h-3.5 text-emerald-300" />
-                                            </div>
-                                        </motion.button>
-                                    )}
 
                                     {/* Module Information */}
                                     <div className="space-y-1">
@@ -1835,14 +1790,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                             activeVideo.video_url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)
                         )
                     );
-                    const isLinkOnly = Boolean(
-                        activeVideo.video_url && (
-                            !activeVideo.file_name ||
-                            youtubeEmbed ||
-                            driveEmbed ||
-                            !isDirectVideoFile
-                        )
-                    );
                     const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
                     const allWatched = watchedVideoIds.length === 3;
 
@@ -2005,43 +1952,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Action Banner: Click the Video Link to Continue (if link lang ang inupload na video) */}
-                                    {isLinkOnly && activeVideo.video_url && (
-                                        <motion.button
-                                            whileHover={{ scale: 1.01 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            type="button"
-                                            onClick={() => {
-                                                window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
-                                                handleMarkWatched(activeTrainingTab);
-                                            }}
-                                            className="w-full p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-700/25 flex items-center justify-between gap-3 transition-all cursor-pointer border border-emerald-400/40 group text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                                                    <ExternalLink className="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-black text-white text-xs">
-                                                            Click the Video Link to Continue
-                                                        </span>
-                                                        <span className="text-[9px] bg-white text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">
-                                                            Module {activeTrainingTab}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[10px] text-emerald-100/90 font-normal normal-case">
-                                                        Buksan ang video link sa bagong tab at i-mark bilang complete
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 bg-black/25 px-3 py-1.5 rounded-xl text-[10px] text-emerald-100 font-bold shrink-0 group-hover:bg-black/35 transition-colors">
-                                                <span>{isCurrentWatched ? '✓ Watched' : 'Watch & Continue'}</span>
-                                                <ArrowRight className="w-3.5 h-3.5 text-emerald-300" />
-                                            </div>
-                                        </motion.button>
-                                    )}
 
                                     {/* Module Info */}
                                     <div className="space-y-1">
