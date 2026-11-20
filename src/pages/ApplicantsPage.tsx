@@ -30,8 +30,10 @@ import {
     Check,
     ChevronRight,
     AlertTriangle,
-    Copy
+    Copy,
+    Video
 } from 'lucide-react';
+import { TrainingVideoManager } from '../components/TrainingVideoManager';
 
 export const ApplicantsPage: React.FC = () => {
     const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -49,6 +51,7 @@ export const ApplicantsPage: React.FC = () => {
     const [copiedLink, setCopiedLink] = useState(false);
     const [tableMissing, setTableMissing] = useState(false);
     const [copiedSql, setCopiedSql] = useState(false);
+    const [showTrainingManager, setShowTrainingManager] = useState(false);
 
     const handleCopyHiringLink = () => {
         const url = `${window.location.origin}/hiring`;
@@ -594,12 +597,22 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    <button
+                        type="button"
+                        onClick={() => setShowTrainingManager(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
+                        title="Upload at i-manage ang Training Videos 1, 2, at 3 para sa mga aplikante"
+                    >
+                        <Video className="w-3.5 h-3.5 text-amber-200" />
+                        <span>Training Videos (1, 2, 3)</span>
+                    </button>
+
                     <button
                         type="button"
                         onClick={handleCopyHiringLink}
                         title="Copy hiring page link to share with candidates"
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
                     >
                         {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5 text-zinc-300" />}
                         <span>{copiedLink ? 'Copied /hiring Link!' : 'Copy /hiring Link'}</span>
@@ -608,7 +621,7 @@ export const ApplicantsPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => loadData(false)}
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700 hover:text-black transition-all shadow-2xs"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 hover:border-black rounded-xl text-xs font-bold text-zinc-700 hover:text-black transition-all shadow-2xs cursor-pointer"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                         <span>Refresh List</span>
@@ -919,6 +932,12 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Training Video Manager Modal for Owner */}
+            <TrainingVideoManager
+                isOpen={showTrainingManager}
+                onClose={() => setShowTrainingManager(false)}
+            />
         </div>
     );
 };

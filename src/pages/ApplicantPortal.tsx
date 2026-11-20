@@ -31,9 +31,20 @@ import {
     FileText,
     GraduationCap,
     Briefcase,
-    X
+    X,
+    Video,
+    PlayCircle,
+    Award,
+    CheckCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+    type TrainingVideo,
+    DEFAULT_TRAINING_VIDEOS,
+    fetchTrainingVideos,
+    getWatchedVideoIds,
+    markVideoWatched
+} from '../lib/trainingVideos';
 
 const TARGET_EMAIL = 'webnegosyo3@gmail.com';
 
@@ -88,6 +99,15 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
 
+    // Step 3 Training Videos State
+    const [showTrainingModal, setShowTrainingModal] = useState(false);
+    const [trainingVideos, setTrainingVideos] = useState<TrainingVideo[]>(DEFAULT_TRAINING_VIDEOS);
+    const [activeTrainingTab, setActiveTrainingTab] = useState<1 | 2 | 3>(1);
+    const [watchedVideoIds, setWatchedVideoIds] = useState<number[]>([]);
+    const [showTrainingCompleteModal, setShowTrainingCompleteModal] = useState(false);
+    const [applicantTrainingName, setApplicantTrainingName] = useState('');
+    const [copiedTrainingEmail, setCopiedTrainingEmail] = useState(false);
+
     const isCompleted = !!completedApplicant;
 
     const handleCloseCompletionModal = () => {
@@ -96,6 +116,104 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
         setCurrentStep(1);
         setCompletedApplicant(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Load Training Videos and Watched State
+    useEffect(() => {
+        const loadVideos = async () => {
+            try {
+                const list = await fetchTrainingVideos();
+                setTrainingVideos(list);
+            } catch {
+                // ignore
+            }
+        };
+        loadVideos();
+        setWatchedVideoIds(getWatchedVideoIds());
+
+        const handleVideosChanged = (e: any) => {
+            if (e.detail) setTrainingVideos(e.detail);
+        };
+        const handleWatchedChanged = (e: any) => {
+            if (e.detail) setWatchedVideoIds(e.detail);
+        };
+        window.addEventListener('smartmenu_training_videos_changed', handleVideosChanged);
+        window.addEventListener('smartmenu_watched_videos_changed', handleWatchedChanged);
+
+        return () => {
+            window.removeEventListener('smartmenu_training_videos_changed', handleVideosChanged);
+            window.removeEventListener('smartmenu_watched_videos_changed', handleWatchedChanged);
+        };
+    }, []);
+
+    // Sync applicant name for training email
+    useEffect(() => {
+        if (fullName.trim() && !applicantTrainingName) {
+            setApplicantTrainingName(fullName.trim());
+        }
+    }, [fullName, applicantTrainingName]);
+
+    // Handle Marking a Training Video as Watched
+    const handleMarkWatched = (videoId: number) => {
+        const updated = markVideoWatched(videoId);
+        setWatchedVideoIds(updated);
+        if (updated.length === 3) {
+            setShowTrainingCompleteModal(true);
+        }
+    };
+
+    // Helper: is this a YouTube URL for embed
+    const getYouTubeEmbedUrl = (url?: string) => {
+        if (!url) return null;
+        try {
+            if (url.includes('youtube.com/watch')) {
+                const urlObj = new URL(url);
+                const videoId = urlObj.searchParams.get('v');
+                return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+            }
+            if (url.includes('youtu.be/')) {
+                const parts = url.split('youtu.be/');
+                const videoId = parts[1]?.split('?')[0];
+                return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+            }
+        } catch {
+            return null;
+        }
+        return null;
+    };
+
+    // Training Completion Email URLs
+    const getTrainingCompletionEmailUrls = () => {
+        const name = (applicantTrainingName || fullName || 'SmartMenu Sales Applicant').trim();
+        const subject = `SmartMenu 3-Video Training Completed - ${name}`;
+        const body =
+            `Hi WebNegosyo / SmartMenu Team,\n\n` +
+            `I have successfully watched and completed all 3 Training Videos for the Sales Consultant position.\n\n` +
+            `🎓 TRAINING MODULES COMPLETED:\n` +
+            `• Training 1: ${trainingVideos.find(v => v.id === 1)?.title || 'Sales Consultant Pitch & Overview'}\n` +
+            `• Training 2: ${trainingVideos.find(v => v.id === 2)?.title || 'Objection Handling & Cold Calling'}\n` +
+            `• Training 3: ${trainingVideos.find(v => v.id === 3)?.title || 'Closing the Deal & Dashboard Lead Submission'}\n\n` +
+            `📋 APPLICANT DETAILS:\n` +
+            `• Full Name: ${name}\n` +
+            (phoneNumber ? `• Phone Number: ${phoneNumber}\n` : '') +
+            (email ? `• Email: ${email}\n` : '') +
+            (completedApplicant?.application_code ? `• Application Code: ${completedApplicant.application_code}\n` : '') +
+            `• Status: 100% Completed (Training 1, 2, and 3)\n` +
+            `• Date Completed: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}\n\n` +
+            `I am ready for the next steps and account onboarding. Please confirm. Thank you!\n\n` +
+            `Respectfully,\n` +
+            `${name}`;
+
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${TARGET_EMAIL}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const mailtoUrl = `mailto:${TARGET_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        return { gmailUrl, mailtoUrl, subject, body };
+    };
+
+    const handleCopyTrainingEmail = () => {
+        navigator.clipboard.writeText(TARGET_EMAIL);
+        setCopiedTrainingEmail(true);
+        setTimeout(() => setCopiedTrainingEmail(false), 2000);
     };
 
     const personalityQuestions = SALES_QUESTIONS.filter(q => q.category === 'personality');
@@ -529,7 +647,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                             </div>
                         </div>
 
-                        {/* CTA ACTION BUTTONS: Apply Now + View Job Description */}
+                        {/* CTA ACTION BUTTONS: Apply Now + Watch Videos + View Job Description */}
                         <div className="pt-1 max-w-[320px] sm:max-w-[360px] mx-auto space-y-2">
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
@@ -544,6 +662,21 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                 <Sparkles className="w-4 h-4 text-amber-200" />
                                 <span>Apply as Sales Consultant</span>
                                 <ArrowRight className="w-4 h-4" />
+                            </motion.button>
+
+                            {/* Direct Button to Step 3: Watch 3 Training Videos */}
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                type="button"
+                                onClick={() => setShowTrainingModal(true)}
+                                className="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <PlayCircle className="w-4 h-4 text-emerald-200" />
+                                <span>Watch 3 Training Videos (Step 3)</span>
+                                <span className="text-[9px] bg-black/25 text-emerald-100 px-1.5 py-0.5 rounded-full font-bold">
+                                    {watchedVideoIds.length}/3 Done
+                                </span>
                             </motion.button>
 
                             <motion.button
@@ -621,7 +754,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                         </div>
                                     </div>
 
-                                    {/* Step 3 */}
+                                    {/* Step 3: Watch 3 Videos for Training */}
                                     <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/70 transition-all hover:bg-emerald-50">
                                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
                                             3
@@ -629,15 +762,23 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <h4 className="text-xs font-black text-zinc-900">
-                                                    Onboarding & Signing Employee Certificate
+                                                    Watch 3 Videos for Training
                                                 </h4>
                                                 <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">
                                                     Step 3
                                                 </span>
                                             </div>
                                             <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">
-                                                Opisyal na onboarding, pagbibigay ng employee credentials sa sales dashboard, at pagpirma ng Sales Consultant Certificate bago mag-start.
+                                                Panoorin nang buo ang 3 Training Videos (Training 1, 2, at 3) para sa sales pitch, objection handling, at closing bago magsimula.
                                             </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowTrainingModal(true)}
+                                                className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+                                            >
+                                                <PlayCircle className="w-3.5 h-3.5" />
+                                                <span>Panoorin ang Videos Ngayon ({watchedVideoIds.length}/3 Complete) →</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1442,7 +1583,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                                         </div>
                                         <div className="flex items-start gap-2">
                                             <span className="text-amber-400 font-black">Step 3:</span>
-                                            <span>Onboarding & Signing Employee Certificate bago mag-start</span>
+                                            <span>Watch 3 Videos for Training (Panoorin ang Training 1, 2, at 3)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1483,6 +1624,367 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = () => {
                         </motion.div>
                     </div>
                 )}
+            </AnimatePresence>
+
+            {/* ===== STEP 3: WATCH 3 TRAINING VIDEOS MODAL ===== */}
+            <AnimatePresence>
+                {showTrainingModal && (() => {
+                    const activeVideo = trainingVideos.find(v => v.id === activeTrainingTab) || DEFAULT_TRAINING_VIDEOS[activeTrainingTab - 1];
+                    const youtubeEmbed = getYouTubeEmbedUrl(activeVideo.video_url);
+                    const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
+                    const allWatched = watchedVideoIds.length === 3;
+
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+                            <motion.div
+                                initial={{ scale: 0.92, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.92, opacity: 0 }}
+                                className="bg-white rounded-3xl border border-zinc-200 max-w-xl w-full shadow-2xl relative overflow-hidden my-auto max-h-[92vh] flex flex-col"
+                            >
+                                {/* Header */}
+                                <div className="p-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-2 bg-white/20 rounded-xl">
+                                            <PlayCircle className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-sm font-black uppercase tracking-wider">
+                                                    Sales Consultant Training Videos
+                                                </h3>
+                                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white text-emerald-800">
+                                                    Step 3
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-emerald-100 font-semibold">
+                                                Panoorin ang 3 Video Modules para Makumpleto ang Training
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTrainingModal(false)}
+                                        className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer"
+                                        aria-label="Close"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {/* Progress Bar Header */}
+                                <div className="px-4 py-2.5 bg-emerald-50/80 border-b border-emerald-100 space-y-1.5 shrink-0 text-left">
+                                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider">
+                                        <span className="text-emerald-950 flex items-center gap-1.5">
+                                            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Training Progress</span>
+                                        </span>
+                                        <span className="text-emerald-700">
+                                            {watchedVideoIds.length} of 3 Videos Completed ({Math.round((watchedVideoIds.length / 3) * 100)}%)
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-emerald-200/60 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${(watchedVideoIds.length / 3) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Tabs for Training 1, 2, 3 */}
+                                <div className="p-2.5 bg-zinc-100/90 border-b border-zinc-200 grid grid-cols-3 gap-1.5 shrink-0">
+                                    {[1, 2, 3].map((num) => {
+                                        const isTabActive = activeTrainingTab === num;
+                                        const isTabWatched = watchedVideoIds.includes(num);
+
+                                        return (
+                                            <button
+                                                key={num}
+                                                type="button"
+                                                onClick={() => setActiveTrainingTab(num as 1 | 2 | 3)}
+                                                className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                                                    isTabActive
+                                                        ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40'
+                                                        : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider block">
+                                                        Training {num}
+                                                    </span>
+                                                    {isTabWatched ? (
+                                                        <span className="text-[9px] text-emerald-400 font-black">✓</span>
+                                                    ) : (
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                    )}
+                                                </div>
+                                                <span className={`text-[9px] font-bold block truncate mt-0.5 ${
+                                                    isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
+                                                }`}>
+                                                    {isTabWatched ? '✓ Watched' : 'Watch Now'}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Video Player & Details Body */}
+                                <div className="p-4 overflow-y-auto space-y-3.5 text-left flex-1">
+                                    {/* Video Player Display */}
+                                    <div className="rounded-2xl overflow-hidden border border-zinc-300 bg-black aspect-video relative flex items-center justify-center shadow-inner">
+                                        {youtubeEmbed ? (
+                                            <iframe
+                                                src={youtubeEmbed}
+                                                title={activeVideo.title}
+                                                className="w-full h-full border-0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        ) : activeVideo.video_url ? (
+                                            <video
+                                                key={activeVideo.video_url}
+                                                src={activeVideo.video_url}
+                                                controls
+                                                playsInline
+                                                onEnded={() => handleMarkWatched(activeTrainingTab)}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="p-6 text-center text-zinc-400 space-y-2">
+                                                <Video className="w-10 h-10 mx-auto text-zinc-500" />
+                                                <p className="text-xs font-bold text-zinc-300">
+                                                    Video is being updated by Management
+                                                </p>
+                                                <p className="text-[10px] text-zinc-400 max-w-xs mx-auto">
+                                                    Maaari mong basahin ang module description sa ibaba at i-click ang button sa ibaba upang i-mark bilang watched.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Module Info */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                Module {activeTrainingTab} of 3
+                                            </span>
+                                            {isCurrentWatched && (
+                                                <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                    <span>Completed</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h4 className="text-sm font-black text-zinc-900 leading-snug">
+                                            {activeVideo.title}
+                                        </h4>
+                                        <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                                            {activeVideo.description}
+                                        </p>
+                                    </div>
+
+                                    {/* Mark as Watched & Navigation */}
+                                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-between gap-2 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMarkWatched(activeTrainingTab)}
+                                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                                                isCurrentWatched
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+                                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
+                                            }`}
+                                        >
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
+                                        </button>
+
+                                        {activeTrainingTab < 3 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
+                                                className="px-3.5 py-2 bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                            >
+                                                <span>Training {activeTrainingTab + 1}</span>
+                                                <ChevronRight className="w-3.5 h-3.5" />
+                                            </button>
+                                        ) : (
+                                            allWatched && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTrainingCompleteModal(true)}
+                                                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                                                >
+                                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                                                    <span>Send Confirmation</span>
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* 100% Completed Banner inside modal */}
+                                    {allWatched && (
+                                        <div className="p-3.5 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-300 rounded-2xl text-center space-y-2 animate-in fade-in">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                                                🎉 All 3 Training Videos Watched!
+                                            </span>
+                                            <p className="text-xs font-bold text-zinc-800">
+                                                Kumpleto mo nang napanood ang Training 1, 2, at 3! Ipadala na ang iyong completion confirmation via email sa management.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowTrainingCompleteModal(true)}
+                                                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                                            >
+                                                <Send className="w-3.5 h-3.5" />
+                                                <span>Send Email Confirmation Now</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Modal Footer */}
+                                <div className="p-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between shrink-0">
+                                    <span className="text-[10px] text-zinc-500 font-bold">
+                                        Step 3 of Hiring Process • SmartMenu
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTrainingModal(false)}
+                                        className="px-4 py-2 bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
+            </AnimatePresence>
+
+            {/* ===== CONGRATULATIONS: 3-VIDEO TRAINING COMPLETE POP-UP MODAL ===== */}
+            <AnimatePresence>
+                {showTrainingCompleteModal && (() => {
+                    const { gmailUrl, mailtoUrl } = getTrainingCompletionEmailUrls();
+
+                    return (
+                        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white rounded-3xl border border-amber-300 p-5 sm:p-6 max-w-sm w-full shadow-2xl relative text-center space-y-3.5 my-auto"
+                            >
+                                {/* Top-right Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTrainingCompleteModal(false)}
+                                    className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 flex items-center justify-center transition-all cursor-pointer"
+                                    aria-label="Close"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+
+                                {/* Trophy Icon */}
+                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 via-teal-100 to-amber-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-emerald-200">
+                                    <Award className="w-8 h-8 text-emerald-600" />
+                                </div>
+
+                                <div>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-0.5 rounded-full border border-emerald-300">
+                                        ✓ 100% Training Completed
+                                    </span>
+                                    <h3 className="text-base sm:text-lg font-black text-zinc-950 mt-1">
+                                        Congratulations! You Complete the Training!
+                                    </h3>
+                                    <p className="text-[10px] text-zinc-600 mt-1 font-medium leading-relaxed">
+                                        Matagumpay mong natapos panoorin ang lahat ng 3 Training Videos para sa posisyong <strong>Sales Consultant</strong>!
+                                    </p>
+                                </div>
+
+                                {/* 3 Module Checklist Box */}
+                                <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-left space-y-1.5 text-xs font-bold text-zinc-800">
+                                    <div className="flex items-center gap-2 text-emerald-700">
+                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                                        <span className="truncate">Training 1: Overview & Pitching</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-emerald-700">
+                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                                        <span className="truncate">Training 2: Objection Handling</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-emerald-700">
+                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                                        <span className="truncate">Training 3: Closing & Lead Submission</span>
+                                    </div>
+                                </div>
+
+                                {/* Applicant Full Name Input */}
+                                <div className="text-left space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-zinc-700 block">
+                                        Your Full Name (Pangalan ng Aplikante):
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={applicantTrainingName}
+                                        onChange={(e) => setApplicantTrainingName(e.target.value)}
+                                        placeholder="Ilagay ang iyong buong pangalan..."
+                                        className="w-full px-3 py-2 text-xs font-bold border border-zinc-300 rounded-xl focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none bg-white"
+                                    />
+                                </div>
+
+                                {/* Send Email Action Card */}
+                                <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-left space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-zinc-800 font-bold block">
+                                            Send message thru email to:
+                                        </span>
+                                        <span className="text-[10px] font-mono font-black text-red-600">
+                                            {TARGET_EMAIL}
+                                        </span>
+                                    </div>
+
+                                    {/* Primary CTA: SEND THE MESSAGE THRU EMAIL (Direct Gmail Link) */}
+                                    <a
+                                        href={gmailUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="w-full py-3 px-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
+                                    >
+                                        <Send className="w-4 h-4 text-amber-200" />
+                                        <span>Send the Message Thru Email</span>
+                                    </a>
+
+                                    {/* Helper options */}
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        <a
+                                            href={mailtoUrl}
+                                            className="py-1.5 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center flex items-center justify-center gap-1 active:scale-95 transition-all"
+                                        >
+                                            <Mail className="w-3 h-3 text-zinc-500" />
+                                            <span>Open Mail App</span>
+                                        </a>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyTrainingEmail}
+                                            className="py-1.5 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            {copiedTrainingEmail ? '✓ Copied' : 'Copy Email'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTrainingCompleteModal(false)}
+                                    className="w-full py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                >
+                                    Close / Done
+                                </button>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* Footer */}
