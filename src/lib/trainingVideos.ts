@@ -167,6 +167,69 @@ export const saveTrainingVideo = async (video: TrainingVideo): Promise<TrainingV
 };
 
 /**
+ * Delete / Reset a training video (for Owner)
+ */
+export const deleteTrainingVideo = async (videoId: number): Promise<TrainingVideo[]> => {
+    const list = await fetchTrainingVideos();
+    const defaultItem = DEFAULT_TRAINING_VIDEOS.find(d => d.id === videoId);
+
+    const updated = list.map(v => {
+        if (v.id === videoId) {
+            return {
+                ...v,
+                video_url: '',
+                file_name: '',
+                title: defaultItem?.title || v.title,
+                description: defaultItem?.description || v.description,
+                updated_at: new Date().toISOString()
+            };
+        }
+        return v;
+    });
+
+    // Save to LocalStorage immediately
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('smartmenu_training_videos_changed', { detail: updated }));
+    } catch {
+        // ignore
+    }
+
+    // Try updating Supabase `training_videos` table
+    try {
+        const { error } = await supabase
+            .from('training_videos')
+            .update({
+                video_url: '',
+                file_name: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', videoId);
+
+        if (error) {
+            console.warn('Could not update training_videos table on delete:', error.message);
+        }
+    } catch (err) {
+        console.warn('Network or DB error deleting training video:', err);
+    }
+
+    // Fallback sync to system_settings
+    try {
+        await supabase
+            .from('system_settings')
+            .upsert([{
+                key: 'training_videos',
+                value: JSON.stringify(updated),
+                updated_at: new Date().toISOString()
+            }], { onConflict: 'key' });
+    } catch {
+        // ignore
+    }
+
+    return updated;
+};
+
+/**
  * Upload Video File to Supabase Storage Bucket ('profiles' or 'training_videos')
  */
 export const uploadTrainingVideoFile = async (

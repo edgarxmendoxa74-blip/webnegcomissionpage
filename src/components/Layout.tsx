@@ -11,6 +11,7 @@ import {
     Menu,
     LogOut,
     UserCheck,
+    Video,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
@@ -61,6 +62,7 @@ const navItems = [
     { icon: Target, label: 'Master List', short: 'Leads' },
     { icon: Users, label: 'Manage Team', short: 'Team' },
     { icon: UserCheck, label: 'Applicants', short: 'Hiring' },
+    { icon: Video, label: 'Training Videos', short: 'Videos' },
     { icon: Banknote, label: 'Receipts', short: 'Receipts' },
     { icon: ClipboardList, label: 'Daily Audit', short: 'Audit' },
     { icon: Eye, label: 'Monitoring', short: 'Monitoring' },

@@ -680,21 +680,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 <ArrowRight className="w-4 h-4" />
                             </motion.button>
 
-                            {/* Direct Button to Step 3: Watch 3 Training Videos */}
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                type="button"
-                                onClick={() => setShowTrainingModal(true)}
-                                className="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <PlayCircle className="w-4 h-4 text-emerald-200" />
-                                <span>Watch 3 Training Videos (Step 3)</span>
-                                <span className="text-[9px] bg-black/25 text-emerald-100 px-1.5 py-0.5 rounded-full font-bold">
-                                    {watchedVideoIds.length}/3 Done
-                                </span>
-                            </motion.button>
-
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
@@ -787,14 +772,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">
                                                 Panoorin nang buo ang 3 Training Videos (Training 1, 2, at 3) para sa sales pitch, objection handling, at closing bago magsimula.
                                             </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowTrainingModal(true)}
-                                                className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
-                                            >
-                                                <PlayCircle className="w-3.5 h-3.5" />
-                                                <span>Panoorin ang Videos Ngayon ({watchedVideoIds.length}/3 Complete) →</span>
-                                            </button>
+
                                         </div>
                                     </div>
                                 </div>

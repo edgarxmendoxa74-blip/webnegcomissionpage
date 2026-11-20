@@ -502,3 +502,26 @@ export const updateApplicantReview = async (
         saveLocalApplicants(local);
     }
 };
+
+/**
+ * Delete an applicant (for Owner)
+ */
+export const deleteApplicant = async (applicantId: string): Promise<void> => {
+    try {
+        const { error } = await supabase
+            .from('applicants')
+            .delete()
+            .eq('id', applicantId);
+
+        if (error) {
+            console.warn('Supabase applicant delete warning:', error.message);
+        }
+    } catch (err) {
+        console.warn('Network error deleting applicant:', err);
+    }
+
+    // Always sync with local storage
+    const local = getLocalApplicants();
+    const filtered = local.filter(a => a.id !== applicantId);
+    saveLocalApplicants(filtered);
+};

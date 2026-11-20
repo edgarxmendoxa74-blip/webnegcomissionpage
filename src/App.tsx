@@ -14,6 +14,7 @@ import { DailyAuditPage } from './pages/DailyAuditPage';
 import { ExpensesPage } from './pages/Expenses';
 import { LoginPage } from './pages/Login';
 import { ApplicantsPage } from './pages/ApplicantsPage';
+import { TrainingVideoManager } from './components/TrainingVideoManager';
 import { ApplicantPortal } from './pages/ApplicantPortal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
@@ -49,6 +50,8 @@ function AppContent() {
         return <WorkersPage />;
       case 'Applicants':
         return <ApplicantsPage />;
+      case 'Training Videos':
+        return <TrainingVideoManager isOpen={true} isPageSection={true} onClose={() => setActiveTab('Applicants')} />;
       case 'Monitoring':
         return <MonitoringPage />;
       case 'Daily Audit':
