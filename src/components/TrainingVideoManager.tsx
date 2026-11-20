@@ -21,7 +21,8 @@ import {
     Eye,
     Copy,
     Code,
-    AlertTriangle
+    AlertTriangle,
+    ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -237,7 +238,28 @@ export const TrainingVideoManager: React.FC<TrainingVideoManagerProps> = ({
         return null;
     };
 
+    const getDriveEmbedUrl = (url: string) => {
+        if (!url) return null;
+        try {
+            const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://drive.google.com/file/d/${match[1]}/preview`;
+            }
+        } catch {
+            return null;
+        }
+        return null;
+    };
+
     const youtubeEmbed = getYouTubeEmbedUrl(videoUrl);
+    const driveEmbed = getDriveEmbedUrl(videoUrl);
+    const isDirectVideoFile = Boolean(
+        videoUrl && (
+            fileName ||
+            videoUrl.includes('/storage/v1/object/public/') ||
+            videoUrl.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)
+        )
+    );
 
     if (!isOpen && !isPageSection) return null;
 
@@ -510,7 +532,15 @@ export const TrainingVideoManager: React.FC<TrainingVideoManagerProps> = ({
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                             allowFullScreen
                                         />
-                                    ) : (
+                                    ) : driveEmbed ? (
+                                        <iframe
+                                            src={driveEmbed}
+                                            title={`Training Video ${activeTab}`}
+                                            className="w-full h-full border-0"
+                                            allow="autoplay"
+                                            allowFullScreen
+                                        />
+                                    ) : isDirectVideoFile ? (
                                         <video
                                             key={videoUrl}
                                             src={videoUrl}
@@ -518,6 +548,27 @@ export const TrainingVideoManager: React.FC<TrainingVideoManagerProps> = ({
                                             playsInline
                                             className="w-full h-full object-contain"
                                         />
+                                    ) : (
+                                        <div className="p-6 text-center text-zinc-300 space-y-3">
+                                            <Video className="w-10 h-10 mx-auto text-amber-400" />
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-bold text-white">
+                                                    External Video Link Preview
+                                                </p>
+                                                <p className="text-[10px] text-zinc-400 max-w-xs mx-auto truncate">
+                                                    {videoUrl}
+                                                </p>
+                                            </div>
+                                            <a
+                                                href={videoUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                <span>Open Video Link</span>
+                                            </a>
+                                        </div>
                                     )}
                                 </div>
                             ) : (

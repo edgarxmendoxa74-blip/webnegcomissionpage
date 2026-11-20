@@ -35,7 +35,8 @@ import {
     Video,
     PlayCircle,
     Award,
-    CheckCheck
+    CheckCheck,
+    ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -175,6 +176,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 const parts = url.split('youtu.be/');
                 const videoId = parts[1]?.split('?')[0];
                 return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+            }
+        } catch {
+            return null;
+        }
+        return null;
+    };
+
+    const getDriveEmbedUrl = (url?: string) => {
+        if (!url) return null;
+        try {
+            const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://drive.google.com/file/d/${match[1]}/preview`;
             }
         } catch {
             return null;
@@ -1625,6 +1639,22 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                 {showTrainingModal && (() => {
                     const activeVideo = trainingVideos.find(v => v.id === activeTrainingTab) || DEFAULT_TRAINING_VIDEOS[activeTrainingTab - 1];
                     const youtubeEmbed = getYouTubeEmbedUrl(activeVideo.video_url);
+                    const driveEmbed = getDriveEmbedUrl(activeVideo.video_url);
+                    const isDirectVideoFile = Boolean(
+                        activeVideo.video_url && (
+                            activeVideo.file_name ||
+                            activeVideo.video_url.includes('/storage/v1/object/public/') ||
+                            activeVideo.video_url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)
+                        )
+                    );
+                    const isLinkOnly = Boolean(
+                        activeVideo.video_url && (
+                            !activeVideo.file_name ||
+                            youtubeEmbed ||
+                            driveEmbed ||
+                            !isDirectVideoFile
+                        )
+                    );
                     const isCurrentWatched = watchedVideoIds.includes(activeTrainingTab);
                     const allWatched = watchedVideoIds.length === 3;
 
@@ -1735,7 +1765,15 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                 allowFullScreen
                                             />
-                                        ) : activeVideo.video_url ? (
+                                        ) : driveEmbed ? (
+                                            <iframe
+                                                src={driveEmbed}
+                                                title={activeVideo.title}
+                                                className="w-full h-full border-0"
+                                                allow="autoplay"
+                                                allowFullScreen
+                                            />
+                                        ) : isDirectVideoFile ? (
                                             <video
                                                 key={activeVideo.video_url}
                                                 src={activeVideo.video_url}
@@ -1744,6 +1782,29 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                                 onEnded={() => handleMarkWatched(activeTrainingTab)}
                                                 className="w-full h-full object-contain"
                                             />
+                                        ) : activeVideo.video_url ? (
+                                            <div className="p-6 text-center text-zinc-300 space-y-3">
+                                                <Video className="w-10 h-10 mx-auto text-amber-400" />
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-white">
+                                                        Training Video Link Available
+                                                    </p>
+                                                    <p className="text-[10px] text-zinc-400 max-w-xs mx-auto truncate">
+                                                        {activeVideo.video_url}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
+                                                        handleMarkWatched(activeTrainingTab);
+                                                    }}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all cursor-pointer"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                    <span>Click the Video Link to Continue</span>
+                                                </button>
+                                            </div>
                                         ) : (
                                             <div className="p-6 text-center text-zinc-400 space-y-2">
                                                 <Video className="w-10 h-10 mx-auto text-zinc-500" />
@@ -1756,6 +1817,43 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Action Banner: Click the Video Link to Continue (if link lang ang inupload na video) */}
+                                    {isLinkOnly && activeVideo.video_url && (
+                                        <motion.button
+                                            whileHover={{ scale: 1.01 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            type="button"
+                                            onClick={() => {
+                                                window.open(activeVideo.video_url, '_blank', 'noopener,noreferrer');
+                                                handleMarkWatched(activeTrainingTab);
+                                            }}
+                                            className="w-full p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-700/25 flex items-center justify-between gap-3 transition-all cursor-pointer border border-emerald-400/40 group text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                                                    <ExternalLink className="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-black text-white text-xs">
+                                                            Click the Video Link to Continue
+                                                        </span>
+                                                        <span className="text-[9px] bg-white text-emerald-800 font-extrabold px-1.5 py-0.2 rounded-full">
+                                                            Module {activeTrainingTab}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] text-emerald-100/90 font-normal normal-case">
+                                                        Buksan ang video link sa bagong tab at i-mark bilang complete
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 bg-black/25 px-3 py-1.5 rounded-xl text-[10px] text-emerald-100 font-bold shrink-0 group-hover:bg-black/35 transition-colors">
+                                                <span>{isCurrentWatched ? '✓ Watched' : 'Watch & Continue'}</span>
+                                                <ArrowRight className="w-3.5 h-3.5 text-emerald-300" />
+                                            </div>
+                                        </motion.button>
+                                    )}
 
                                     {/* Module Info */}
                                     <div className="space-y-1">
