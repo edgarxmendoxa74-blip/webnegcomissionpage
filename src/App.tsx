@@ -99,7 +99,7 @@ const Dashboard = () => {
 
   const [allLeads, setAllLeads] = React.useState<any[]>([]);
   const [workers, setWorkers] = React.useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [_loading, setLoading] = React.useState(true);
 
   const fetchData = async () => {
     setLoading(true);
@@ -223,7 +223,6 @@ const Dashboard = () => {
   const currentSlot = chartData[chartData.length - 1];
   const prevSlot = chartData[chartData.length - 2];
   const dealsDelta = currentSlot.deals - (prevSlot?.deals || 0);
-  const salesDelta = currentSlot.sales - (prevSlot?.sales || 0);
 
   // ── all-time aggregates ───────────────────────────────────────────────────
   const totalGrossSales = paidLeads.reduce((s, l) => s + (Number(l.deal_value) || 0), 0);

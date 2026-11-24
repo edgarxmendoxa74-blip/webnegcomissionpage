@@ -27,7 +27,7 @@ interface TrainingVideoManagerProps {
 
 export const TrainingVideoManager: React.FC<TrainingVideoManagerProps> = ({
     isOpen = true,
-    onClose,
+    onClose: _onClose,
     isPageSection = false
 }) => {
     const [videos, setVideos] = useState<TrainingVideo[]>([]);

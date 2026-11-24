@@ -96,7 +96,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     const [showTrainingCompleteModal, setShowTrainingCompleteModal] = useState(false);
     const [applicantTrainingName, setApplicantTrainingName] = useState('');
     const [applicantTrainingFb, setApplicantTrainingFb] = useState('');
-    const [copiedTrainingEmail, setCopiedTrainingEmail] = useState(false);
 
     const isCompleted = !!completedApplicant;
 
@@ -218,12 +217,6 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
         const mailtoUrl = `mailto:${TARGET_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
         return { gmailUrl, mailtoUrl, subject, body };
-    };
-
-    const handleCopyTrainingEmail = () => {
-        navigator.clipboard.writeText(TARGET_EMAIL);
-        setCopiedTrainingEmail(true);
-        setTimeout(() => setCopiedTrainingEmail(false), 2000);
     };
 
     const personalityQuestions = SALES_QUESTIONS.filter(q => q.category === 'personality');
