@@ -95,6 +95,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
     const [watchedVideoIds, setWatchedVideoIds] = useState<number[]>([]);
     const [showTrainingCompleteModal, setShowTrainingCompleteModal] = useState(false);
     const [applicantTrainingName, setApplicantTrainingName] = useState('');
+    const [applicantTrainingFb, setApplicantTrainingFb] = useState('');
     const [copiedTrainingEmail, setCopiedTrainingEmail] = useState(false);
 
     const isCompleted = !!completedApplicant;
@@ -135,12 +136,18 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
         };
     }, []);
 
-    // Sync applicant name for training email
+    // Sync applicant name and FB account for training email
     useEffect(() => {
         if (fullName.trim() && !applicantTrainingName) {
             setApplicantTrainingName(fullName.trim());
         }
     }, [fullName, applicantTrainingName]);
+
+    useEffect(() => {
+        if (fbLink.trim() && !applicantTrainingFb) {
+            setApplicantTrainingFb(fbLink.trim());
+        }
+    }, [fbLink, applicantTrainingFb]);
 
     // Handle Marking a Training Video as Watched
     const handleMarkWatched = (videoId: number) => {
@@ -197,6 +204,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
             `• Training 3: ${trainingVideos.find(v => v.id === 3)?.title || 'Closing the Deal & Dashboard Lead Submission'}\n\n` +
             `📋 APPLICANT DETAILS:\n` +
             `• Full Name: ${name}\n` +
+            `• Facebook Account: ${applicantTrainingFb || fbLink || 'N/A'}\n` +
             (phoneNumber ? `• Phone Number: ${phoneNumber}\n` : '') +
             (email ? `• Email: ${email}\n` : '') +
             (completedApplicant?.application_code ? `• Application Code: ${completedApplicant.application_code}\n` : '') +
@@ -339,11 +347,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
             return;
         }
         if (!fbLink.trim()) {
-            setError('Please provide your Facebook profile link.');
-            return;
-        }
-        if (!otherSocials.trim()) {
-            setError('Please provide your other social/portfolio link (or enter "None" if you have none).');
+            setError('Please provide your Facebook account name.');
             return;
         }
 
@@ -794,7 +798,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 {[
                                     { num: 1, label: 'Profile' },
                                     { num: 2, label: 'Q&A' },
-                                    { num: 3, label: 'Training' }
+                                    { num: 3, label: 'Online Training' }
                                 ].map((step) => {
                                     const isDone = currentStep > step.num || isCompleted;
                                     const isCurrent = currentStep === step.num && !isCompleted;
@@ -969,13 +973,13 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
 
                                     <div className="space-y-1">
                                         <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600">
-                                            Facebook Profile Link *
+                                            Facebook Account Name *
                                         </label>
                                         <div className="relative">
                                             <input
-                                                type="url"
+                                                type="text"
                                                 required
-                                                placeholder="https://facebook.com/yourprofile"
+                                                placeholder="e.g. Juan Dela Cruz"
                                                 value={fbLink}
                                                 onChange={(e) => setFbLink(e.target.value)}
                                                 className="w-full pl-8 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-red-500"
@@ -985,14 +989,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600">
-                                            Other Socials / Online Link *
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 flex items-center gap-1">
+                                            Other Socials / Online Link
+                                            <span className="text-zinc-400 font-bold normal-case tracking-normal">(optional)</span>
                                         </label>
                                         <div className="relative">
                                             <input
                                                 type="text"
-                                                required
-                                                placeholder="e.g. TikTok, LinkedIn, Instagram, or type 'None'"
+                                                placeholder="e.g. TikTok, LinkedIn, Instagram (optional)"
                                                 value={otherSocials}
                                                 onChange={(e) => setOtherSocials(e.target.value)}
                                                 className="w-full pl-8 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-red-500"
@@ -1203,7 +1207,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         onClick={handleProceedToMeeting}
                                         className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-1.5 cursor-pointer"
                                     >
-                                        <span>Next: Training Videos</span>
+                                        <span>Proceed to Training</span>
                                         <ArrowRight className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -1233,11 +1237,11 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             <div className="flex items-center gap-1.5">
                                                 <Video className="w-4 h-4 text-emerald-600" />
                                                 <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900">
-                                                    Step 3: Watch 3 Training Videos *
+                                                    Stage 3: Online Training *
                                                 </h3>
                                             </div>
                                             <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">
-                                                Panoorin ang 3 Video Modules para makapasa sa application
+                                                Panoorin ang 3 Training Videos — kailangan matapos bawat isa bago lumipat
                                             </p>
                                         </div>
                                         <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
@@ -1265,36 +1269,42 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         </div>
                                     </div>
 
-                                    {/* Module Selector Tabs (Training 1, 2, 3) */}
+                                    {/* Video 1, 2, 3 — locked until previous is finished */}
                                     <div className="grid grid-cols-3 gap-1.5">
                                         {[1, 2, 3].map((num) => {
                                             const isTabActive = activeTrainingTab === num;
                                             const isTabWatched = watchedVideoIds.includes(num);
+                                            const isLocked = num > 1 && !watchedVideoIds.includes(num - 1);
                                             return (
                                                 <button
                                                     key={num}
                                                     type="button"
-                                                    onClick={() => setActiveTrainingTab(num as 1 | 2 | 3)}
-                                                    className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
-                                                        isTabActive
-                                                            ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40'
-                                                            : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700'
+                                                    disabled={isLocked}
+                                                    onClick={() => { if (!isLocked) setActiveTrainingTab(num as 1 | 2 | 3); }}
+                                                    className={`p-2 rounded-xl text-left transition-all border ${
+                                                        isLocked
+                                                            ? 'bg-zinc-50 border-zinc-200 text-zinc-300 cursor-not-allowed opacity-60'
+                                                            : isTabActive
+                                                            ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40 cursor-pointer'
+                                                            : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 cursor-pointer'
                                                     }`}
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-[10px] font-black uppercase tracking-wider block">
-                                                            Training {num}
+                                                            Video {num}
                                                         </span>
-                                                        {isTabWatched ? (
+                                                        {isLocked ? (
+                                                            <span className="text-[9px]">🔒</span>
+                                                        ) : isTabWatched ? (
                                                             <span className="text-[9px] text-emerald-400 font-black">✓</span>
                                                         ) : (
                                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                                                         )}
                                                     </div>
                                                     <span className={`text-[9px] font-bold block truncate mt-0.5 ${
-                                                        isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
+                                                        isLocked ? 'text-zinc-300' : isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
                                                     }`}>
-                                                        {isTabWatched ? '✓ Watched' : 'Watch Now'}
+                                                        {isLocked ? 'Finish prev. video' : isTabWatched ? '✓ Done' : 'Watch Now'}
                                                     </span>
                                                 </button>
                                             );
@@ -1385,32 +1395,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         </p>
                                     </div>
 
-                                    {/* Mark as Watched & Next Module */}
-                                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-between gap-2 flex-wrap">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleMarkWatched(activeTrainingTab)}
-                                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-                                                isCurrentWatched
-                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
-                                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
-                                            }`}
-                                        >
-                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                            <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
-                                        </button>
-
-                                        {activeTrainingTab < 3 && (
+                                    {/* Next Module */}
+                                    {activeTrainingTab < 3 && isCurrentWatched && (
+                                        <div className="flex justify-end">
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
-                                                className="px-3.5 py-2 bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                                             >
-                                                <span>Training {activeTrainingTab + 1}</span>
+                                                <span>Watch Video {activeTrainingTab + 1}</span>
                                                 <ChevronRight className="w-3.5 h-3.5" />
                                             </button>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
 
                                     {/* Bottom Navigation */}
                                     <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-100">
@@ -1422,19 +1419,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                             ← Back to Q&A
                                         </button>
 
-                                        {allWatched ? (
+                                        {activeTrainingTab === 3 && isCurrentWatched ? (
                                             <button
                                                 type="button"
                                                 disabled={loading}
                                                 onClick={handleCompleteTrainingApplication}
-                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                                                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                                             >
                                                 {loading ? (
                                                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                                 ) : (
                                                     <>
-                                                        <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                                                        <span>View Congratulations</span>
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        <span>Done Watching</span>
                                                     </>
                                                 )}
                                             </button>
@@ -1821,32 +1818,38 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     {[1, 2, 3].map((num) => {
                                         const isTabActive = activeTrainingTab === num;
                                         const isTabWatched = watchedVideoIds.includes(num);
+                                        const isLocked = num > 1 && !watchedVideoIds.includes(num - 1);
 
                                         return (
                                             <button
                                                 key={num}
                                                 type="button"
-                                                onClick={() => setActiveTrainingTab(num as 1 | 2 | 3)}
-                                                className={`p-2 rounded-xl text-left transition-all cursor-pointer border ${
-                                                    isTabActive
-                                                        ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40'
-                                                        : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700'
+                                                disabled={isLocked}
+                                                onClick={() => { if (!isLocked) setActiveTrainingTab(num as 1 | 2 | 3); }}
+                                                className={`p-2 rounded-xl text-left transition-all border ${
+                                                    isLocked
+                                                        ? 'bg-zinc-50 border-zinc-200 text-zinc-300 cursor-not-allowed opacity-60'
+                                                        : isTabActive
+                                                        ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-emerald-500/40 cursor-pointer'
+                                                        : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 cursor-pointer'
                                                 }`}
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase tracking-wider block">
-                                                        Training {num}
+                                                        Video {num}
                                                     </span>
-                                                    {isTabWatched ? (
+                                                    {isLocked ? (
+                                                        <span className="text-[9px]">🔒</span>
+                                                    ) : isTabWatched ? (
                                                         <span className="text-[9px] text-emerald-400 font-black">✓</span>
                                                     ) : (
                                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                                                     )}
                                                 </div>
                                                 <span className={`text-[9px] font-bold block truncate mt-0.5 ${
-                                                    isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
+                                                    isLocked ? 'text-zinc-300' : isTabWatched ? 'text-emerald-400 font-black' : isTabActive ? 'text-zinc-300' : 'text-zinc-500'
                                                 }`}>
-                                                    {isTabWatched ? '✓ Watched' : 'Watch Now'}
+                                                    {isLocked ? 'Finish prev. video' : isTabWatched ? '✓ Done' : 'Watch Now'}
                                                 </span>
                                             </button>
                                         );
@@ -1940,31 +1943,18 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     </div>
 
                                     {/* Mark as Watched & Navigation */}
-                                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-between gap-2 flex-wrap">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleMarkWatched(activeTrainingTab)}
-                                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-                                                isCurrentWatched
-                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
-                                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
-                                            }`}
-                                        >
-                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                            <span>{isCurrentWatched ? '✓ Marked as Watched' : `Mark Training ${activeTrainingTab} as Watched`}</span>
-                                        </button>
-
-                                        {activeTrainingTab < 3 && (
+                                    {activeTrainingTab < 3 && isCurrentWatched && (
+                                        <div className="flex justify-end">
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTrainingTab((activeTrainingTab + 1) as 1 | 2 | 3)}
-                                                className="px-3.5 py-2 bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                                             >
-                                                <span>Training {activeTrainingTab + 1}</span>
+                                                <span>Watch Video {activeTrainingTab + 1}</span>
                                                 <ChevronRight className="w-3.5 h-3.5" />
                                             </button>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Modal Footer */}
@@ -1989,7 +1979,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
             {/* ===== CONGRATULATIONS: 3-VIDEO TRAINING COMPLETE POP-UP MODAL ===== */}
             <AnimatePresence>
                 {showTrainingCompleteModal && (() => {
-                    const { gmailUrl, mailtoUrl } = getTrainingCompletionEmailUrls();
+                    const { gmailUrl } = getTrainingCompletionEmailUrls();
 
                     return (
                         <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
@@ -1999,7 +1989,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                 exit={{ scale: 0.9, opacity: 0 }}
                                 className="bg-white rounded-3xl border border-amber-300 p-5 sm:p-6 max-w-sm w-full shadow-2xl relative text-center space-y-3.5 my-auto"
                             >
-                                {/* Top-right Close Button */}
+                                {/* Close Button */}
                                 <button
                                     type="button"
                                     onClick={() => setShowTrainingCompleteModal(false)}
@@ -2019,55 +2009,68 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         ✓ 100% Training Completed
                                     </span>
                                     <h3 className="text-base sm:text-lg font-black text-zinc-950 mt-1">
-                                        Congratulations! Nakapasa ka na!
+                                        Congratulations! You Passed!
                                     </h3>
                                     <p className="text-[10px] text-zinc-600 mt-1 font-medium leading-relaxed">
-                                        Matagumpay mong natapos panoorin ang lahat ng 3 Training Videos para sa posisyong <strong>Sales Consultant</strong>! Pindutin ang button sa ibaba upang ipadala ang iyong mensahe.
+                                        You have successfully finished all 3 Training Videos for the <strong>Sales Consultant</strong> position. Click the button below to send your completion message.
                                     </p>
                                 </div>
 
-                                {/* 3 Module Checklist Box */}
+                                {/* 3 Module Checklist */}
                                 <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-left space-y-1.5 text-xs font-bold text-zinc-800">
                                     <div className="flex items-center gap-2 text-emerald-700">
                                         <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                                        <span className="truncate">Training 1: Overview & Pitching</span>
+                                        <span className="truncate">Video 1: Overview &amp; Pitching</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-emerald-700">
                                         <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                                        <span className="truncate">Training 2: Objection Handling</span>
+                                        <span className="truncate">Video 2: Objection Handling</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-emerald-700">
                                         <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                                        <span className="truncate">Training 3: Closing & Lead Submission</span>
+                                        <span className="truncate">Video 3: Closing &amp; Lead Submission</span>
                                     </div>
                                 </div>
 
-                                {/* Applicant Full Name Input */}
-                                <div className="text-left space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-wider text-zinc-700 block">
-                                        Your Full Name (Pangalan ng Aplikante):
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={applicantTrainingName}
-                                        onChange={(e) => setApplicantTrainingName(e.target.value)}
-                                        placeholder="Ilagay ang iyong buong pangalan..."
-                                        className="w-full px-3 py-2 text-xs font-bold border border-zinc-300 rounded-xl focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none bg-white"
-                                    />
+                                {/* Full Name + FB Account Inputs */}
+                                <div className="text-left space-y-2.5">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-700 block">
+                                            Your Full Name:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={applicantTrainingName}
+                                            onChange={(e) => setApplicantTrainingName(e.target.value)}
+                                            placeholder="Enter your full name..."
+                                            className="w-full px-3 py-2 text-xs font-bold border border-zinc-300 rounded-xl focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none bg-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-700 block">
+                                            Facebook Account Name:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={applicantTrainingFb}
+                                            onChange={(e) => setApplicantTrainingFb(e.target.value)}
+                                            placeholder="Enter your Facebook account name..."
+                                            className="w-full px-3 py-2 text-xs font-bold border border-zinc-300 rounded-xl focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none bg-white"
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Send Email Action Card */}
+                                {/* Send Email */}
                                 <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-left space-y-2.5">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] text-zinc-800 font-bold block">
-                                            Send message thru email to:
+                                            Send your completion message to:
                                         </span>
                                         <span className="text-[10px] font-mono font-black text-red-600">
                                             {TARGET_EMAIL}
                                         </span>
                                     </div>
 
-                                    {/* Primary CTA: SEND MESSAGE HERE (Direct Gmail Link) */}
                                     <a
                                         href={gmailUrl}
                                         target="_blank"
@@ -2076,27 +2079,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                         className="w-full py-3.5 px-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer"
                                     >
                                         <Send className="w-4 h-4 text-amber-200" />
-                                        <span>Send Message Here</span>
+                                        <span>Send Your Done Training Here</span>
                                     </a>
-
-                                    {/* Helper options */}
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                        <a
-                                            href={mailtoUrl}
-                                            className="py-1.5 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center flex items-center justify-center gap-1 active:scale-95 transition-all"
-                                        >
-                                            <Mail className="w-3 h-3 text-zinc-500" />
-                                            <span>Open Mail App</span>
-                                        </a>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleCopyTrainingEmail}
-                                            className="py-1.5 px-2 bg-white border border-zinc-200 hover:border-black text-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-wider text-center active:scale-95 transition-all cursor-pointer"
-                                        >
-                                            {copiedTrainingEmail ? '✓ Copied' : 'Copy Email'}
-                                        </button>
-                                    </div>
                                 </div>
 
                                 <button
@@ -2104,7 +2088,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ onBackToSelect
                                     onClick={() => setShowTrainingCompleteModal(false)}
                                     className="w-full py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
                                 >
-                                    Close / Done
+                                    Close
                                 </button>
                             </motion.div>
                         </div>
