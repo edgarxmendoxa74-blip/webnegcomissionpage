@@ -188,6 +188,46 @@ self.addEventListener('message', (event) => {
             })
         );
     }
+
+    // Show a native OS notification triggered from the app
+    if (event.data && event.data.type === 'NEW_APPLICANT') {
+        const { name } = event.data;
+        event.waitUntil(
+            self.registration.showNotification('New Applicant! 🎉', {
+                body: `${name} just applied via the hiring portal.`,
+                icon: '/icons/icon-192.png',
+                badge: '/icons/icon-192.png',
+                tag: 'new-applicant',          // replaces previous notif of same tag
+                renotify: true,                // vibrate/sound even if same tag
+                requireInteraction: false,
+                data: { url: '/' },
+                actions: [
+                    { action: 'view', title: 'View Applicants' },
+                    { action: 'dismiss', title: 'Dismiss' },
+                ],
+            })
+        );
+    }
+});
+
+// Open the app and go to Applicants when notification is tapped
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    if (event.action === 'dismiss') return;
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+            // Focus existing window if open
+            const existing = clients.find(c => c.url && c.visibilityState !== undefined);
+            if (existing) {
+                existing.focus();
+                existing.postMessage({ type: 'NAVIGATE_TO', tab: 'Applicants' });
+                return;
+            }
+            // Otherwise open a new window
+            return self.clients.openWindow('/');
+        })
+    );
 });
 
 // Background sync (for future implementation)

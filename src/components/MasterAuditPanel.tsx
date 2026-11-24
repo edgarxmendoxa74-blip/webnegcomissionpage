@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AUDIT_STATUS_STYLE, type DailyAuditRow, type AuditRecord } from './EmployeeDailyAudit';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, LayoutGrid, Table2, Download } from 'lucide-react';
 
 const STATUSES: DailyAuditRow['status'][] = ['Submitted', 'Reviewed', 'Needs Review'];
 
@@ -34,6 +34,7 @@ export const MasterAuditPanel: React.FC = () => {
     const [day, setDay] = useState('');
     const [filter, setFilter] = useState<'All' | DailyAuditRow['status']>('All');
     const [savingId, setSavingId] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'sheet'>('grid');
 
     const load = async () => {
         try {
@@ -126,6 +127,67 @@ export const MasterAuditPanel: React.FC = () => {
 
     const workerOf = (id: string) => workers.find(w => w.id === id);
 
+    const exportCSV = () => {
+        // Header rows
+        const auditHeaders = ['Account', 'Role', 'Date', 'Clients Added', 'Deals Closed', 'Total Sales', 'Commission', 'Status', 'Notes'];
+        const recordHeaders = ['Account', 'Date', 'Client Name', 'Phone', 'Socials', 'Status', 'Notes'];
+
+        const esc = (v: string | number | null | undefined) => {
+            const s = String(v ?? '').replace(/"/g, '""');
+            return `"${s}"`;
+        };
+
+        // Section 1: audit summaries
+        const auditRows = visible.map(g => {
+            const w = workerOf(g.worker_id);
+            const r = g.report;
+            return [
+                esc(w?.name || 'Unknown'),
+                esc(w?.role || ''),
+                esc(g.date),
+                esc(r?.clients_added ?? ''),
+                esc(r?.deals_closed ?? ''),
+                esc(r ? Number(r.total_sales) : ''),
+                esc(r ? Number(r.commission) : ''),
+                esc(r?.status || ''),
+                esc(r?.notes || ''),
+            ].join(',');
+        });
+
+        // Section 2: client records (flat)
+        const recordRows = visible.flatMap(g => {
+            const w = workerOf(g.worker_id);
+            return g.records.map(rec => [
+                esc(w?.name || 'Unknown'),
+                esc(rec.record_date),
+                esc(rec.client_name),
+                esc(rec.phone_number || ''),
+                esc(rec.socials || ''),
+                esc(rec.status),
+                esc(rec.notes || ''),
+            ].join(','));
+        });
+
+        const csv = [
+            'DAILY AUDIT SUMMARY',
+            auditHeaders.map(h => `"${h}"`).join(','),
+            ...auditRows,
+            '',
+            'CLIENT RECORDS',
+            recordHeaders.map(h => `"${h}"`).join(','),
+            ...recordRows,
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = day || new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `daily-audit-${dateStr}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     // One group per employee per day, holding that day's submitted report and every record they entered
     const groups = useMemo(() => {
         const map = new Map<string, DayGroup>();
@@ -160,15 +222,27 @@ export const MasterAuditPanel: React.FC = () => {
     return (
         <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                    onClick={load}
-                    disabled={loading}
-                    title="Refresh Daily Audits"
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-slate-700 hover:border-black transition-all active:scale-95 disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-black' : ''}`} />
-                    <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={load}
+                        disabled={loading}
+                        title="Refresh Daily Audits"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-slate-700 hover:border-black transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-black' : ''}`} />
+                        <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                    </button>
+
+                    <button
+                        onClick={exportCSV}
+                        disabled={visible.length === 0}
+                        title="Export to CSV"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-700 text-white border border-zinc-900 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export CSV</span>
+                    </button>
+                </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                     <select
@@ -247,105 +321,223 @@ export const MasterAuditPanel: React.FC = () => {
                     {groups.length === 0 ? 'Nothing submitted yet' : 'Nothing matches this filter'}
                 </p>
             ) : (
-                <ul className="space-y-3">
-                    {visible.map(g => {
-                        const w = workerOf(g.worker_id);
-                        const r = g.report;
-                        return (
-                            <li key={g.key} className="bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-b border-zinc-50">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-sm text-black truncate">{w?.name || 'Unknown'}</p>
-                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
-                                            {new Date(`${g.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                                            {w?.role ? ` · ${w.role}` : ''}
-                                        </p>
-                                    </div>
-                                    {r ? (
-                                        <>
-                                            <div className="grid grid-cols-4 sm:flex gap-4 sm:gap-6 text-[10px]">
-                                                <div>
-                                                    <p className="font-black text-zinc-400 uppercase tracking-widest">Added</p>
-                                                    <p className="font-black text-black tabular-nums">{r.clients_added}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-zinc-400 uppercase tracking-widest">Paid</p>
-                                                    <p className="font-black text-black tabular-nums">{r.deals_closed}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-zinc-400 uppercase tracking-widest">Sales</p>
-                                                    <p className="font-black text-black tabular-nums">{peso(r.total_sales)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-zinc-400 uppercase tracking-widest">Comm.</p>
-                                                    <p className="font-black text-green-600 tabular-nums">{peso(r.commission)}</p>
-                                                </div>
+                <>
+                    {/* View toggle */}
+                    <div className="flex items-center justify-between">
+                        <p className="text-xs text-zinc-400 font-medium">
+                            {visible.length} record{visible.length !== 1 ? 's' : ''} shown
+                        </p>
+                        <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('grid')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-black shadow-sm' : 'text-zinc-500 hover:text-black'}`}
+                            >
+                                <LayoutGrid className="w-3.5 h-3.5" />
+                                Grid
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('sheet')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'sheet' ? 'bg-white text-black shadow-sm' : 'text-zinc-500 hover:text-black'}`}
+                            >
+                                <Table2 className="w-3.5 h-3.5" />
+                                Sheet
+                            </button>
+                        </div>
+                    </div>
+
+                    {viewMode === 'grid' ? (
+                        /* ── Grid / Card View ── */
+                        <ul className="space-y-3">
+                            {visible.map(g => {
+                                const w = workerOf(g.worker_id);
+                                const r = g.report;
+                                return (
+                                    <li key={g.key} className="bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-b border-zinc-50">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-sm text-black truncate">{w?.name || 'Unknown'}</p>
+                                                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                                                    {new Date(`${g.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {w?.role ? ` · ${w.role}` : ''}
+                                                </p>
                                             </div>
-                                            <select
-                                                aria-label={`Status for ${w?.name || 'report'}`}
-                                                value={r.status}
-                                                disabled={savingId === r.id}
-                                                onChange={(e) => setStatus(r.id, e.target.value as DailyAuditRow['status'])}
-                                                className={`h-7 sm:h-9 px-2.5 sm:px-4 rounded-full border font-black uppercase tracking-wide sm:tracking-widest text-[8px] sm:text-[9px] w-fit outline-none cursor-pointer disabled:opacity-50 ${AUDIT_STATUS_STYLE[r.status]}`}
-                                            >
-                                                {STATUSES.map(s => <option key={s} value={s} className="bg-white text-black">{s}</option>)}
-                                            </select>
-                                        </>
-                                    ) : (
-                                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-                                            {g.records.length} client record{g.records.length === 1 ? '' : 's'}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {r?.notes && (
-                                    <p className="mx-4 mt-3 text-xs font-medium text-zinc-600 leading-relaxed bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 whitespace-pre-wrap">
-                                        {r.notes}
-                                    </p>
-                                )}
-
-                                <div className="p-3 sm:p-4">
-                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">
-                                        Client records · {g.records.length}
-                                    </p>
-                                    {g.records.length === 0 ? (
-                                        <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">No client records</p>
-                                    ) : (
-                                        <div className="overflow-x-auto scrollbar-hide -mx-1">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead>
-                                                    <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
-                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Phone</th>
-                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Socials</th>
-                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
-                                                        <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Notes</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-zinc-50">
-                                                    {g.records.map(rec => (
-                                                        <tr key={rec.id}>
-                                                            <td className="px-2 py-1">
-                                                                <div className="font-bold text-[9px] text-black break-words">{rec.client_name}</div>
-                                                                <div className="text-[7px] font-medium uppercase tracking-widest text-zinc-400 tabular-nums">{new Date(`${rec.record_date}T00:00:00`).toLocaleDateString()}</div>
-                                                            </td>
-                                                            <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 tabular-nums whitespace-nowrap">{rec.phone_number || '—'}</td>
-                                                            <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 max-w-[5rem] break-words">{rec.socials || '—'}</td>
-                                                            <td className="px-2 py-1">
-                                                                <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-[7px] font-black uppercase tracking-widest whitespace-nowrap">{rec.status}</span>
-                                                            </td>
-                                                            <td className="px-2 py-1 text-[8px] font-medium text-zinc-500 min-w-[5rem] max-w-[10rem] whitespace-pre-wrap break-words">{rec.notes || '—'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                            {r ? (
+                                                <>
+                                                    <div className="grid grid-cols-4 sm:flex gap-4 sm:gap-6 text-[10px]">
+                                                        <div>
+                                                            <p className="font-black text-zinc-400 uppercase tracking-widest">Added</p>
+                                                            <p className="font-black text-black tabular-nums">{r.clients_added}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black text-zinc-400 uppercase tracking-widest">Paid</p>
+                                                            <p className="font-black text-black tabular-nums">{r.deals_closed}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black text-zinc-400 uppercase tracking-widest">Sales</p>
+                                                            <p className="font-black text-black tabular-nums">{peso(r.total_sales)}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black text-zinc-400 uppercase tracking-widest">Comm.</p>
+                                                            <p className="font-black text-green-600 tabular-nums">{peso(r.commission)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <select
+                                                        aria-label={`Status for ${w?.name || 'report'}`}
+                                                        value={r.status}
+                                                        disabled={savingId === r.id}
+                                                        onChange={(e) => setStatus(r.id, e.target.value as DailyAuditRow['status'])}
+                                                        className={`h-7 sm:h-9 px-2.5 sm:px-4 rounded-full border font-black uppercase tracking-wide sm:tracking-widest text-[8px] sm:text-[9px] w-fit outline-none cursor-pointer disabled:opacity-50 ${AUDIT_STATUS_STYLE[r.status]}`}
+                                                    >
+                                                        {STATUSES.map(s => <option key={s} value={s} className="bg-white text-black">{s}</option>)}
+                                                    </select>
+                                                </>
+                                            ) : (
+                                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+                                                    {g.records.length} client record{g.records.length === 1 ? '' : 's'}
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </li>
-                        );
-                    })}
-                </ul>
+
+                                        {r?.notes && (
+                                            <p className="mx-4 mt-3 text-xs font-medium text-zinc-600 leading-relaxed bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 whitespace-pre-wrap">
+                                                {r.notes}
+                                            </p>
+                                        )}
+
+                                        <div className="p-3 sm:p-4">
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">
+                                                Client records · {g.records.length}
+                                            </p>
+                                            {g.records.length === 0 ? (
+                                                <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">No client records</p>
+                                            ) : (
+                                                <div className="overflow-x-auto scrollbar-hide -mx-1">
+                                                    <table className="w-full text-left border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-zinc-50/50 border-b border-zinc-100">
+                                                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Client</th>
+                                                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Phone</th>
+                                                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Socials</th>
+                                                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Status</th>
+                                                                <th className="px-2 py-1.5 text-[7px] font-black uppercase tracking-[0.2em] text-zinc-400">Notes</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-zinc-50">
+                                                            {g.records.map(rec => (
+                                                                <tr key={rec.id}>
+                                                                    <td className="px-2 py-1">
+                                                                        <div className="font-bold text-[9px] text-black break-words">{rec.client_name}</div>
+                                                                        <div className="text-[7px] font-medium uppercase tracking-widest text-zinc-400 tabular-nums">{new Date(`${rec.record_date}T00:00:00`).toLocaleDateString()}</div>
+                                                                    </td>
+                                                                    <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 tabular-nums whitespace-nowrap">{rec.phone_number || '—'}</td>
+                                                                    <td className="px-2 py-1 text-[8px] font-bold text-zinc-600 max-w-[5rem] break-words">{rec.socials || '—'}</td>
+                                                                    <td className="px-2 py-1">
+                                                                        <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-[7px] font-black uppercase tracking-widest whitespace-nowrap">{rec.status}</span>
+                                                                    </td>
+                                                                    <td className="px-2 py-1 text-[8px] font-medium text-zinc-500 min-w-[5rem] max-w-[10rem] whitespace-pre-wrap break-words">{rec.notes || '—'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        /* ── Sheet / Table View ── */
+                        <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs border-collapse">
+                                    <thead>
+                                        <tr className="bg-zinc-50 border-b border-zinc-200">
+                                            <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Account</th>
+                                            <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Date</th>
+                                            <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Clients Added</th>
+                                            <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Deals Closed</th>
+                                            <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Total Sales</th>
+                                            <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Commission</th>
+                                            <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Client Records</th>
+                                            <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Status</th>
+                                            <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100">
+                                        {visible.map(g => {
+                                            const w = workerOf(g.worker_id);
+                                            const r = g.report;
+                                            return (
+                                                <tr key={g.key} className="hover:bg-zinc-50 transition-colors group">
+                                                    {/* Account */}
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <p className="font-bold text-black">{w?.name || 'Unknown'}</p>
+                                                        {w?.role && <p className="text-[9px] text-zinc-400 font-medium">{w.role}</p>}
+                                                    </td>
+
+                                                    {/* Date */}
+                                                    <td className="px-4 py-3 whitespace-nowrap text-zinc-600 font-medium">
+                                                        {new Date(`${g.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </td>
+
+                                                    {/* Clients Added */}
+                                                    <td className="px-4 py-3 text-right tabular-nums font-black text-black">
+                                                        {r ? r.clients_added : '—'}
+                                                    </td>
+
+                                                    {/* Deals Closed */}
+                                                    <td className="px-4 py-3 text-right tabular-nums font-black text-black">
+                                                        {r ? r.deals_closed : '—'}
+                                                    </td>
+
+                                                    {/* Total Sales */}
+                                                    <td className="px-4 py-3 text-right tabular-nums font-black text-black">
+                                                        {r ? peso(r.total_sales) : '—'}
+                                                    </td>
+
+                                                    {/* Commission */}
+                                                    <td className="px-4 py-3 text-right tabular-nums font-black text-green-600">
+                                                        {r ? peso(r.commission) : '—'}
+                                                    </td>
+
+                                                    {/* Client Records count */}
+                                                    <td className="px-4 py-3 text-right tabular-nums text-zinc-500 font-medium">
+                                                        {g.records.length}
+                                                    </td>
+
+                                                    {/* Status */}
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        {r ? (
+                                                            <select
+                                                                aria-label={`Status for ${w?.name || 'report'}`}
+                                                                value={r.status}
+                                                                disabled={savingId === r.id}
+                                                                onChange={(e) => setStatus(r.id, e.target.value as DailyAuditRow['status'])}
+                                                                className={`h-7 px-2.5 rounded-full border font-black uppercase tracking-widest text-[8px] outline-none cursor-pointer disabled:opacity-50 ${AUDIT_STATUS_STYLE[r.status]}`}
+                                                            >
+                                                                {STATUSES.map(s => <option key={s} value={s} className="bg-white text-black">{s}</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            <span className="text-[9px] text-zinc-300 font-bold uppercase tracking-widest">No report</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Notes */}
+                                                    <td className="px-4 py-3 text-zinc-500 font-medium max-w-[200px] truncate">
+                                                        {r?.notes || <span className="text-zinc-300">—</span>}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

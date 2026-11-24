@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import {
     type Applicant,
@@ -32,7 +32,10 @@ import {
     ChevronRight,
     AlertTriangle,
     Copy,
-    Trash2
+    Trash2,
+    LayoutGrid,
+    Table2,
+    Bell,
 } from 'lucide-react';
 
 export const ApplicantsPage: React.FC = () => {
@@ -54,6 +57,47 @@ export const ApplicantsPage: React.FC = () => {
     const [deletingApplicantId, setDeletingApplicantId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [deleteSuccess, setDeleteSuccess] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'sheet'>('grid');
+
+    // ── new-applicant notification ──────────────────────────────────────────
+    const knownCountRef = useRef<number | null>(null); // null = not yet initialised
+    const [newApplicantToast, setNewApplicantToast] = useState<{ name: string } | null>(null);
+    const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const playNotificationSound = () => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+            const playTone = (freq: number, startAt: number, duration: number, vol = 0.4) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + startAt);
+                gain.gain.setValueAtTime(0, ctx.currentTime + startAt);
+                gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + startAt + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startAt + duration);
+                osc.start(ctx.currentTime + startAt);
+                osc.stop(ctx.currentTime + startAt + duration);
+            };
+
+            // Three-note ascending chime: C5 → E5 → G5
+            playTone(523, 0.00, 0.18);
+            playTone(659, 0.18, 0.18);
+            playTone(784, 0.36, 0.30);
+
+            setTimeout(() => ctx.close(), 1200);
+        } catch {
+            // Browser blocked AudioContext — silently ignore
+        }
+    };
+
+    const showNewApplicantToast = (name: string) => {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        setNewApplicantToast({ name });
+        toastTimerRef.current = setTimeout(() => setNewApplicantToast(null), 5000);
+    };
 
     const handleCopyHiringLink = () => {
         const url = `${window.location.origin}/hiring`;
@@ -91,6 +135,15 @@ export const ApplicantsPage: React.FC = () => {
             setTableMissing(!tableStatus.exists);
 
             const list = await fetchAllApplicants();
+
+            // Detect new applicant on background refreshes
+            if (isBackground && knownCountRef.current !== null && list.length > knownCountRef.current) {
+                const newest = list[0]; // fetchAllApplicants returns newest first
+                playNotificationSound();
+                showNewApplicantToast(newest?.full_name || 'Someone');
+            }
+            knownCountRef.current = list.length;
+
             setApplicants(list);
         } catch (err) {
             console.error('Error loading applicants:', err);
@@ -107,10 +160,23 @@ export const ApplicantsPage: React.FC = () => {
             .channel(`applicants_realtime_${Date.now()}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'applicants' },
-                () => {
+                { event: 'INSERT', schema: 'public', table: 'applicants' },
+                (payload) => {
+                    const name = (payload.new as any)?.full_name || 'Someone';
+                    playNotificationSound();
+                    showNewApplicantToast(name);
                     loadData(true);
                 }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'applicants' },
+                () => { loadData(true); }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'applicants' },
+                () => { loadData(true); }
             )
             .subscribe();
 
@@ -796,8 +862,33 @@ export const ApplicantsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Applicants — Responsive Card Grid */}
+            {/* Applicants — Responsive Card Grid / Sheet */}
             <div>
+                {/* View toggle */}
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-zinc-400 font-medium">
+                        {filteredApplicants.length} applicant{filteredApplicants.length !== 1 ? 's' : ''} shown
+                    </p>
+                    <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('grid')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-black shadow-sm' : 'text-zinc-500 hover:text-black'}`}
+                        >
+                            <LayoutGrid className="w-3.5 h-3.5" />
+                            Grid
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('sheet')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'sheet' ? 'bg-white text-black shadow-sm' : 'text-zinc-500 hover:text-black'}`}
+                        >
+                            <Table2 className="w-3.5 h-3.5" />
+                            Sheet
+                        </button>
+                    </div>
+                </div>
+
                 {loading ? (
                     <div className="py-16 text-center text-xs font-bold text-zinc-400 flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-zinc-500" />
@@ -811,7 +902,7 @@ export const ApplicantsPage: React.FC = () => {
                             {searchQuery ? 'Subukang baguhin ang iyong search query o filter.' : 'Wala pang nag-a-apply sa kasalukuyan.'}
                         </p>
                     </div>
-                ) : (
+                ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         {filteredApplicants.map((app) => {
                             const isDone = app.status === 'completed' || app.status === 'interview_scheduled' || app.status === 'hired' || app.status === 'reviewed';
@@ -972,8 +1063,196 @@ export const ApplicantsPage: React.FC = () => {
                             );
                         })}
                     </div>
+                ) : (
+                    /* ── Sheet / Table View ── */
+                    <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xs">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-zinc-200 bg-zinc-50">
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Name</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Contact</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Status</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Meeting</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Code</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Q&A</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Applied</th>
+                                        <th className="text-left px-4 py-3 font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Links</th>
+                                        <th className="px-4 py-3" />
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100">
+                                    {filteredApplicants.map((app) => {
+                                        const isDone = app.status === 'completed' || app.status === 'interview_scheduled' || app.status === 'hired' || app.status === 'reviewed';
+                                        const isHired = app.status === 'hired';
+                                        const qCount = app.answers ? Object.keys(app.answers).filter(k => app.answers![k]?.trim()).length : 0;
+                                        const totalQ = SALES_QUESTIONS.length;
+                                        const qPct = Math.round((qCount / totalQ) * 100);
+
+                                        const statusConfig: Record<string, { label: string; color: string }> = {
+                                            completed:           { label: 'Completed',     color: 'bg-emerald-100 text-emerald-800' },
+                                            interview_scheduled: { label: 'Interview Set', color: 'bg-blue-100 text-blue-800' },
+                                            reviewed:            { label: 'Reviewed',      color: 'bg-amber-100 text-amber-800' },
+                                            hired:               { label: 'Hired 🎉',      color: 'bg-purple-100 text-purple-900' },
+                                            rejected:            { label: 'Rejected',      color: 'bg-rose-100 text-rose-800' },
+                                            incomplete:          { label: 'Incomplete',    color: 'bg-zinc-100 text-zinc-600' },
+                                        };
+                                        const sc = statusConfig[app.status] ?? statusConfig.incomplete;
+
+                                        return (
+                                            <tr
+                                                key={app.id}
+                                                className={`group hover:bg-zinc-50 transition-colors ${isHired ? 'bg-purple-50/40' : ''}`}
+                                            >
+                                                {/* Name */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenDetail(app)}
+                                                        className="text-left cursor-pointer hover:underline"
+                                                    >
+                                                        <p className="font-bold text-black">{app.full_name}</p>
+                                                        <p className="text-zinc-400 text-[10px] truncate max-w-[160px]">{app.email}</p>
+                                                    </button>
+                                                </td>
+
+                                                {/* Contact */}
+                                                <td className="px-4 py-3 whitespace-nowrap text-zinc-600">
+                                                    {app.phone_number
+                                                        ? <a href={`tel:${app.phone_number}`} className="hover:text-black hover:underline flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{app.phone_number}</a>
+                                                        : <span className="text-zinc-300">—</span>
+                                                    }
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${sc.color}`}>
+                                                        {isDone ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                                                        {sc.label}
+                                                    </span>
+                                                </td>
+
+                                                {/* Meeting */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    {app.meeting_time ? (
+                                                        <span className={`font-bold ${app.meeting_time === '10:00 AM' ? 'text-emerald-700' : app.meeting_time === '4:00 PM' ? 'text-blue-700' : 'text-purple-700'}`}>
+                                                            {app.meeting_time}
+                                                        </span>
+                                                    ) : <span className="text-zinc-300">—</span>}
+                                                </td>
+
+                                                {/* Code */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    {app.application_code
+                                                        ? <span className="font-mono text-[10px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600">{app.application_code}</span>
+                                                        : <span className="text-zinc-300">—</span>
+                                                    }
+                                                </td>
+
+                                                {/* Q&A progress */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full ${qCount >= totalQ ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                                                                style={{ width: `${qPct}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className={`text-[10px] font-bold ${qCount >= totalQ ? 'text-emerald-600' : 'text-amber-600'}`}>{qCount}/{totalQ}</span>
+                                                    </div>
+                                                </td>
+
+                                                {/* Applied date */}
+                                                <td className="px-4 py-3 whitespace-nowrap text-zinc-400">
+                                                    {app.created_at ? new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                                                </td>
+
+                                                {/* Links */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        {app.fb_link && (
+                                                            <a href={app.fb_link} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700" title="Facebook">
+                                                                <Facebook className="w-3.5 h-3.5" />
+                                                            </a>
+                                                        )}
+                                                        {app.resume_link && (
+                                                            <a href={app.resume_link} target="_blank" rel="noreferrer" className="text-zinc-500 hover:text-black" title="Resume">
+                                                                <FileText className="w-3.5 h-3.5" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Actions */}
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenDetail(app)}
+                                                            className="px-2 py-1 bg-zinc-900 text-white rounded-lg text-[10px] font-bold hover:bg-zinc-700 cursor-pointer"
+                                                        >
+                                                            View
+                                                        </button>
+                                                        {confirmDeleteId === app.id ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteApplicant(app.id!)}
+                                                                    disabled={deletingApplicantId === app.id}
+                                                                    className="px-2 py-1 bg-red-600 text-white rounded-lg text-[10px] font-bold cursor-pointer disabled:opacity-60"
+                                                                >
+                                                                    {deletingApplicantId === app.id ? '...' : 'Confirm'}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setConfirmDeleteId(null)}
+                                                                    className="px-2 py-1 bg-zinc-200 text-zinc-700 rounded-lg text-[10px] font-bold cursor-pointer"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setConfirmDeleteId(app.id!)}
+                                                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 )}
             </div>
+
+            {/* New Applicant Notification Toast */}
+            {newApplicantToast && (
+                <div className="fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 bg-zinc-900 text-white rounded-2xl shadow-2xl border border-zinc-700 animate-in slide-in-from-top-2 duration-300 max-w-xs">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                        <Bell className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-400">New Applicant!</p>
+                        <p className="text-sm font-bold text-white truncate">{newApplicantToast.name}</p>
+                        <p className="text-[10px] text-zinc-400">Just applied via the hiring portal</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setNewApplicantToast(null)}
+                        className="ml-1 text-zinc-500 hover:text-white shrink-0 cursor-pointer"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* Delete Success Toast */}
             {deleteSuccess && (

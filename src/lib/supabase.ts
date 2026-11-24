@@ -7,4 +7,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase credentials missing. Please check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+// Use sessionStorage so each browser tab keeps its own session independently.
+// This prevents one tab's login from overwriting another tab's session —
+// each account stays logged in until the user themselves clicks Logout.
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
+    auth: {
+        storage: window.sessionStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+    },
+});

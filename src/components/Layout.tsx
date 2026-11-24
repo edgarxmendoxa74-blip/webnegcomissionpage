@@ -12,6 +12,9 @@ import {
     LogOut,
     UserCheck,
     Video,
+    Bell,
+    X,
+    UserPlus,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
@@ -58,6 +61,13 @@ interface LayoutProps {
     setActiveTab: (tab: string) => void;
 }
 
+interface AppNotification {
+    id: string;
+    name: string;
+    time: Date;
+    read: boolean;
+}
+
 const navItems = [
     { icon: Target, label: 'Master List', short: 'Leads' },
     { icon: Users, label: 'Manage Team', short: 'Team' },
@@ -70,7 +80,6 @@ const navItems = [
     { icon: TrendingUp, label: 'Sales', short: 'Sales' },
 ];
 
-// The phone tab bar shows the everyday tabs; everything else lives under "More".
 const primaryLabels = ['Master List', 'Receipts', 'Daily Audit'];
 const primaryItems = navItems.filter((n) => primaryLabels.includes(n.label));
 const moreItems = navItems.filter((n) => !primaryLabels.includes(n.label));
@@ -85,7 +94,111 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     const [resetKey, setResetKey] = React.useState(0);
     const mainRef = React.useRef<HTMLElement>(null);
 
-    // Switching page starts at the top and closes the More sheet.
+    // ── Notification permission + SW message ───────────────────────────────
+    const [notifPermission, setNotifPermission] = React.useState<NotificationPermission | null>(null);
+
+    // Request permission once when owner loads the app
+    React.useEffect(() => {
+        if (!isOwner) return;
+        if (!('Notification' in window)) return;
+
+        setNotifPermission(Notification.permission);
+
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(perm => {
+                setNotifPermission(perm);
+            });
+        }
+    }, [isOwner]);
+
+    // Send message to SW to fire a native OS notification
+    const fireNativeNotification = React.useCallback((name: string) => {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.ready.then(reg => {
+            reg.active?.postMessage({ type: 'NEW_APPLICANT', name });
+        });
+    }, []);
+
+    // Listen for SW → app messages (e.g. notificationclick navigate)
+    React.useEffect(() => {
+        if (!('serviceWorker' in navigator)) return;
+        const handler = (event: MessageEvent) => {
+            if (event.data?.type === 'NAVIGATE_TO' && event.data.tab) {
+                setActiveTab(event.data.tab);
+            }
+        };
+        navigator.serviceWorker.addEventListener('message', handler);
+        return () => navigator.serviceWorker.removeEventListener('message', handler);
+    }, [setActiveTab]);
+
+    // ── Notification state ──────────────────────────────────────────────────
+    const [notifications, setNotifications] = React.useState<AppNotification[]>([]);
+    const [notifOpen, setNotifOpen] = React.useState(false);
+    const notifRef = React.useRef<HTMLDivElement>(null);
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    // Subscribe to new applicants (owner only)
+    React.useEffect(() => {
+        if (!isOwner) return;
+
+        const channel = supabase
+            .channel('layout-applicants-notif')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'applicants' },
+                (payload) => {
+                    const name = (payload.new as any)?.full_name || 'Someone';
+                    setNotifications(prev => [
+                        {
+                            id: (payload.new as any)?.id || String(Date.now()),
+                            name,
+                            time: new Date(),
+                            read: false,
+                        },
+                        ...prev,
+                    ]);
+                    fireNativeNotification(name);
+                }
+            )
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [isOwner]);
+
+    // Close notif panel when clicking outside
+    React.useEffect(() => {
+        if (!notifOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+                setNotifOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [notifOpen]);
+
+    const openNotif = () => {
+        setNotifOpen(o => !o);
+    };
+
+    const markAllRead = () => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    };
+
+    const clearAll = () => {
+        setNotifications([]);
+        setNotifOpen(false);
+    };
+
+    const timeAgo = (date: Date) => {
+        const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return date.toLocaleDateString();
+    };
+
+    // ── Other layout state ──────────────────────────────────────────────────
     React.useEffect(() => {
         mainRef.current?.scrollTo({ top: 0 });
         setMoreOpen(false);
@@ -112,14 +225,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
         setIsResetting(true);
         setResetMessage(null);
         try {
-            // `neq` on a never-matching id is the PostgREST way to say "all rows".
             const { error } = await supabase
                 .from('leads')
                 .delete()
                 .neq('id', '00000000-0000-0000-0000-000000000000');
             if (error) throw error;
             setShowReset(false);
-            setResetKey((k) => k + 1); // remount the current page so it reloads empty
+            setResetKey((k) => k + 1);
         } catch (err: any) {
             setResetMessage(err?.message || 'Reset failed. Make sure you are signed in as the owner.');
         } finally {
@@ -197,27 +309,197 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                         <h1 className="text-sm lg:text-xl font-black tracking-tighter text-black uppercase truncate">{activeTab}</h1>
                     </div>
 
-                    <button
-                        onClick={() => setMoreOpen(true)}
-                        aria-haspopup="dialog"
-                        aria-label="More"
-                        className={cn(
-                            "lg:hidden flex items-center justify-center w-9 h-9 rounded-full border transition-colors active:scale-95 shrink-0",
-                            moreActive ? "bg-ink text-white border-ink" : "bg-white text-ink border-zinc-200"
-                        )}
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
+                    {/* Right side of header */}
+                    <div className="flex items-center gap-2 shrink-0">
 
-                    {isOwner && (
+                        {/* Notification bell — owner only */}
+                        {isOwner && (
+                            <div className="relative" ref={notifRef}>
+                                <button
+                                    onClick={openNotif}
+                                    aria-label="Notifications"
+                                    className={cn(
+                                        "relative flex items-center justify-center w-9 h-9 rounded-xl border transition-colors active:scale-95",
+                                        notifOpen
+                                            ? "bg-black text-white border-black"
+                                            : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                                    )}
+                                >
+                                    <Bell className="w-4 h-4" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[9px] font-black px-0.5 ring-2 ring-white">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                    {/* Muted indicator when permission denied */}
+                                    {notifPermission === 'denied' && (
+                                        <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center">
+                                            <X className="w-1.5 h-1.5 text-white" />
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notification dropdown panel */}
+                                <AnimatePresence>
+                                    {notifOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                                            transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+                                            className="absolute right-0 top-[calc(100%+0.5rem)] w-80 bg-white rounded-2xl border border-zinc-200 shadow-2xl z-50 overflow-hidden"
+                                        >
+                                            {/* Panel header */}
+                                            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
+                                                <div className="flex items-center gap-2">
+                                                    <Bell className="w-4 h-4 text-zinc-700" />
+                                                    <span className="text-sm font-black text-black uppercase tracking-tight">Notifications</span>
+                                                    {unreadCount > 0 && (
+                                                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black">
+                                                            {unreadCount} new
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {unreadCount > 0 && (
+                                                        <button
+                                                            onClick={markAllRead}
+                                                            className="text-[10px] font-bold text-zinc-400 hover:text-black px-2 py-1 rounded-lg hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                        >
+                                                            Mark all read
+                                                        </button>
+                                                    )}
+                                                    {notifications.length > 0 && (
+                                                        <button
+                                                            onClick={clearAll}
+                                                            className="text-[10px] font-bold text-zinc-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Permission status banner */}
+                                            {notifPermission !== 'granted' && (
+                                                <div className={cn(
+                                                    "flex items-center justify-between gap-2 px-4 py-2.5 text-xs border-b",
+                                                    notifPermission === 'denied'
+                                                        ? "bg-red-50 border-red-100"
+                                                        : "bg-amber-50 border-amber-100"
+                                                )}>
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className={notifPermission === 'denied' ? "text-red-500" : "text-amber-500"}>
+                                                            {notifPermission === 'denied' ? '🔕' : '🔔'}
+                                                        </span>
+                                                        <span className={cn("font-semibold leading-tight", notifPermission === 'denied' ? "text-red-700" : "text-amber-700")}>
+                                                            {notifPermission === 'denied'
+                                                                ? 'Notifications blocked. Enable in browser settings.'
+                                                                : 'Allow notifications to get alerts on your device.'
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    {notifPermission !== 'denied' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                Notification.requestPermission().then(p => setNotifPermission(p));
+                                                            }}
+                                                            className="shrink-0 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black transition-colors cursor-pointer"
+                                                        >
+                                                            Allow
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Notification list */}
+                                            <div className="max-h-80 overflow-y-auto">
+                                                {notifications.length === 0 ? (
+                                                    <div className="flex flex-col items-center justify-center py-10 gap-2 text-zinc-300">
+                                                        <Bell className="w-8 h-8" />
+                                                        <p className="text-xs font-bold text-zinc-400">No notifications yet</p>
+                                                        <p className="text-[10px] text-zinc-300">New applicants will appear here</p>
+                                                    </div>
+                                                ) : (
+                                                    <ul className="divide-y divide-zinc-50">
+                                                        {notifications.map(notif => (
+                                                            <li
+                                                                key={notif.id}
+                                                                onClick={() => {
+                                                                    setNotifications(prev =>
+                                                                        prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
+                                                                    );
+                                                                    setActiveTab('Applicants');
+                                                                    setNotifOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-zinc-50",
+                                                                    !notif.read && "bg-emerald-50/60"
+                                                                )}
+                                                            >
+                                                                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                                                                    <UserPlus className="w-4 h-4 text-emerald-600" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-black text-black truncate">{notif.name}</p>
+                                                                    <p className="text-[10px] text-zinc-500 font-medium">Applied via hiring portal</p>
+                                                                    <p className="text-[9px] text-zinc-400 font-medium mt-0.5">{timeAgo(notif.time)}</p>
+                                                                </div>
+                                                                {!notif.read && (
+                                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                                                                )}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+
+                                            {/* Footer — go to applicants */}
+                                            {notifications.length > 0 && (
+                                                <div className="border-t border-zinc-100 p-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            markAllRead();
+                                                            setActiveTab('Applicants');
+                                                            setNotifOpen(false);
+                                                        }}
+                                                        className="w-full py-2 text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-50 rounded-xl transition-colors cursor-pointer"
+                                                    >
+                                                        View all applicants →
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
+
+                        {/* Mobile menu button */}
                         <button
-                            onClick={openReset}
-                            className="hidden lg:flex items-center gap-2 px-5 py-2.5 bg-white text-red-600 border border-red-200 rounded-full hover:bg-red-50 transition-all duration-300 font-medium active:scale-95 text-sm"
+                            onClick={() => setMoreOpen(true)}
+                            aria-haspopup="dialog"
+                            aria-label="Menu"
+                            className={cn(
+                                "lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors active:scale-95",
+                                moreActive ? "bg-black text-white border-black" : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400"
+                            )}
                         >
-                            <RotateCcw className="w-4 h-4" />
-                            <span>Reset</span>
+                            <Menu className="w-4 h-4" />
+                            <span>Menu</span>
                         </button>
-                    )}
+
+                        {/* Desktop reset button */}
+                        {isOwner && (
+                            <button
+                                onClick={openReset}
+                                className="hidden lg:flex items-center gap-2 px-5 py-2.5 bg-white text-red-600 border border-red-200 rounded-full hover:bg-red-50 transition-all duration-300 font-medium active:scale-95 text-sm"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                <span>Reset</span>
+                            </button>
+                        )}
+                    </div>
                 </header>
 
                 <div key={resetKey} className="p-4 sm:p-6 lg:p-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
@@ -230,39 +512,65 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isResetting && setShowReset(false)} />
                     <div className="relative w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl space-y-5">
-                        <h2 className="text-2xl font-black tracking-tighter text-black uppercase">Reset data</h2>
-                        <p className="text-sm font-medium text-zinc-500 leading-relaxed">
-                            This permanently deletes every lead and deal, including payments and commissions. Team members, settings and client storage are kept. It cannot be undone.
-                        </p>
-                        <input
-                            type="text"
-                            value={resetConfirm}
-                            onChange={(e) => setResetConfirm(e.target.value)}
-                            placeholder="Type RESET to confirm"
-                            className="w-full h-14 px-6 bg-zinc-50 border border-zinc-100 rounded-full focus:border-red-500 outline-none font-bold text-sm"
-                        />
-                        {resetMessage && <p className="text-[11px] font-black uppercase tracking-widest text-red-600">{resetMessage}</p>}
+                        <div className="flex flex-col items-center text-center space-y-3">
+                            <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center">
+                                <RotateCcw className="w-8 h-8 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest text-red-500 mb-1">Irreversible Action</p>
+                                <h2 className="text-2xl font-black tracking-tighter text-black uppercase">Are you sure?</h2>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl space-y-1.5">
+                            <p className="text-xs font-black uppercase tracking-wider text-red-700">This will permanently delete:</p>
+                            <ul className="space-y-1">
+                                {['All leads & deals', 'All payments & commissions', 'All sales history'].map(item => (
+                                    <li key={item} className="flex items-center gap-2 text-xs font-medium text-red-600">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="text-[10px] font-bold text-red-400 pt-1">Team members, settings and client storage are kept.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <p className="text-xs font-bold text-zinc-500 text-center">Type <span className="font-black text-black">RESET</span> to confirm</p>
+                            <input
+                                type="text"
+                                value={resetConfirm}
+                                onChange={(e) => setResetConfirm(e.target.value)}
+                                placeholder="Type RESET here..."
+                                className="w-full h-14 px-6 bg-zinc-50 border border-zinc-200 rounded-full focus:border-red-500 outline-none font-bold text-sm text-center tracking-widest"
+                            />
+                        </div>
+
+                        {resetMessage && (
+                            <p className="text-[11px] font-black uppercase tracking-widest text-red-600 text-center">{resetMessage}</p>
+                        )}
+
                         <div className="flex gap-3">
                             <button
                                 disabled={isResetting}
                                 onClick={() => setShowReset(false)}
-                                className="flex-1 h-12 rounded-full border border-zinc-200 font-black uppercase tracking-widest text-[10px] text-zinc-500"
+                                className="flex-1 h-12 rounded-full border border-zinc-200 hover:bg-zinc-50 font-black uppercase tracking-widest text-[10px] text-zinc-500 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 disabled={resetConfirm !== 'RESET' || isResetting}
                                 onClick={handleResetLeads}
-                                className="flex-1 h-12 rounded-full bg-red-600 text-white font-black uppercase tracking-widest text-[10px] disabled:opacity-40 active:scale-95 transition-all"
+                                className="flex-1 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[10px] disabled:opacity-40 active:scale-95 transition-all"
                             >
-                                {isResetting ? 'Resetting...' : 'Reset data'}
+                                {isResetting ? 'Resetting...' : 'Yes, Reset All Data'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Mobile "More" popover, anchored under the header button */}
+            {/* Mobile "More" popover */}
             <AnimatePresence>
                 {moreOpen && (
                     <div className="lg:hidden fixed inset-0 z-[60]">
@@ -282,7 +590,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
                             exit={{ opacity: 0, scale: 0.92, y: -8 }}
                             transition={{ type: 'spring', damping: 28, stiffness: 380 }}
                         >
-
                             {profile && <div className="flex items-center gap-3 px-1 mb-4">{profileBadge}</div>}
 
                             <div className="grid grid-cols-1 gap-2">
