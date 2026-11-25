@@ -36,40 +36,7 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-/* ─── Inline SVG logo matching the SmartMenu brand ──────────────────────── */
-function SmartMenuLogo({ size = 56 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Sun rays (amber) */}
-      {[0, 30, 60, 90, 120, 150].map((deg) => (
-        <rect
-          key={deg}
-          x="48" y="4" width="4" height="10" rx="2"
-          fill="#F5A623"
-          transform={`rotate(${deg} 50 50)`}
-        />
-      ))}
-      {/* Circle arc / spoon shape (amber) */}
-      <path
-        d="M18 58 C14 40 24 20 50 18 C76 16 86 36 82 54"
-        stroke="#F5A623" strokeWidth="4" strokeLinecap="round" fill="none"
-      />
-      {/* S letter (red) */}
-      <text x="16" y="62" fontSize="36" fontWeight="900" fill="#E8191A" fontFamily="Arial Black, sans-serif">S</text>
-      {/* M letter (red) */}
-      <text x="46" y="62" fontSize="36" fontWeight="900" fill="#E8191A" fontFamily="Arial Black, sans-serif">M</text>
-      {/* Cloche dish (red) */}
-      <ellipse cx="50" cy="78" rx="18" ry="4" fill="#E8191A" />
-      <path d="M34 78 Q34 66 50 64 Q66 66 66 78 Z" fill="#E8191A" />
-    </svg>
-  );
-}
+/* ─── SmartMenu logo image — replaced by real img tag everywhere ─────────── */
 
 /* ─── Wordmark matching the logo typography ─────────────────────────────── */
 function SmartMenuWordmark({ className = '' }: { className?: string }) {
@@ -86,15 +53,17 @@ function PartnerNav() {
   return (
     <header className="sticky top-0 z-30 bg-white/90 dark:bg-zinc-950/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-800">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Logo + name */}
+        {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <SmartMenuLogo size={36} />
-          <div className="leading-none">
-            <SmartMenuWordmark className="text-xl" />
-            <p className="text-[9px] font-bold tracking-widest text-[#F5A623] uppercase mt-0.5">
-              Partner Program
-            </p>
-          </div>
+          <img
+            src="/smartmenu-logo.jpg"
+            alt="SmartMenu"
+            className="h-9 w-auto select-none object-contain"
+            draggable={false}
+          />
+          <p className="text-[9px] font-black tracking-widest text-[#F5A623] uppercase border-l border-zinc-200 dark:border-zinc-700 pl-2.5">
+            Partner Program
+          </p>
         </div>
         {/* Tagline – hidden on small screens */}
         <p className="hidden sm:block text-[11px] font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase">
@@ -301,9 +270,16 @@ export function PartnerProgram() {
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full bg-[#F5A623]/10 blur-3xl pointer-events-none" />
         <div className="relative max-w-4xl mx-auto px-4 text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            {/* logo mark */}
+            {/* logo */}
             <div className="flex justify-center mb-6">
-              <SmartMenuLogo size={80} />
+              <div className="bg-white rounded-2xl p-3 shadow-2xl shadow-black/40 inline-block">
+                <img
+                  src="/smartmenu-logo.jpg"
+                  alt="SmartMenu"
+                  className="w-36 sm:w-44 h-auto select-none object-contain"
+                  draggable={false}
+                />
+              </div>
             </div>
             {/* wordmark */}
             <div className="mb-2">
@@ -387,7 +363,14 @@ export function PartnerProgram() {
             {/* form header stripe */}
             <div className="bg-gradient-to-r from-[#E8191A] to-[#c0121a] px-8 pt-8 pb-7">
               <div className="flex items-center gap-3">
-                <SmartMenuLogo size={42} />
+                <div className="bg-white rounded-xl p-1.5 shrink-0">
+                  <img
+                    src="/smartmenu-logo.jpg"
+                    alt="SmartMenu"
+                    className="w-10 h-10 object-contain select-none"
+                    draggable={false}
+                  />
+                </div>
                 <div>
                   <h2 className="text-xl font-black text-white leading-tight">Mag-register Bilang Partner</h2>
                   <p className="text-xs text-red-200 mt-0.5">Kumpletuhin ang form sa ibaba</p>
@@ -518,7 +501,14 @@ export function PartnerProgram() {
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
       <footer className="bg-zinc-900 dark:bg-zinc-950 py-10 px-4 text-center border-t border-zinc-800">
         <div className="flex justify-center mb-3">
-          <SmartMenuLogo size={40} />
+          <div className="bg-white rounded-xl p-2 inline-block">
+            <img
+              src="/smartmenu-logo.jpg"
+              alt="SmartMenu"
+              className="w-16 h-16 object-contain select-none"
+              draggable={false}
+            />
+          </div>
         </div>
         <SmartMenuWordmark className="text-2xl" />
         <p className="text-xs font-bold tracking-widest text-[#F5A623] uppercase mt-1 mb-4">
@@ -696,7 +686,14 @@ function SuccessScreen({
 
             {/* footer stripe */}
             <div className="px-8 py-4 bg-zinc-900 flex items-center justify-center gap-2">
-              <SmartMenuLogo size={22} />
+              <div className="bg-white rounded-lg p-1 shrink-0">
+                <img
+                  src="/smartmenu-logo.jpg"
+                  alt="SmartMenu"
+                  className="w-6 h-6 object-contain select-none"
+                  draggable={false}
+                />
+              </div>
               <span className="text-xs font-black text-white">Smart</span>
               <span className="text-xs font-black text-[#E8191A]">Menu</span>
               <span className="text-xs text-zinc-500 mx-1">·</span>
