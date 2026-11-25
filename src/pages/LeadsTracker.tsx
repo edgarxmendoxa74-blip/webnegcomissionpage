@@ -125,18 +125,18 @@ export const LeadsTracker: React.FC = () => {
                     table: 'leads'
                 },
                 () => {
-                    fetchData();
+                    fetchData(true);
                 }
             )
             .subscribe();
 
         // Auto sync fallback every 8 seconds & on window focus
         const pollInterval = setInterval(() => {
-            fetchData();
+            fetchData(true);
         }, 8000);
 
         const handleFocus = () => {
-            fetchData();
+            fetchData(true);
         };
         window.addEventListener('focus', handleFocus);
 
@@ -157,9 +157,9 @@ export const LeadsTracker: React.FC = () => {
         }
     }, [closingLead, workers]);
 
-    const fetchData = async () => {
+    const fetchData = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setFetchError(null);
             const leadsQuery = supabase
                 .from('leads')
@@ -531,7 +531,7 @@ export const LeadsTracker: React.FC = () => {
                         <span className="font-semibold">{fetchError}</span>
                     </div>
                     <button
-                        onClick={fetchData}
+                        onClick={() => fetchData(false)}
                         className="flex items-center gap-1.5 px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs shrink-0 active:scale-95"
                     >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -617,7 +617,7 @@ export const LeadsTracker: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2">
                         {/* Refresh Button */}
                         <button
-                            onClick={fetchData}
+                            onClick={() => fetchData(false)}
                             disabled={loading}
                             title="Refresh data from server"
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50 active:scale-95 disabled:opacity-50"
@@ -784,7 +784,7 @@ export const LeadsTracker: React.FC = () => {
                                 </p>
                                 <p className="text-slate-400 text-xs mt-1 mb-3">Try adjusting search or status filters, or click Reload Data.</p>
                                 <button
-                                    onClick={fetchData}
+                                    onClick={() => fetchData(false)}
                                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
                                 >
                                     <RefreshCw className="w-3.5 h-3.5" />
@@ -1132,7 +1132,7 @@ export const LeadsTracker: React.FC = () => {
                                                 {searchQuery ? "Try searching for a different keyword or resetting filters." : "Click below to refresh data from database."}
                                             </p>
                                             <button
-                                                onClick={fetchData}
+                                                onClick={() => fetchData(false)}
                                                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-black mt-2"
                                             >
                                                 <RefreshCw className="w-3.5 h-3.5" />

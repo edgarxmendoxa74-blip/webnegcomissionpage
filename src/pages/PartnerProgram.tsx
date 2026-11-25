@@ -249,30 +249,138 @@ export function PartnerProgram() {
 
   const handleDownload = () => {
     if (!submittedData || !stampDate) return;
-    const content = [
-      'SMARTMENU PARTNER PROGRAM',
-      'Certificate of Partnership Registration',
-      '',
-      `Partner Name  : ${submittedData.fullName}`,
-      `Business      : ${submittedData.businessName}`,
-      `Email         : ${submittedData.email}`,
-      `Mobile        : ${submittedData.mobileNumber}`,
-      `Address       : ${submittedData.businessAddress}`,
-      '',
-      `Offered Price : ₱${submittedData.offeredPrice}`,
-      `Markup        : ₱${submittedData.markup}`,
-      '',
-      `Stamp Date    : ${stampDate}`,
-      `Status        : APPROVED`,
-      '',
-      '────────────────────────────────────────',
-      'SmartMenu · Growing Restaurants. Together.',
-      'webnegosyo3@gmail.com',
-    ].join('\n');
-    const a = document.createElement('a');
-    a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
-    a.download = `SmartMenu-Partner-${submittedData.email}.txt`;
-    a.click();
+
+    const logoUrl = `${window.location.origin}/smartmenu-logo.jpg`;
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>SmartMenu Partner Certificate</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;600;700;800&display=swap');
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:210mm; height:297mm; overflow:hidden; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .page { width:210mm; height:297mm; position:relative; display:flex; flex-direction:column; background:#fff; }
+  /* top band */
+  .top-band { background:linear-gradient(135deg,#8B0000,#E8191A); height:40mm; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:3mm; position:relative; flex-shrink:0; }
+  .top-band::after { content:''; position:absolute; bottom:-6mm; left:0; right:0; height:8mm; background:#fff; clip-path:polygon(0 100%,100% 100%,100% 0); }
+  .amber-line { position:absolute; bottom:0; left:0; right:0; height:3px; background:linear-gradient(to right,#F5A623,#FFD700,#F5A623); }
+  .header-logo { width:22mm; height:22mm; object-fit:contain; filter:brightness(0) invert(1); }
+  .header-eyebrow { font-family:'Montserrat',sans-serif; font-size:7pt; font-weight:700; letter-spacing:5px; color:rgba(255,255,255,0.65); text-transform:uppercase; }
+  .header-title { font-family:'Cinzel',serif; font-size:22pt; font-weight:900; color:#fff; letter-spacing:4px; text-transform:uppercase; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,0.3); }
+  .header-sub { font-family:'Cinzel',serif; font-size:9pt; font-weight:400; color:rgba(255,255,255,0.7); letter-spacing:7px; text-transform:uppercase; }
+  /* borders */
+  .border-outer { position:absolute; inset:5mm; border:2.5px solid rgba(232,25,26,0.2); pointer-events:none; z-index:10; }
+  .border-mid { position:absolute; inset:7mm; border:1px solid rgba(245,166,35,0.18); pointer-events:none; z-index:10; }
+  /* watermark */
+  .watermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90mm; height:90mm; opacity:0.04; pointer-events:none; }
+  .watermark img { width:100%; height:100%; object-fit:contain; }
+  /* body */
+  .body { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:14mm 20mm 8mm; text-align:center; position:relative; }
+  .body::before { content:''; position:absolute; left:9mm; top:10mm; bottom:10mm; width:3px; background:linear-gradient(to bottom,transparent,#E8191A 20%,#E8191A 80%,transparent); }
+  .body::after { content:''; position:absolute; right:9mm; top:10mm; bottom:10mm; width:3px; background:linear-gradient(to bottom,transparent,#F5A623 20%,#F5A623 80%,transparent); }
+  .to-whom { font-family:'EB Garamond',serif; font-size:10pt; font-style:italic; color:#aaa; letter-spacing:1px; margin-bottom:4mm; }
+  .certify-line { font-family:'EB Garamond',serif; font-size:12pt; font-style:italic; color:#666; margin-bottom:4mm; }
+  .partner-badge { display:inline-block; padding:1.5mm 5mm; background:rgba(232,25,26,0.08); border:1px solid rgba(232,25,26,0.3); border-radius:20px; font-family:'Montserrat',sans-serif; font-size:7pt; font-weight:700; color:#E8191A; letter-spacing:3px; text-transform:uppercase; margin-bottom:4mm; }
+  .employee-name { font-family:'Cinzel',serif; font-size:26pt; font-weight:700; color:#1a1a1a; letter-spacing:1px; line-height:1.1; display:block; margin-bottom:1.5mm; }
+  .name-rule { display:block; height:2px; margin:0 auto 5mm; width:70%; background:linear-gradient(to right,transparent,#E8191A 25%,#E8191A 75%,transparent); }
+  .body-text { font-family:'EB Garamond',serif; font-size:11.5pt; color:#444; line-height:1.9; max-width:160mm; margin:0 auto 5mm; }
+  .em { color:#E8191A; font-weight:600; }
+  /* detail box */
+  .detail-box { background:#f9f9f9; border:1px solid #eee; border-radius:4mm; padding:5mm 7mm; width:100%; max-width:160mm; text-align:left; display:grid; grid-template-columns:1fr 1fr; gap:3mm; margin-top:3mm; }
+  .detail-item .label { font-family:'Montserrat',sans-serif; font-size:6pt; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:2px; }
+  .detail-item .value { font-family:'Montserrat',sans-serif; font-size:9.5pt; font-weight:700; color:#333; margin-top:0.5mm; }
+  .detail-item.price .value { color:#E8191A; font-size:11pt; }
+  .detail-item.markup .value { color:#2a7d4f; font-size:11pt; }
+  /* stamp */
+  .stamp-wrap { margin:5mm 0 3mm; }
+  .stamp { display:inline-block; border:4px solid rgba(232,25,26,0.6); border-radius:3mm; padding:2mm 7mm; transform:rotate(-8deg); }
+  .stamp-text { font-family:'Cinzel',serif; font-size:16pt; font-weight:900; color:rgba(232,25,26,0.6); letter-spacing:4px; text-transform:uppercase; }
+  .stamp-date { font-family:'Montserrat',sans-serif; font-size:7pt; color:rgba(0,0,0,0.3); text-align:center; margin-top:1mm; letter-spacing:1px; }
+  /* footer */
+  .footer-band { background:linear-gradient(135deg,#1a1a1a,#2a2a2a); height:22mm; display:flex; align-items:center; justify-content:space-between; padding:0 14mm; flex-shrink:0; position:relative; }
+  .footer-band::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(to right,#F5A623,#FFD700,#F5A623); }
+  .sig-block { text-align:center; }
+  .sig-line { width:50mm; height:1px; background:rgba(255,255,255,0.3); margin:0 auto 1.5mm; }
+  .sig-name { font-family:'Cinzel',serif; font-size:10pt; font-weight:700; color:#fff; letter-spacing:0.5px; }
+  .sig-title { font-family:'Montserrat',sans-serif; font-size:6pt; font-weight:600; color:#F5A623; letter-spacing:2px; text-transform:uppercase; margin-top:0.5mm; }
+  .sig-company { font-family:'Montserrat',sans-serif; font-size:5.5pt; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:2px; }
+  .footer-brand { display:flex; flex-direction:column; align-items:flex-end; gap:1.5mm; }
+  .footer-logo { width:12mm; height:12mm; object-fit:contain; filter:brightness(0) invert(1); opacity:0.8; }
+  .footer-tagline { font-family:'Montserrat',sans-serif; font-size:5.5pt; font-weight:700; color:#F5A623; letter-spacing:2px; text-transform:uppercase; }
+  .footer-date { font-family:'EB Garamond',serif; font-size:8.5pt; font-style:italic; color:rgba(255,255,255,0.6); }
+  @page { size:A4 portrait; margin:0; }
+  @media print { html,body { width:210mm; height:297mm; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="border-outer"></div>
+  <div class="border-mid"></div>
+  <div class="top-band">
+    <div class="amber-line"></div>
+    <img src="${logoUrl}" alt="SmartMenu" class="header-logo"/>
+    <div>
+      <div class="header-eyebrow">SmartMenu · Official Partnership Document</div>
+      <div class="header-title">Certificate of Partnership</div>
+      <div class="header-sub">Partner Program Registration</div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="watermark"><img src="${logoUrl}" alt=""/></div>
+    <div class="to-whom">To Whom It May Concern:</div>
+    <div class="certify-line">This is to certify that</div>
+    <div class="partner-badge">Official SmartMenu Partner</div>
+    <span class="employee-name">${submittedData.fullName}</span>
+    <span class="name-rule"></span>
+    <p class="body-text">
+      has officially registered as an authorized partner of <span class="em">SmartMenu</span>.<br/>
+      This partner is duly recognized under the SmartMenu Partner Program
+      and has agreed to all terms and conditions.
+    </p>
+    <div class="detail-box">
+      <div class="detail-item"><div class="label">Business Name</div><div class="value">${submittedData.businessName}</div></div>
+      <div class="detail-item"><div class="label">Email</div><div class="value">${submittedData.email}</div></div>
+      <div class="detail-item"><div class="label">Mobile</div><div class="value">${submittedData.mobileNumber}</div></div>
+      <div class="detail-item"><div class="label">Address</div><div class="value">${submittedData.businessAddress}</div></div>
+      <div class="detail-item price"><div class="label">Offered Price</div><div class="value">₱${submittedData.offeredPrice}</div></div>
+      <div class="detail-item markup"><div class="label">Partner Markup</div><div class="value">₱${submittedData.markup}</div></div>
+    </div>
+    <div class="stamp-wrap">
+      <div class="stamp"><div class="stamp-text">REGISTERED</div></div>
+      <div class="stamp-date">${stampDate}</div>
+    </div>
+  </div>
+  <div class="footer-band">
+    <div class="footer-date">Issued: ${stampDate}</div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">John Angelo David</div>
+      <div class="sig-title">Founder &amp; Owner</div>
+      <div class="sig-company">SmartMenu</div>
+    </div>
+    <div class="footer-brand">
+      <img src="${logoUrl}" alt="SmartMenu" class="footer-logo"/>
+      <div class="footer-tagline">Growing Restaurants. Together.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:0;visibility:hidden;';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) { document.body.removeChild(iframe); return; }
+    doc.open(); doc.write(html); doc.close();
+    iframe.contentWindow?.addEventListener('load', () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 3000);
+      }, 800);
+    });
   };
 
   if (submitted && submittedData && stampDate) {
@@ -829,9 +937,9 @@ function SuccessScreen({
               <div className="flex flex-col sm:flex-row gap-3">
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={onDownload}
-                  className="flex-1 py-3 px-5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm">
+                  className="flex-1 py-3 px-5 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm shadow-lg shadow-red-200 dark:shadow-red-900/30">
                   <Download className="w-4 h-4" />
-                  I-download ang Certificate
+                  I-download bilang PDF
                 </motion.button>
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={() => { window.location.href = '/'; }}
