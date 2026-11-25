@@ -14,7 +14,7 @@ function todayFormatted() {
   });
 }
 
-/* ─── Build the HTML that becomes the PDF ───────────────────────────────── */
+/* ─── Certificate HTML ───────────────────────────────────────────────────── */
 function buildCertificateHTML(employeeName: string, logoUrl: string): string {
   const date = todayFormatted();
 
@@ -22,229 +22,424 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>Certificate of Employment – ${employeeName}</title>
+<title>Certificate of Employment</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lato:wght@300;400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    width:297mm; height:210mm;
-    font-family:'Lato', Arial, sans-serif;
-    background:#fff;
-    display:flex; align-items:stretch;
-    overflow:hidden;
+  html, body {
+    width: 297mm; height: 210mm;
+    overflow: hidden;
+    background: #0d0d0d;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  /* ── left accent bar ── */
-  .accent-bar {
-    width:16px; min-height:100%;
-    background: linear-gradient(to bottom, #E8191A 60%, #F5A623 100%);
-    flex-shrink:0;
-  }
-
-  /* ── main content ── */
+  /* ══ PAGE SHELL ══════════════════════════════════════════════════════════ */
   .page {
-    flex:1;
-    padding: 18mm 20mm 14mm 18mm;
-    display:flex; flex-direction:column;
-    border:3px solid #E8191A;
-    border-left:none;
-    position:relative;
+    width: 297mm; height: 210mm;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* outer amber line */
-  .page::before {
-    content:'';
-    position:absolute;
-    inset:6px;
-    border:1.5px solid #F5A623;
-    pointer-events:none;
+  /* ── deep red top band ── */
+  .top-band {
+    background: linear-gradient(135deg, #8B0000 0%, #C0121A 50%, #E8191A 100%);
+    height: 28mm;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20mm;
+    flex-shrink: 0;
   }
 
-  /* ── header row ── */
-  .header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding-bottom:10px;
-    border-bottom:2px solid #E8191A;
-    margin-bottom:12px;
+  /* diagonal cut on top-band */
+  .top-band::after {
+    content: '';
+    position: absolute;
+    bottom: -8mm; left: 0; right: 0;
+    height: 10mm;
+    background: #fff;
+    clip-path: polygon(0 100%, 100% 100%, 100% 0);
   }
 
-  .logo { width:88px; height:88px; object-fit:contain; }
-
-  .header-text { text-align:center; flex:1; padding:0 16px; }
-
-  .cert-label {
-    font-family:'Lato', sans-serif;
-    font-size:10pt; font-weight:700; letter-spacing:5px;
-    color:#F5A623; text-transform:uppercase;
-    margin-bottom:4px;
+  /* ── amber accent line under top-band ── */
+  .amber-rule {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(to right, #F5A623, #FFD700, #F5A623);
   }
 
-  .cert-title {
-    font-family:'Playfair Display', Georgia, serif;
-    font-size:24pt; font-weight:900; color:#E8191A;
-    line-height:1.1;
-    text-transform:uppercase; letter-spacing:2px;
+  /* ── header logo ── */
+  .header-logo {
+    width: 18mm; height: 18mm;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    position: relative; z-index: 2;
+    margin-right: 5mm;
+    flex-shrink: 0;
   }
 
-  .cert-of {
-    font-family:'Playfair Display', Georgia, serif;
-    font-size:13pt; font-weight:400; color:#555;
-    letter-spacing:3px; text-transform:uppercase;
+  /* ── header text ── */
+  .header-text { text-align: center; position: relative; z-index: 2; }
+
+  .header-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 6pt; font-weight: 700;
+    letter-spacing: 5px;
+    color: rgba(255,255,255,0.65);
+    text-transform: uppercase;
+    margin-bottom: 1.5mm;
   }
 
-  /* ── body ── */
-  .body { flex:1; display:flex; flex-direction:column; justify-content:center; text-align:center; }
+  .header-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20pt; font-weight: 900;
+    color: #fff;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .header-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 9pt; font-weight: 400;
+    color: rgba(255,255,255,0.75);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    margin-top: 1.5mm;
+  }
+
+  /* ══ BODY ════════════════════════════════════════════════════════════════ */
+  .body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10mm 24mm 6mm;
+    position: relative;
+  }
+
+  /* ── watermark ── */
+  .watermark {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85mm; height: 85mm;
+    opacity: 0.035;
+    pointer-events: none;
+  }
+  .watermark img { width: 100%; height: 100%; object-fit: contain; }
+
+  /* ── left border ornament ── */
+  .body::before {
+    content: '';
+    position: absolute;
+    left: 8mm; top: 8mm; bottom: 8mm;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, #E8191A 20%, #E8191A 80%, transparent);
+  }
+
+  /* ── right border ornament ── */
+  .body::after {
+    content: '';
+    position: absolute;
+    right: 8mm; top: 8mm; bottom: 8mm;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, #F5A623 20%, #F5A623 80%, transparent);
+  }
 
   .to-whom {
-    font-family:'Lato', sans-serif;
-    font-size:9.5pt; font-style:italic; color:#888;
-    margin-bottom:10px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 9.5pt; font-style: italic;
+    color: #aaa;
+    letter-spacing: 1px;
+    margin-bottom: 3mm;
   }
 
   .certify-line {
-    font-family:'Playfair Display', Georgia, serif;
-    font-size:12pt; font-style:italic; color:#444;
-    margin-bottom:8px;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 12pt; font-style: italic;
+    color: #666;
+    margin-bottom: 3mm;
+  }
+
+  /* ── employee name ── */
+  .name-wrap {
+    position: relative;
+    text-align: center;
+    margin-bottom: 4mm;
   }
 
   .employee-name {
-    font-family:'Playfair Display', Georgia, serif;
-    font-size:30pt; font-weight:900; color:#E8191A;
-    line-height:1.1; margin:4px 0 2px;
-    text-transform:uppercase;
+    font-family: 'Cinzel', serif;
+    font-size: 30pt; font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 2px;
+    line-height: 1.1;
+    display: block;
   }
 
-  .name-rule {
-    display:block; height:2px;
-    background:linear-gradient(to right, transparent, #F5A623, transparent);
-    margin:0 auto 14px; width:70%;
+  /* red glow under name */
+  .name-glow {
+    display: block;
+    height: 2px;
+    margin: 1.5mm auto 0;
+    width: 80%;
+    background: linear-gradient(to right, transparent, #E8191A 25%, #E8191A 75%, transparent);
   }
 
+  /* ── ornamental divider ── */
+  .ornament {
+    display: flex;
+    align-items: center;
+    gap: 2.5mm;
+    margin: 0 0 4mm;
+  }
+  .ornament .bar { flex: 1; height: 1px; background: #ddd; }
+  .ornament .gem {
+    width: 6px; height: 6px;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  /* ── body paragraph ── */
   .body-text {
-    font-family:'Lato', sans-serif;
-    font-size:11pt; color:#333; line-height:1.75;
-    max-width:420px; margin:0 auto;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 11.5pt;
+    color: #444;
+    line-height: 1.85;
+    text-align: center;
+    max-width: 185mm;
+  }
+  .body-text .em  { color: #E8191A; font-weight: 600; }
+  .body-text .em2 { color: #8B0000; font-style: italic; }
+
+  /* ══ FOOTER ══════════════════════════════════════════════════════════════ */
+  .footer-band {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    height: 24mm;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16mm;
+    flex-shrink: 0;
+    position: relative;
   }
 
-  .body-text strong { color:#E8191A; }
-
-  .issued-date {
-    font-family:'Lato', sans-serif;
-    font-size:9pt; font-style:italic; color:#999;
-    margin-top:14px;
+  /* diagonal cut on footer-band top */
+  .footer-band::before {
+    content: '';
+    position: absolute;
+    top: -8mm; left: 0; right: 0;
+    height: 10mm;
+    background: #fff;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
   }
 
-  /* ── footer / signature ── */
-  .footer {
-    padding-top:12px;
-    border-top:1.5px solid #eee;
-    display:flex; align-items:flex-end; justify-content:space-between;
+  /* amber top rule on footer */
+  .footer-rule {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, #F5A623, #FFD700, #F5A623);
   }
 
-  .sig-block { text-align:center; }
+  /* left: issue date */
+  .footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1mm;
+    min-width: 55mm;
+  }
+  .footer-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 5.5pt; font-weight: 700;
+    color: #F5A623;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .footer-date {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 9.5pt; font-style: italic;
+    color: rgba(255,255,255,0.75);
+  }
 
+  /* center: signature */
+  .sig-block {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1mm;
+    min-width: 70mm;
+  }
+  .sig-line {
+    width: 60mm; height: 1px;
+    background: rgba(255,255,255,0.3);
+    margin-bottom: 1.5mm;
+  }
   .sig-name {
-    font-family:'Playfair Display', Georgia, serif;
-    font-size:13pt; font-weight:700; color:#1a1a1a;
-    border-bottom:1.5px solid #333;
-    padding-bottom:4px; margin-bottom:4px;
-    min-width:200px; display:inline-block;
+    font-family: 'Cinzel', serif;
+    font-size: 11pt; font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
   }
-
   .sig-title {
-    font-family:'Lato', sans-serif;
-    font-size:9pt; color:#555; font-weight:700;
-    text-transform:uppercase; letter-spacing:1px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 6.5pt; font-weight: 600;
+    color: #F5A623;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
   }
-
   .sig-company {
-    font-family:'Lato', sans-serif;
-    font-size:8.5pt; color:#E8191A; font-weight:700;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 6pt; font-weight: 400;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
   }
 
-  .footer-brand {
-    text-align:right;
-    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+  /* right: branding */
+  .footer-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1.5mm;
+    min-width: 55mm;
   }
-
-  .footer-logo { width:52px; height:52px; object-fit:contain; }
-
+  .footer-logo {
+    width: 14mm; height: 14mm;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+  }
   .footer-tagline {
-    font-family:'Lato', sans-serif;
-    font-size:7.5pt; font-weight:700; color:#F5A623;
-    letter-spacing:2px; text-transform:uppercase;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 5.5pt; font-weight: 700;
+    color: #F5A623;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
   }
 
-  /* ── print settings ── */
-  @page {
-    size: A4 landscape;
-    margin: 0;
+  /* ══ BORDER FRAME ════════════════════════════════════════════════════════ */
+  .frame {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
   }
+  /* red outer ring */
+  .frame::before {
+    content: '';
+    position: absolute;
+    inset: 4mm;
+    border: 2.5px solid rgba(232,25,26,0.25);
+  }
+  /* amber inner ring */
+  .frame::after {
+    content: '';
+    position: absolute;
+    inset: 6mm;
+    border: 1px solid rgba(245,166,35,0.2);
+  }
+
+  /* ── print ── */
+  @page { size: A4 landscape; margin: 0; }
   @media print {
     html, body { width:297mm; height:210mm; }
   }
 </style>
 </head>
 <body>
-  <div class="accent-bar"></div>
-  <div class="page">
+<div class="page">
 
-    <!-- HEADER -->
-    <div class="header">
-      <img src="${logoUrl}" alt="SmartMenu Logo" class="logo"/>
+  <!-- absolute frame rings -->
+  <div class="frame"></div>
 
-      <div class="header-text">
-        <div class="cert-label">${COMPANY} &nbsp;·&nbsp; Official Document</div>
-        <div class="cert-title">Certificate</div>
-        <div class="cert-of">of Employment</div>
-      </div>
+  <!-- ═══ TOP BAND ═══ -->
+  <div class="top-band">
+    <div class="amber-rule"></div>
+    <img src="${logoUrl}" alt="SmartMenu" class="header-logo"/>
+    <div class="header-text">
+      <div class="header-eyebrow">${COMPANY} &nbsp;·&nbsp; Official Human Resources Document</div>
+      <div class="header-title">Certificate of Employment</div>
+      <div class="header-subtitle">Republic of the Philippines</div>
+    </div>
+  </div>
 
-      <img src="${logoUrl}" alt="SmartMenu Logo" class="logo" style="opacity:0.18;"/>
+  <!-- ═══ BODY ═══ -->
+  <div class="body">
+
+    <!-- watermark -->
+    <div class="watermark"><img src="${logoUrl}" alt=""/></div>
+
+    <div class="to-whom">To Whom It May Concern:</div>
+    <div class="certify-line">This is to certify that</div>
+
+    <div class="name-wrap">
+      <span class="employee-name">${employeeName}</span>
+      <span class="name-glow"></span>
     </div>
 
-    <!-- BODY -->
-    <div class="body">
-      <div class="to-whom">To Whom It May Concern:</div>
-
-      <div class="certify-line">This is to certify that</div>
-
-      <div class="employee-name">${employeeName}</div>
-      <span class="name-rule"></span>
-
-      <p class="body-text">
-        is a <strong>bonafide employee</strong> of <strong>${COMPANY}</strong>.<br/>
-        This certificate is issued upon the request of the above-named employee
-        for whatever legal purpose it may serve.
-      </p>
-
-      <div class="issued-date">Issued on: ${date}</div>
+    <div class="ornament">
+      <div class="bar"></div>
+      <div class="gem" style="background:#F5A623"></div>
+      <div class="gem" style="background:#E8191A;width:8px;height:8px"></div>
+      <div class="gem" style="background:#F5A623"></div>
+      <div class="bar"></div>
     </div>
 
-    <!-- FOOTER -->
-    <div class="footer">
-      <div class="sig-block">
-        <span class="sig-name">${OWNER_NAME}</span><br/>
-        <span class="sig-title">${OWNER_TITLE}</span><br/>
-        <span class="sig-company">${COMPANY}</span>
-      </div>
+    <p class="body-text">
+      is a <span class="em">bonafide and active employee</span> of
+      <span class="em">SmartMenu</span>,
+      a company duly registered and operating under Philippine laws.<br/>
+      This certificate is issued upon the
+      <span class="em2">personal request</span> of the above-named employee
+      for whatever legal purpose it may serve.
+    </p>
 
-      <div class="footer-brand">
-        <img src="${logoUrl}" alt="SmartMenu" class="footer-logo"/>
-        <div class="footer-tagline">${TAGLINE}</div>
-      </div>
+  </div>
+
+  <!-- ═══ FOOTER BAND ═══ -->
+  <div class="footer-band">
+    <div class="footer-rule"></div>
+
+    <div class="footer-left">
+      <div class="footer-label">Date Issued</div>
+      <div class="footer-date">${date}</div>
+    </div>
+
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">${OWNER_NAME}</div>
+      <div class="sig-title">${OWNER_TITLE}</div>
+      <div class="sig-company">${COMPANY}</div>
+    </div>
+
+    <div class="footer-right">
+      <img src="${logoUrl}" alt="${COMPANY}" class="footer-logo"/>
+      <div class="footer-tagline">${TAGLINE}</div>
     </div>
 
   </div>
+</div>
 </body>
 </html>`;
 }
 
-/* ─── Print-to-PDF via hidden iframe ────────────────────────────────────── */
+/* ─── Print via hidden iframe → Save as PDF ─────────────────────────────── */
 function printToPDF(html: string): void {
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:297mm;height:210mm;border:0;';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:297mm;height:210mm;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -254,19 +449,18 @@ function printToPDF(html: string): void {
   doc.write(html);
   doc.close();
 
-  // Wait for images to load, then print
   iframe.contentWindow?.addEventListener('load', () => {
     setTimeout(() => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      setTimeout(() => document.body.removeChild(iframe), 2000);
-    }, 500);
+      setTimeout(() => document.body.removeChild(iframe), 3000);
+    }, 800);
   });
 }
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 export function CertificateGenerator() {
-  const [name, setName]           = useState('');
+  const [name, setName]             = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewHTML, setPreviewHTML]   = useState('');
@@ -296,7 +490,7 @@ export function CertificateGenerator() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
 
-      {/* ── page header ── */}
+      {/* header */}
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
           <FileText className="w-6 h-6 text-[#E8191A]" />
@@ -309,7 +503,7 @@ export function CertificateGenerator() {
         </div>
       </div>
 
-      {/* ── input card ── */}
+      {/* input */}
       <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-sm">
         <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-widest">
           Full Name ng Empleyado *
@@ -346,14 +540,13 @@ export function CertificateGenerator() {
         </p>
       </div>
 
-      {/* ── preview + actions ── */}
+      {/* preview */}
       {previewing && previewHTML && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          {/* action bar */}
           <div className="flex flex-wrap items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -372,17 +565,16 @@ export function CertificateGenerator() {
               Bago Muli
             </motion.button>
             <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-auto hidden sm:block">
-              Kapag pinindot ang "I-download bilang PDF", mag-aappear ang print dialog — piliin ang "Save as PDF"
+              Sa print dialog → Destination → "Save as PDF"
             </span>
           </div>
 
-          {/* iframe preview — shows the actual certificate HTML */}
-          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-xl bg-white">
+          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-2xl bg-zinc-900">
             <iframe
               srcDoc={previewHTML}
               title="Certificate Preview"
               className="w-full block"
-              style={{ height: '520px', border: 'none' }}
+              style={{ height: '530px', border: 'none' }}
             />
           </div>
         </motion.div>
