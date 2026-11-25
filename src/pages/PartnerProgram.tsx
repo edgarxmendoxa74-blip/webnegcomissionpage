@@ -10,10 +10,17 @@ import {
   Phone,
   MapPin,
   DollarSign,
+  User,
+  Building2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PARTNER_PROGRAM_CONFIG } from '../lib/partnerConfig';
 import { savePartnerApplication, checkDuplicateSubmission } from '../lib/partners';
+
+/* ─── SmartMenu brand tokens ────────────────────────────────────────────── */
+// Red   : #E8191A  (logo letters + Menu wordmark)
+// Amber : #F5A623  (sun rays + spoon arc + tagline dashes)
+// Black : #1A1A1A  (Smart wordmark)
 
 type FormState = {
   fullName: string;
@@ -29,9 +36,79 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+/* ─── Inline SVG logo matching the SmartMenu brand ──────────────────────── */
+function SmartMenuLogo({ size = 56 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Sun rays (amber) */}
+      {[0, 30, 60, 90, 120, 150].map((deg) => (
+        <rect
+          key={deg}
+          x="48" y="4" width="4" height="10" rx="2"
+          fill="#F5A623"
+          transform={`rotate(${deg} 50 50)`}
+        />
+      ))}
+      {/* Circle arc / spoon shape (amber) */}
+      <path
+        d="M18 58 C14 40 24 20 50 18 C76 16 86 36 82 54"
+        stroke="#F5A623" strokeWidth="4" strokeLinecap="round" fill="none"
+      />
+      {/* S letter (red) */}
+      <text x="16" y="62" fontSize="36" fontWeight="900" fill="#E8191A" fontFamily="Arial Black, sans-serif">S</text>
+      {/* M letter (red) */}
+      <text x="46" y="62" fontSize="36" fontWeight="900" fill="#E8191A" fontFamily="Arial Black, sans-serif">M</text>
+      {/* Cloche dish (red) */}
+      <ellipse cx="50" cy="78" rx="18" ry="4" fill="#E8191A" />
+      <path d="M34 78 Q34 66 50 64 Q66 66 66 78 Z" fill="#E8191A" />
+    </svg>
+  );
+}
+
+/* ─── Wordmark matching the logo typography ─────────────────────────────── */
+function SmartMenuWordmark({ className = '' }: { className?: string }) {
+  return (
+    <span className={`font-black tracking-tight ${className}`}>
+      <span className="text-zinc-900 dark:text-white">Smart</span>
+      <span className="text-[#E8191A]">Menu</span>
+    </span>
+  );
+}
+
+/* ─── Top navbar ─────────────────────────────────────────────────────────── */
+function PartnerNav() {
+  return (
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-zinc-950/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-800">
+      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        {/* Logo + name */}
+        <div className="flex items-center gap-2.5">
+          <SmartMenuLogo size={36} />
+          <div className="leading-none">
+            <SmartMenuWordmark className="text-xl" />
+            <p className="text-[9px] font-bold tracking-widest text-[#F5A623] uppercase mt-0.5">
+              Partner Program
+            </p>
+          </div>
+        </div>
+        {/* Tagline – hidden on small screens */}
+        <p className="hidden sm:block text-[11px] font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase">
+          Growing Restaurants. Together.
+        </p>
+      </div>
+    </header>
+  );
+}
+
+/* ─── Main page component ─────────────────────────────────────────────────── */
 export function PartnerProgram() {
   const [submitted, setSubmitted] = useState(false);
-  const [submittedData, setSubmittedData] = useState<FormState & { stampDate: string } | null>(null);
+  const [submittedData, setSubmittedData] = useState<(FormState & { stampDate: string }) | null>(null);
   const [stampDate, setStampDate] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormState>({
@@ -53,7 +130,7 @@ export function PartnerProgram() {
   const stampRef = useRef<HTMLDivElement>(null);
   const registrationFormRef = useRef<HTMLDivElement>(null);
 
-  // Cheap field-presence check used only for disabling the button
+  /* cheap validity check — never sets state so safe inside render */
   const isFormValid =
     !!formData.fullName.trim() &&
     !!formData.businessName.trim() &&
@@ -66,172 +143,95 @@ export function PartnerProgram() {
     !isNaN(Number(formData.markup.replace(/,/g, ''))) &&
     Number(formData.markup.replace(/,/g, '')) <= Number(formData.offeredPrice.replace(/,/g, ''));
 
+  /* full validation — also sets error messages */
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+    const e: FormErrors = {};
+    const v = PARTNER_PROGRAM_CONFIG.validationMessages;
 
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = PARTNER_PROGRAM_CONFIG.validationMessages.fullNameRequired;
-    }
+    if (!formData.fullName.trim()) e.fullName = v.fullNameRequired;
+    if (!formData.businessName.trim()) e.businessName = v.businessNameRequired;
+    if (!formData.mobileNumber.trim()) e.mobileNumber = v.mobileRequired;
+    else if (!/^09\d{2}\s\d{3}\s\d{4}$/.test(formData.mobileNumber)) e.mobileNumber = v.mobileInvalid;
+    if (!formData.email.trim()) e.email = v.emailRequired;
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) e.email = v.emailInvalid;
+    if (!formData.businessAddress.trim()) e.businessAddress = v.addressRequired;
+    if (!formData.offeredPrice.trim()) e.offeredPrice = v.offeredPriceRequired;
+    else if (isNaN(Number(formData.offeredPrice.replace(/,/g, '')))) e.offeredPrice = v.offeredPriceInvalid;
+    if (!formData.markup.trim()) e.markup = v.markupRequired;
+    else if (isNaN(Number(formData.markup.replace(/,/g, '')))) e.markup = v.markupInvalid;
+    else if (Number(formData.markup.replace(/,/g, '')) > Number(formData.offeredPrice.replace(/,/g, ''))) e.markup = v.markupTooHigh;
 
-    if (!formData.businessName.trim()) {
-      newErrors.businessName = PARTNER_PROGRAM_CONFIG.validationMessages.businessNameRequired;
-    }
-
-    if (!formData.mobileNumber.trim()) {
-      newErrors.mobileNumber = PARTNER_PROGRAM_CONFIG.validationMessages.mobileRequired;
-    } else if (!/^09\d{2}\s\d{3}\s\d{4}$/.test(formData.mobileNumber)) {
-      newErrors.mobileNumber = PARTNER_PROGRAM_CONFIG.validationMessages.mobileInvalid;
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = PARTNER_PROGRAM_CONFIG.validationMessages.emailRequired;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = PARTNER_PROGRAM_CONFIG.validationMessages.emailInvalid;
-    }
-
-    if (!formData.businessAddress.trim()) {
-      newErrors.businessAddress = PARTNER_PROGRAM_CONFIG.validationMessages.addressRequired;
-    }
-
-    if (!formData.offeredPrice.trim()) {
-      newErrors.offeredPrice = PARTNER_PROGRAM_CONFIG.validationMessages.offeredPriceRequired;
-    } else if (isNaN(Number(formData.offeredPrice))) {
-      newErrors.offeredPrice = PARTNER_PROGRAM_CONFIG.validationMessages.offeredPriceInvalid;
-    }
-
-    if (!formData.markup.trim()) {
-      newErrors.markup = PARTNER_PROGRAM_CONFIG.validationMessages.markupRequired;
-    } else if (isNaN(Number(formData.markup))) {
-      newErrors.markup = PARTNER_PROGRAM_CONFIG.validationMessages.markupInvalid;
-    } else if (Number(formData.markup) > Number(formData.offeredPrice)) {
-      newErrors.markup = PARTNER_PROGRAM_CONFIG.validationMessages.markupTooHigh;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const formatPhoneNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 4) {
-      return digits;
-    } else if (digits.length <= 7) {
-      return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-    } else {
-      return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 11)}`;
-    }
+  const formatPhone = (v: string) => {
+    const d = v.replace(/\D/g, '');
+    if (d.length <= 4) return d;
+    if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
+    return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7, 11)}`;
   };
 
-  const formatPrice = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  };
+  const formatPrice = (v: string) => v.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    if (name === 'mobileNumber') {
-      setFormData((prev) => ({ ...prev, [name]: formatPhoneNumber(value) }));
-    } else if (name === 'offeredPrice' || name === 'markup') {
-      setFormData((prev) => ({ ...prev, [name]: formatPrice(value) }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
-
-    // Clear error for this field when user starts typing
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === 'mobileNumber' ? formatPhone(value)
+        : name === 'offeredPrice' || name === 'markup' ? formatPrice(value)
+        : value,
+    }));
     if (errors[name as keyof FormState]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name as keyof FormState];
-        return newErrors;
-      });
+      setErrors((prev) => { const n = { ...prev }; delete n[name as keyof FormState]; return n; });
     }
   };
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setErrors((prev) => ({ ...prev, profilePicture: 'Please upload an image file.' }));
-        return;
-      }
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors((prev) => ({ ...prev, profilePicture: 'File size must be less than 5MB.' }));
-        return;
-      }
-      setFormData((prev) => ({ ...prev, profilePicture: file }));
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.profilePicture;
-        return newErrors;
-      });
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrors((prev) => ({ ...prev, profilePicture: 'Please upload an image file.' }));
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, profilePicture: 'File size must be less than 5MB.' }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, profilePicture: file }));
+    setErrors((prev) => { const n = { ...prev }; delete n.profilePicture; return n; });
   };
 
   const handleStamp = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
+    if (!termsAccepted) { setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.termsRequired); return; }
 
-    if (!termsAccepted) {
-      setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.termsRequired);
-      return;
-    }
-
-    // Check for duplicates
     setIsLoading(true);
     setGeneralError(null);
 
     try {
-      const { emailExists, mobileExists } = await checkDuplicateSubmission(
-        formData.email,
-        formData.mobileNumber
-      );
+      const { emailExists, mobileExists } = await checkDuplicateSubmission(formData.email, formData.mobileNumber);
+      if (emailExists) { setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateEmail); return; }
+      if (mobileExists) { setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateMobile); return; }
 
-      if (emailExists) {
-        setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateEmail);
-        setIsLoading(false);
-        return;
-      }
-
-      if (mobileExists) {
-        setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateMobile);
-        setIsLoading(false);
-        return;
-      }
-
-      // Upload profile picture if provided
-      let profilePictureUrl: string | null = null;
+      /* upload picture */
+      let profilePictureUrl: string | undefined;
       if (formData.profilePicture) {
-        const fileExt = formData.profilePicture.name.split('.').pop();
-        const fileName = `${Date.now()}-${formData.email}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('partner_profiles')
-          .upload(`public/${fileName}`, formData.profilePicture);
-
-        if (uploadError) {
-          console.warn('Failed to upload profile picture:', uploadError);
-        } else {
-          const { data: publicUrl } = supabase.storage
-            .from('partner_profiles')
-            .getPublicUrl(`public/${fileName}`);
-          profilePictureUrl = publicUrl.publicUrl;
+        const ext = formData.profilePicture.name.split('.').pop();
+        const fileName = `${Date.now()}-${formData.email}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('partner_profiles').upload(`public/${fileName}`, formData.profilePicture);
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('partner_profiles').getPublicUrl(`public/${fileName}`);
+          profilePictureUrl = pub.publicUrl;
         }
       }
 
-      // Set stamp date to today
-      const today = new Date();
-      const dateStr = today.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       setStampDate(dateStr);
 
-      // Save to database
-      const submissionData = {
+      await savePartnerApplication({
         full_name: formData.fullName,
         business_name: formData.businessName,
         mobile_number: formData.mobileNumber,
@@ -240,432 +240,349 @@ export function PartnerProgram() {
         area_coverage: formData.areaCoverage || undefined,
         offered_price: Number(formData.offeredPrice.replace(/,/g, '')),
         markup: Number(formData.markup.replace(/,/g, '')),
-        accepted_terms: termsAccepted,
+        accepted_terms: true,
         stamp_date: dateStr,
-        profile_picture_url: profilePictureUrl || undefined,
-      };
-
-      await savePartnerApplication(submissionData);
-
-      // Store for success screen
-      setSubmittedData({
-        ...formData,
-        stampDate: dateStr,
+        profile_picture_url: profilePictureUrl,
       });
 
-      // Show success screen
+      setSubmittedData({ ...formData, stampDate: dateStr });
       setSubmitted(true);
 
-      // Send email notification to owner
-      await fetch('/api/send-partner-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...submissionData,
-          ownerEmail: PARTNER_PROGRAM_CONFIG.ownerEmail,
-        }),
-      }).catch(() => {
-        // Email notification failed, but form submission succeeded
-        console.warn('Failed to send notification email');
-      });
+      fetch('/api/send-partner-notification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, ownerEmail: PARTNER_PROGRAM_CONFIG.ownerEmail }),
+      }).catch(() => {});
     } catch (err) {
       setGeneralError(err instanceof Error ? err.message : 'May nangyari na error. Subukan ulit.');
-      console.error('Error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownload = () => {
     if (!submittedData || !stampDate) return;
-
-    try {
-      const element = stampRef.current;
-      if (!element) return;
-
-      // Create a simple text-based certificate download
-      const content = `
-SMARTMENU PARTNER PROGRAM
-Certificate of Partnership Registration
-
-Partner Name: ${submittedData.fullName}
-Business Name: ${submittedData.businessName}
-Email: ${submittedData.email}
-Mobile: ${submittedData.mobileNumber}
-Address: ${submittedData.businessAddress}
-
-Offered Price: ₱${submittedData.offeredPrice}
-Markup: ₱${submittedData.markup}
-
-Stamp Date: ${stampDate}
-Status: APPROVED
-
-This certifies that the above party has been registered as an authorized
-partner of the SmartMenu Partner Program and has accepted all terms and conditions.
-
----
-SmartMenu Partner Program
-webnegosyo3@gmail.com
-      `.trim();
-
-      const downloadLink = document.createElement('a');
-      downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
-      downloadLink.setAttribute('download', `SmartMenu-Partner-${submittedData.email}-${stampDate}.txt`);
-      downloadLink.style.display = 'none';
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-    } catch (err) {
-      console.error('Error generating document:', err);
-    }
-  };
-
-  const scrollToForm = () => {
-    registrationFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const content = [
+      'SMARTMENU PARTNER PROGRAM',
+      'Certificate of Partnership Registration',
+      '',
+      `Partner Name  : ${submittedData.fullName}`,
+      `Business      : ${submittedData.businessName}`,
+      `Email         : ${submittedData.email}`,
+      `Mobile        : ${submittedData.mobileNumber}`,
+      `Address       : ${submittedData.businessAddress}`,
+      '',
+      `Offered Price : ₱${submittedData.offeredPrice}`,
+      `Markup        : ₱${submittedData.markup}`,
+      '',
+      `Stamp Date    : ${stampDate}`,
+      `Status        : APPROVED`,
+      '',
+      '────────────────────────────────────────',
+      'SmartMenu · Growing Restaurants. Together.',
+      'webnegosyo3@gmail.com',
+    ].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+    a.download = `SmartMenu-Partner-${submittedData.email}.txt`;
+    a.click();
   };
 
   if (submitted && submittedData && stampDate) {
-    return <SuccessScreen data={submittedData} stampDate={stampDate} stampRef={stampRef} onDownloadPDF={handleDownloadPDF} />;
+    return <SuccessScreen data={submittedData} stampDate={stampDate} stampRef={stampRef} onDownload={handleDownload} />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 transition-colors">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden px-4 py-16 sm:py-24 md:py-32">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-6">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <PartnerNav />
+
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 py-20 sm:py-28">
+        {/* decorative amber glow */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full bg-[#F5A623]/10 blur-3xl pointer-events-none" />
+        <div className="relative max-w-4xl mx-auto px-4 text-center">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            {/* logo mark */}
+            <div className="flex justify-center mb-6">
+              <SmartMenuLogo size={80} />
+            </div>
+            {/* wordmark */}
+            <div className="mb-2">
+              <span className="text-5xl sm:text-6xl font-black tracking-tight text-white">Smart</span>
+              <span className="text-5xl sm:text-6xl font-black tracking-tight text-[#E8191A]">Menu</span>
+            </div>
+            <p className="text-xs sm:text-sm font-bold tracking-[0.25em] text-[#F5A623] uppercase mb-8">
+              — Growing Restaurants. Together. —
+            </p>
+            {/* badge */}
+            <div className="inline-block mb-6 px-4 py-1.5 rounded-full border border-[#E8191A]/40 bg-[#E8191A]/10 text-[#E8191A] text-xs font-black uppercase tracking-widest">
+              Partner Program
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight mb-4">
               {PARTNER_PROGRAM_CONFIG.heroSection.title}
             </h1>
-            <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-zinc-300 mb-10 max-w-xl mx-auto leading-relaxed">
               {PARTNER_PROGRAM_CONFIG.heroSection.subtitle}
             </p>
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={scrollToForm}
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl font-bold text-base sm:text-lg shadow-lg transition-all"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => registrationFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-black text-base shadow-xl shadow-red-900/40 transition-all"
             >
               {PARTNER_PROGRAM_CONFIG.heroSection.buttonText}
               <ArrowRight className="w-5 h-5" />
             </motion.button>
           </motion.div>
         </div>
-      </div>
+      </section>
 
-      {/* How It Works */}
-      <div className="px-4 py-16 sm:py-20 bg-white dark:bg-slate-800 transition-colors">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white text-center mb-12">
-            Paano Ito Gumagana
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-zinc-900 py-16 sm:py-20 border-b border-zinc-100 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="inline-block text-xs font-black tracking-widest text-[#F5A623] uppercase mb-3">
+              Paano gumagana
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 dark:text-white">
+              3 Simpleng Hakbang
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
             {PARTNER_PROGRAM_CONFIG.howItWorks.map((item, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: idx * 0.2 }}
-                className="relative p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 transition-colors"
+                transition={{ delay: idx * 0.15 }}
+                className="relative p-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700"
               >
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-black text-xl mb-4">
+                {/* step bubble */}
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-white font-black text-lg mb-4 shadow-md"
+                  style={{ background: idx === 0 ? '#F5A623' : idx === 1 ? '#E8191A' : '#1A1A1A' }}
+                >
                   {item.step}
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.title}</h3>
-                <p className="text-slate-600 dark:text-slate-300">{item.description}</p>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{item.description}</p>
                 {idx < 2 && (
-                  <ArrowRight className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 text-orange-500" />
+                  <ArrowRight className="hidden md:block absolute -right-3 top-10 w-6 h-6 text-[#F5A623]" />
                 )}
               </motion.div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Registration Form */}
-      <div ref={registrationFormRef} className="px-4 py-16 sm:py-20">
+      {/* ── REGISTRATION FORM ─────────────────────────────────────────────── */}
+      <section ref={registrationFormRef} className="py-16 sm:py-20 px-4">
         <div className="max-w-2xl mx-auto">
           <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-8 sm:p-10 border border-slate-200 dark:border-slate-700 transition-colors"
+            className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl shadow-zinc-200/60 dark:shadow-zinc-950 border border-zinc-200 dark:border-zinc-800 overflow-hidden"
           >
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Mag-register Bilang Partner</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
-              Kumpletuhin ang form sa ibaba at simulan ang iyong partnership journey.
-            </p>
-
-            {generalError && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex gap-3"
-              >
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700 dark:text-red-300">{generalError}</p>
-              </motion.div>
-            )}
-
-            {/* Form Fields */}
-            <div className="space-y-5">
-              {/* Row 1: Full Name & Business Name */}
-              <div className="grid sm:grid-cols-2 gap-5">
-                <FormField
-                  label="Pangalan *"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  error={errors.fullName}
-                  placeholder="Juan Dela Cruz"
-                  icon={<Mail className="w-4 h-4" />}
-                />
-                <FormField
-                  label="Pangalan ng Negosyo *"
-                  name="businessName"
-                  value={formData.businessName}
-                  onChange={handleInputChange}
-                  error={errors.businessName}
-                  placeholder="Ang Aming Restaurant"
-                  icon={<DollarSign className="w-4 h-4" />}
-                />
+            {/* form header stripe */}
+            <div className="bg-gradient-to-r from-[#E8191A] to-[#c0121a] px-8 pt-8 pb-7">
+              <div className="flex items-center gap-3">
+                <SmartMenuLogo size={42} />
+                <div>
+                  <h2 className="text-xl font-black text-white leading-tight">Mag-register Bilang Partner</h2>
+                  <p className="text-xs text-red-200 mt-0.5">Kumpletuhin ang form sa ibaba</p>
+                </div>
               </div>
+            </div>
 
-              {/* Row 2: Mobile & Email */}
-              <div className="grid sm:grid-cols-2 gap-5">
-                <FormField
-                  label="Mobile Number *"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleInputChange}
-                  error={errors.mobileNumber}
-                  placeholder="0912 345 6789"
-                  icon={<Phone className="w-4 h-4" />}
-                />
-                <FormField
-                  label="Email Address *"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  error={errors.email}
-                  placeholder="juan@example.com"
-                  icon={<Mail className="w-4 h-4" />}
-                />
-              </div>
+            <div className="p-8">
+              {generalError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex gap-3"
+                >
+                  <AlertCircle className="w-5 h-5 text-[#E8191A] shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700 dark:text-red-300">{generalError}</p>
+                </motion.div>
+              )}
 
-              {/* Row 3: Address & Area */}
-              <div className="grid sm:grid-cols-2 gap-5">
-                <FormField
-                  label="Business Address / City *"
-                  name="businessAddress"
-                  value={formData.businessAddress}
-                  onChange={handleInputChange}
-                  error={errors.businessAddress}
-                  placeholder="Manila, Metro Manila"
-                  icon={<MapPin className="w-4 h-4" />}
-                />
-                <FormField
-                  label="Area ng Pagbebenta (Opsyonal)"
-                  name="areaCoverage"
-                  value={formData.areaCoverage}
-                  onChange={handleInputChange}
-                  placeholder="Metro Manila, Quezon Province"
-                  icon={<MapPin className="w-4 h-4" />}
-                />
-              </div>
-
-              {/* Row 4: Prices */}
-              <div className="grid sm:grid-cols-2 gap-5">
-                <FormField
-                  label="Presyong Ioofer sa Client *"
-                  name="offeredPrice"
-                  value={formData.offeredPrice}
-                  onChange={handleInputChange}
-                  error={errors.offeredPrice}
-                  placeholder="5,499"
-                  prefix="₱"
-                  icon={<DollarSign className="w-4 h-4" />}
-                />
-                <FormField
-                  label="Markup ng Partner *"
-                  name="markup"
-                  value={formData.markup}
-                  onChange={handleInputChange}
-                  error={errors.markup}
-                  placeholder="1,500"
-                  prefix="₱"
-                  icon={<DollarSign className="w-4 h-4" />}
-                />
-              </div>
-
-              {/* Row 5: Profile Picture */}
-              <div>
-                <label className="block text-sm font-bold text-slate-900 dark:text-white mb-2">
-                  Profile Picture (Optional)
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePictureChange}
-                    className="hidden"
-                    id="profile-picture-input"
-                  />
-                  <label
-                    htmlFor="profile-picture-input"
-                    className="cursor-pointer block"
-                  >
-                    <div className="w-full px-4 py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 transition-colors bg-slate-50 dark:bg-slate-700/50 flex flex-col items-center justify-center gap-2">
-                      <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
+              <div className="space-y-5">
+                {/* Row 1 */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <FormField label="Pangalan *" name="fullName" value={formData.fullName}
+                    onChange={handleInputChange} error={errors.fullName}
+                    placeholder="Juan Dela Cruz" icon={<User className="w-4 h-4" />} />
+                  <FormField label="Pangalan ng Negosyo *" name="businessName" value={formData.businessName}
+                    onChange={handleInputChange} error={errors.businessName}
+                    placeholder="Ang Aming Restaurant" icon={<Building2 className="w-4 h-4" />} />
+                </div>
+                {/* Row 2 */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <FormField label="Mobile Number *" name="mobileNumber" value={formData.mobileNumber}
+                    onChange={handleInputChange} error={errors.mobileNumber}
+                    placeholder="0912 345 6789" icon={<Phone className="w-4 h-4" />} />
+                  <FormField label="Email Address *" name="email" type="email" value={formData.email}
+                    onChange={handleInputChange} error={errors.email}
+                    placeholder="juan@example.com" icon={<Mail className="w-4 h-4" />} />
+                </div>
+                {/* Row 3 */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <FormField label="Business Address / City *" name="businessAddress" value={formData.businessAddress}
+                    onChange={handleInputChange} error={errors.businessAddress}
+                    placeholder="Manila, Metro Manila" icon={<MapPin className="w-4 h-4" />} />
+                  <FormField label="Area ng Pagbebenta (Opsyonal)" name="areaCoverage" value={formData.areaCoverage}
+                    onChange={handleInputChange}
+                    placeholder="Metro Manila, Quezon Province" icon={<MapPin className="w-4 h-4" />} />
+                </div>
+                {/* Row 4 — prices */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <FormField label="Presyong Ioofer sa Client *" name="offeredPrice" value={formData.offeredPrice}
+                    onChange={handleInputChange} error={errors.offeredPrice}
+                    placeholder="5,499" prefix="₱" icon={<DollarSign className="w-4 h-4" />} />
+                  <FormField label="Markup ng Partner *" name="markup" value={formData.markup}
+                    onChange={handleInputChange} error={errors.markup}
+                    placeholder="1,500" prefix="₱" icon={<DollarSign className="w-4 h-4" />} />
+                </div>
+                {/* Row 5 — profile picture */}
+                <div>
+                  <label className="block text-sm font-bold text-zinc-900 dark:text-white mb-2">
+                    Profile Picture <span className="text-zinc-400 font-normal">(Opsyonal)</span>
+                  </label>
+                  <input type="file" accept="image/*" onChange={handleProfilePictureChange}
+                    className="hidden" id="profile-picture-input" />
+                  <label htmlFor="profile-picture-input" className="cursor-pointer block">
+                    <div className="w-full px-4 py-5 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl hover:border-[#E8191A] dark:hover:border-[#E8191A] transition-colors bg-zinc-50 dark:bg-zinc-800 flex flex-col items-center gap-1.5">
+                      <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                        <User className="w-5 h-5 text-zinc-400" />
+                      </div>
                       {formData.profilePicture ? (
-                        <p className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                          {formData.profilePicture.name}
-                        </p>
+                        <p className="text-sm font-bold text-[#E8191A]">{formData.profilePicture.name}</p>
                       ) : (
                         <>
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">Click to upload</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">or drag and drop</p>
+                          <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">I-upload ang larawan</p>
+                          <p className="text-xs text-zinc-400">JPG, PNG — max 5 MB</p>
                         </>
                       )}
                     </div>
                   </label>
+                  {errors.profilePicture && (
+                    <p className="text-xs text-[#E8191A] mt-1.5">{errors.profilePicture}</p>
+                  )}
                 </div>
-                {errors.profilePicture && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{errors.profilePicture}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Terms and Conditions */}
-            <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Terms and Conditions</h3>
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 h-64 overflow-y-auto mb-5 border border-slate-200 dark:border-slate-600">
-                <TermsContent />
               </div>
 
-              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => {
-                    setTermsAccepted(e.target.checked);
-                  }}
-                  className="w-5 h-5 mt-1 accent-orange-500 cursor-pointer"
-                />
-                <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-                  Nabasa ko at sumasang-ayon ako sa Terms and Conditions ng SmartMenu Partner Program.
-                </span>
-              </label>
+              {/* Terms & Conditions */}
+              <div className="mt-8 pt-7 border-t border-zinc-200 dark:border-zinc-700">
+                <h3 className="text-base font-black text-zinc-900 dark:text-white mb-3">Terms and Conditions</h3>
+                <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-5 h-56 overflow-y-auto mb-4 border border-zinc-200 dark:border-zinc-700 text-left">
+                  <TermsContent />
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <input type="checkbox" checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="w-5 h-5 mt-0.5 cursor-pointer accent-[#E8191A]" />
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+                    Nabasa ko at sumasang-ayon ako sa Terms and Conditions ng SmartMenu Partner Program.
+                  </span>
+                </label>
+              </div>
+
+              {/* Stamp button */}
+              <motion.button
+                whileHover={!isLoading && !stampDate && isFormValid && termsAccepted ? { scale: 1.02 } : {}}
+                whileTap={!isLoading && !stampDate && isFormValid && termsAccepted ? { scale: 0.97 } : {}}
+                onClick={handleStamp}
+                disabled={isLoading || !isFormValid || !termsAccepted || !!stampDate}
+                className={`w-full mt-7 py-4 px-6 rounded-2xl font-black text-base flex items-center justify-center gap-2.5 transition-all ${
+                  isLoading || !!stampDate
+                    ? 'bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed text-zinc-500'
+                    : !isFormValid || !termsAccepted
+                    ? 'bg-zinc-200 dark:bg-zinc-800 cursor-not-allowed text-zinc-400 dark:text-zinc-600'
+                    : 'bg-[#E8191A] hover:bg-red-700 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30 cursor-pointer'
+                }`}
+              >
+                <Stamp className="w-5 h-5" />
+                {isLoading ? 'Nag-process...' : 'I-stamp ang Approval'}
+              </motion.button>
+
+              {/* Data privacy */}
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 text-center mt-5 leading-relaxed">
+                {PARTNER_PROGRAM_CONFIG.dataPrivacyNotice}
+              </p>
             </div>
-
-            {/* Stamp Button */}
-            <motion.button
-              whileHover={!isLoading && !stampDate ? { scale: 1.02 } : {}}
-              whileTap={!isLoading && !stampDate ? { scale: 0.98 } : {}}
-              onClick={handleStamp}
-              disabled={isLoading || !isFormValid || !termsAccepted || !!stampDate}
-              className={`w-full mt-8 py-4 px-6 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all ${
-                isLoading || !!stampDate
-                  ? 'bg-gray-400 cursor-not-allowed text-gray-600'
-                  : !isFormValid || !termsAccepted
-                  ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                  : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg'
-              }`}
-            >
-              <Stamp className="w-6 h-6" />
-              {isLoading ? 'Nag-process...' : 'I-stamp ang Approval'}
-            </motion.button>
-
-            {/* Data Privacy Notice */}
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-6">
-              {PARTNER_PROGRAM_CONFIG.dataPrivacyNotice}
-            </p>
           </motion.div>
         </div>
-      </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer className="bg-zinc-900 dark:bg-zinc-950 py-10 px-4 text-center border-t border-zinc-800">
+        <div className="flex justify-center mb-3">
+          <SmartMenuLogo size={40} />
+        </div>
+        <SmartMenuWordmark className="text-2xl" />
+        <p className="text-xs font-bold tracking-widest text-[#F5A623] uppercase mt-1 mb-4">
+          Growing Restaurants. Together.
+        </p>
+        <p className="text-xs text-zinc-500">{PARTNER_PROGRAM_CONFIG.ownerEmail}</p>
+        <p className="text-xs text-zinc-600 mt-1">© {new Date().getFullYear()} SmartMenu. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
 
+/* ─── Reusable form field ─────────────────────────────────────────────────── */
 function FormField({
-  label,
-  name,
-  type = 'text',
-  value,
-  onChange,
-  error,
-  placeholder,
-  prefix,
-  icon,
+  label, name, type = 'text', value, onChange, error, placeholder, prefix, icon,
 }: {
-  label: string;
-  name: string;
-  type?: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  error?: string;
-  placeholder?: string;
-  prefix?: string;
-  icon?: React.ReactNode;
+  label: string; name: string; type?: string;
+  value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string; placeholder?: string; prefix?: string; icon?: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="block text-sm font-bold text-slate-900 dark:text-white mb-2">{label}</label>
+      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 uppercase tracking-wide">
+        {label}
+      </label>
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
             {icon}
           </div>
         )}
-        <div className="relative">
-          {prefix && (
-            <span className="absolute left-10 top-1/2 transform -translate-y-1/2 text-slate-900 dark:text-white font-bold pointer-events-none">
-              {prefix}
-            </span>
-          )}
-          <input
-            type={type}
-            name={name}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            className={`w-full pl-10 ${
-              prefix ? 'pl-14' : ''
-            } pr-4 py-3 rounded-lg border-2 transition-colors ${
-              error
-                ? 'border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-900/10 focus:outline-none'
-                : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none'
-            } text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500`}
-          />
-        </div>
+        {prefix && (
+          <span className="absolute left-9 top-1/2 -translate-y-1/2 text-zinc-900 dark:text-white font-bold pointer-events-none text-sm">
+            {prefix}
+          </span>
+        )}
+        <input
+          type={type} name={name} value={value} onChange={onChange} placeholder={placeholder}
+          className={`w-full ${icon ? 'pl-10' : 'pl-4'} ${prefix ? 'pl-14' : ''} pr-4 py-3 rounded-lg border-2 text-sm transition-colors bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none ${
+            error
+              ? 'border-[#E8191A] bg-red-50 dark:bg-red-900/10'
+              : 'border-zinc-200 dark:border-zinc-700 focus:border-[#E8191A]'
+          }`}
+        />
       </div>
-      {error && <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{error}</p>}
+      {error && <p className="text-xs text-[#E8191A] mt-1.5">{error}</p>}
     </div>
   );
 }
 
+/* ─── Terms text renderer ─────────────────────────────────────────────────── */
 function TermsContent() {
-  const terms = PARTNER_PROGRAM_CONFIG.termsAndConditions;
   return (
-    <div className="prose dark:prose-invert prose-sm max-w-none">
-      {terms.split('\n\n').map((para, idx) => {
+    <div className="space-y-3">
+      {PARTNER_PROGRAM_CONFIG.termsAndConditions.split('\n\n').map((para, idx) => {
         if (para.startsWith('#')) {
           return (
-            <h4 key={idx} className="font-bold text-slate-900 dark:text-white mt-3 mb-2">
+            <h4 key={idx} className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wide mt-4 first:mt-0">
               {para.replace(/^#+\s*/, '')}
             </h4>
           );
         }
         return (
-          <p key={idx} className="text-xs text-slate-700 dark:text-slate-300 mb-2">
+          <p key={idx} className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
             {para}
           </p>
         );
@@ -674,123 +591,120 @@ function TermsContent() {
   );
 }
 
+/* ─── Success screen ──────────────────────────────────────────────────────── */
 function SuccessScreen({
-  data,
-  stampDate,
-  stampRef,
-  onDownloadPDF,
+  data, stampDate, stampRef, onDownload,
 }: {
   data: FormState & { stampDate: string };
   stampDate: string;
   stampRef: React.RefObject<HTMLDivElement | null>;
-  onDownloadPDF: () => void;
+  onDownload: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center px-4 py-16">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-2xl w-full"
-      >
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 sm:p-12 text-center border border-slate-200 dark:border-slate-700 transition-colors">
-          {/* Success Icon */}
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="w-20 h-20 mx-auto mb-6 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center"
-          >
-            <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
-          </motion.div>
-
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2">
-            {PARTNER_PROGRAM_CONFIG.successMessage.title}
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-            {PARTNER_PROGRAM_CONFIG.successMessage.subtitle}
-          </p>
-
-          {/* Summary */}
-          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-6 mb-8 text-left border border-slate-200 dark:border-slate-600">
-            <h3 className="font-bold text-slate-900 dark:text-white mb-4">Inyong Application Details:</h3>
-            <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Pangalan</p>
-                <p className="font-bold text-slate-900 dark:text-white">{data.fullName}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Business</p>
-                <p className="font-bold text-slate-900 dark:text-white">{data.businessName}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Email</p>
-                <p className="font-bold text-slate-900 dark:text-white">{data.email}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Mobile</p>
-                <p className="font-bold text-slate-900 dark:text-white">{data.mobileNumber}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Address</p>
-                <p className="font-bold text-slate-900 dark:text-white">{data.businessAddress}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Presyong Ioofer</p>
-                <p className="font-bold text-slate-900 dark:text-white text-lg">₱{data.offeredPrice}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-xs">Markup</p>
-                <p className="font-bold text-slate-900 dark:text-white text-lg">₱{data.markup}</p>
-              </div>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <PartnerNav />
+      <div className="flex items-center justify-center px-4 py-16">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl w-full">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            {/* success header */}
+            <div className="bg-gradient-to-r from-[#E8191A] to-[#c0121a] px-8 py-7 text-center">
+              <motion.div
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center"
+              >
+                <CheckCircle2 className="w-9 h-9 text-white" />
+              </motion.div>
+              <h1 className="text-2xl font-black text-white">{PARTNER_PROGRAM_CONFIG.successMessage.title}</h1>
+              <p className="text-sm text-red-200 mt-1">{PARTNER_PROGRAM_CONFIG.successMessage.subtitle}</p>
             </div>
-          </div>
 
-          {/* Stamp Display */}
-          <div ref={stampRef} className="mb-8 py-8">
-            <div
-              className="inline-block relative"
-              style={{
-                transform: 'rotate(-15deg)',
-              }}
-            >
-              <div className="border-4 border-red-600 dark:border-red-500 text-red-600 dark:text-red-500 px-8 py-4 rounded-lg font-black text-3xl opacity-70">
-                APPROVED
+            <div className="p-8">
+              {/* summary */}
+              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-2xl p-5 mb-6 border border-zinc-200 dark:border-zinc-700 text-left">
+                <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
+                  Inyong Application Details
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  {[
+                    ['Pangalan', data.fullName],
+                    ['Business', data.businessName],
+                    ['Email', data.email],
+                    ['Mobile', data.mobileNumber],
+                  ].map(([lbl, val]) => (
+                    <div key={lbl}>
+                      <p className="text-[10px] font-bold uppercase text-zinc-400">{lbl}</p>
+                      <p className="font-bold text-zinc-900 dark:text-white truncate">{val}</p>
+                    </div>
+                  ))}
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400">Address</p>
+                    <p className="font-bold text-zinc-900 dark:text-white">{data.businessAddress}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-zinc-400">Offered Price</p>
+                    <p className="text-xl font-black text-[#E8191A]">₱{data.offeredPrice}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-zinc-400">Markup</p>
+                    <p className="text-xl font-black text-[#F5A623]">₱{data.markup}</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 text-center mt-2" style={{ transform: 'rotate(15deg)' }}>
-                {stampDate}
+
+              {/* rubber stamp */}
+              <div ref={stampRef} className="flex justify-center my-8">
+                <motion.div
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: -12 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.3 }}
+                  className="inline-block"
+                >
+                  <div className="border-[5px] border-[#E8191A] rounded-xl px-7 py-3 opacity-80">
+                    <p className="text-[#E8191A] font-black text-3xl sm:text-4xl tracking-widest uppercase">APPROVED</p>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <span className="h-px flex-1 bg-[#F5A623]" />
+                      <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wide">{stampDate}</p>
+                      <span className="h-px flex-1 bg-[#F5A623]" />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              <p className="text-sm text-zinc-600 dark:text-zinc-300 text-center mb-2">
+                {PARTNER_PROGRAM_CONFIG.successMessage.details}
               </p>
+              <p className="text-xs text-zinc-400 text-center italic mb-8">
+                {PARTNER_PROGRAM_CONFIG.successMessage.reminder}
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={onDownload}
+                  className="flex-1 py-3 px-5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm">
+                  <Download className="w-4 h-4" />
+                  I-download ang Certificate
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => { window.location.href = '/'; }}
+                  className="flex-1 py-3 px-5 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold transition-all text-sm">
+                  Bumalik sa Home
+                </motion.button>
+              </div>
+            </div>
+
+            {/* footer stripe */}
+            <div className="px-8 py-4 bg-zinc-900 flex items-center justify-center gap-2">
+              <SmartMenuLogo size={22} />
+              <span className="text-xs font-black text-white">Smart</span>
+              <span className="text-xs font-black text-[#E8191A]">Menu</span>
+              <span className="text-xs text-zinc-500 mx-1">·</span>
+              <span className="text-[10px] font-bold text-[#F5A623] tracking-widest uppercase">Growing Restaurants. Together.</span>
             </div>
           </div>
-
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-8">
-            {PARTNER_PROGRAM_CONFIG.successMessage.details}
-          </p>
-
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 italic">
-            {PARTNER_PROGRAM_CONFIG.successMessage.reminder}
-          </p>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onDownloadPDF}
-              className="flex-1 py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
-            >
-              <Download className="w-5 h-5" />
-              Download PDF
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => window.location.href = '/'}
-              className="flex-1 py-3 px-6 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-900 dark:text-white rounded-xl font-bold transition-all"
-            >
-              Back to Home
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
