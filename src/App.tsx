@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
 import { PartnerProgram } from './pages/PartnerProgram';
 import { PartnerAdmin } from './pages/PartnerAdmin';
+import { PartnersList } from './pages/PartnersList';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
@@ -64,6 +65,8 @@ function AppContent() {
         return <ReceiptsPage />;
       case 'Master List':
         return <LeadsTracker />;
+      case 'Partners':
+        return <PartnersList />;
       default:
         return (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground text-center">

@@ -12,6 +12,7 @@ export interface PartnerApplication {
   markup: number;
   accepted_terms: boolean;
   stamp_date: string;
+  profile_picture_url?: string;
   created_at?: string;
   status?: 'pending' | 'approved' | 'rejected';
 }
@@ -34,6 +35,7 @@ export const savePartnerApplication = async (data: PartnerApplication): Promise<
         markup: data.markup,
         accepted_terms: data.accepted_terms,
         stamp_date: data.stamp_date,
+        profile_picture_url: data.profile_picture_url || null,
         status: 'pending',
       },
     ])

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS partner_applications (
   accepted_terms BOOLEAN NOT NULL DEFAULT TRUE,
   stamp_date TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  profile_picture_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

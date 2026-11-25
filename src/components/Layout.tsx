@@ -15,6 +15,7 @@ import {
     Bell,
     X,
     UserPlus,
+    Briefcase,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
@@ -78,6 +79,7 @@ const navItems = [
     { icon: Eye, label: 'Monitoring', short: 'Monitoring' },
     { icon: Wallet, label: 'Expenses', short: 'Expenses' },
     { icon: TrendingUp, label: 'Sales', short: 'Sales' },
+    { icon: Briefcase, label: 'Partners', short: 'Partners' },
 ];
 
 const primaryLabels = ['Master List', 'Receipts', 'Daily Audit'];

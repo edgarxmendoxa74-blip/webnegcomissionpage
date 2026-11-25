@@ -11,6 +11,7 @@ import {
   MapPin,
   DollarSign,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { PARTNER_PROGRAM_CONFIG } from '../lib/partnerConfig';
 import { savePartnerApplication, checkDuplicateSubmission } from '../lib/partners';
 
@@ -23,6 +24,7 @@ type FormState = {
   areaCoverage: string;
   offeredPrice: string;
   markup: string;
+  profilePicture: File | null;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
@@ -41,6 +43,7 @@ export function PartnerProgram() {
     areaCoverage: '',
     offeredPrice: '',
     markup: '',
+    profilePicture: null,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -132,6 +135,28 @@ export function PartnerProgram() {
     }
   };
 
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors((prev) => ({ ...prev, profilePicture: 'Please upload an image file.' }));
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({ ...prev, profilePicture: 'File size must be less than 5MB.' }));
+        return;
+      }
+      setFormData((prev) => ({ ...prev, profilePicture: file }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.profilePicture;
+        return newErrors;
+      });
+    }
+  };
+
   const handleStamp = async () => {
     if (!validateForm()) {
       return;
@@ -164,6 +189,25 @@ export function PartnerProgram() {
         return;
       }
 
+      // Upload profile picture if provided
+      let profilePictureUrl: string | null = null;
+      if (formData.profilePicture) {
+        const fileExt = formData.profilePicture.name.split('.').pop();
+        const fileName = `${Date.now()}-${formData.email}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('partner_profiles')
+          .upload(`public/${fileName}`, formData.profilePicture);
+
+        if (uploadError) {
+          console.warn('Failed to upload profile picture:', uploadError);
+        } else {
+          const { data: publicUrl } = supabase.storage
+            .from('partner_profiles')
+            .getPublicUrl(`public/${fileName}`);
+          profilePictureUrl = publicUrl.publicUrl;
+        }
+      }
+
       // Set stamp date to today
       const today = new Date();
       const dateStr = today.toLocaleDateString('en-US', {
@@ -185,6 +229,7 @@ export function PartnerProgram() {
         markup: Number(formData.markup.replace(/,/g, '')),
         accepted_terms: termsAccepted,
         stamp_date: dateStr,
+        profile_picture_url: profilePictureUrl || undefined,
       };
 
       await savePartnerApplication(submissionData);
@@ -444,6 +489,45 @@ webnegosyo3@gmail.com
                   prefix="₱"
                   icon={<DollarSign className="w-4 h-4" />}
                 />
+              </div>
+
+              {/* Row 5: Profile Picture */}
+              <div>
+                <label className="block text-sm font-bold text-slate-900 dark:text-white mb-2">
+                  Profile Picture (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePictureChange}
+                    className="hidden"
+                    id="profile-picture-input"
+                  />
+                  <label
+                    htmlFor="profile-picture-input"
+                    className="cursor-pointer block"
+                  >
+                    <div className="w-full px-4 py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 transition-colors bg-slate-50 dark:bg-slate-700/50 flex flex-col items-center justify-center gap-2">
+                      <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      {formData.profilePicture ? (
+                        <p className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                          {formData.profilePicture.name}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Click to upload</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">or drag and drop</p>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+                {errors.profilePicture && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{errors.profilePicture}</p>
+                )}
               </div>
             </div>
 
