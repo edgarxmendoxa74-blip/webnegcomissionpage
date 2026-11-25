@@ -557,12 +557,7 @@ function App() {
     };
   }, []);
 
-  const handleBackToSelection = () => {
-    window.history.pushState({}, '', '/');
-    setIsHiring(false);
-  };
-
-  if (isPartnerAdmin) {
+if (isPartnerAdmin) {
     return <PartnerAdmin />;
   }
 
@@ -571,7 +566,7 @@ function App() {
   }
 
   if (isHiring) {
-    return <ApplicantPortal onBackToSelection={handleBackToSelection} />;
+    return <ApplicantPortal />;
   }
 
   return (
