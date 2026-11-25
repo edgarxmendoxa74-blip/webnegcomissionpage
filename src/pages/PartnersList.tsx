@@ -1,364 +1,469 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Download, User, Building2, Mail, Phone, MapPin, TrendingUp, Eye } from 'lucide-react';
-import { fetchPartnerApplications, type PartnerApplication } from '../lib/partners';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search, Download, User, Building2, Mail, Phone, MapPin,
+  Eye, CheckCircle2, XCircle, Clock, RefreshCw, Bell,
+} from 'lucide-react';
+import {
+  fetchPartnerApplications,
+  updatePartnerApplicationStatus,
+  type PartnerApplication,
+} from '../lib/partners';
+import { supabase } from '../lib/supabase';
+
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+
+const STATUS_CONFIG = {
+  pending:  { label: 'Pending',  bg: 'bg-amber-100 dark:bg-amber-900/30',  text: 'text-amber-700 dark:text-amber-300',  Icon: Clock        },
+  approved: { label: 'Approved', bg: 'bg-green-100 dark:bg-green-900/30',  text: 'text-green-700 dark:text-green-300',  Icon: CheckCircle2 },
+  rejected: { label: 'Rejected', bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      Icon: XCircle      },
+};
 
 export function PartnersList() {
-  const [partners, setPartners] = useState<PartnerApplication[]>([]);
-  const [filteredPartners, setFilteredPartners] = useState<PartnerApplication[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [selectedPartner, setSelectedPartner] = useState<PartnerApplication | null>(null);
+  const [all, setAll]                     = useState<PartnerApplication[]>([]);
+  const [filtered, setFiltered]           = useState<PartnerApplication[]>([]);
+  const [isLoading, setIsLoading]         = useState(true);
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [statusFilter, setStatusFilter]   = useState<StatusFilter>('all');
+  const [selected, setSelected]           = useState<PartnerApplication | null>(null);
+  const [updatingId, setUpdatingId]       = useState<string | null>(null);
+  const [newCount, setNewCount]           = useState(0);   // badge for newly arrived rows
 
-  useEffect(() => {
-    loadPartners();
-  }, []);
-
-  const loadPartners = async () => {
+  /* ── load ── */
+  const load = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await fetchPartnerApplications();
-      const approved = data.filter(p => p.status === 'approved');
-      setPartners(approved);
-      setFilteredPartners(approved);
+      setAll(data);
+      applyFilters(data, searchQuery, statusFilter);
     } catch (err) {
       console.error('Error loading partners:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // eslint-disable-line
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    filterPartners(query, statusFilter);
-  };
+  useEffect(() => { load(); }, [load]);
 
-  const handleStatusFilter = (status: typeof statusFilter) => {
-    setStatusFilter(status);
-    filterPartners(searchQuery, status);
-  };
+  /* ── real-time subscription ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel('partner_applications_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'partner_applications' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newRow = payload.new as PartnerApplication;
+            setAll((prev) => {
+              const updated = [newRow, ...prev];
+              applyFilters(updated, searchQuery, statusFilter);
+              return updated;
+            });
+            setNewCount((n) => n + 1);
+          } else if (payload.eventType === 'UPDATE') {
+            setAll((prev) => {
+              const updated = prev.map((p) =>
+                p.id === (payload.new as PartnerApplication).id
+                  ? { ...p, ...(payload.new as PartnerApplication) }
+                  : p
+              );
+              applyFilters(updated, searchQuery, statusFilter);
+              return updated;
+            });
+          }
+        }
+      )
+      .subscribe();
 
-  const filterPartners = (query: string, status: typeof statusFilter) => {
-    let filtered = partners;
+    return () => { supabase.removeChannel(channel); };
+  }, [searchQuery, statusFilter]); // re-subscribe when filters change so closure is fresh
 
+  /* ── filter helper ── */
+  const applyFilters = (data: PartnerApplication[], query: string, status: StatusFilter) => {
+    let f = [...data];
     if (query.trim()) {
-      filtered = filtered.filter(
+      const q = query.toLowerCase();
+      f = f.filter(
         (p) =>
-          p.full_name.toLowerCase().includes(query.toLowerCase()) ||
-          p.business_name.toLowerCase().includes(query.toLowerCase()) ||
-          p.email.toLowerCase().includes(query.toLowerCase()) ||
-          p.mobile_number.includes(query)
+          p.full_name.toLowerCase().includes(q) ||
+          p.business_name.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          p.mobile_number.includes(q)
       );
     }
-
-    if (status !== 'all') {
-      filtered = filtered.filter((p) => p.status === status);
-    }
-
-    setFilteredPartners(filtered);
+    if (status !== 'all') f = f.filter((p) => p.status === status);
+    setFiltered(f);
   };
 
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    applyFilters(all, q, statusFilter);
+  };
+
+  const handleStatusFilter = (s: StatusFilter) => {
+    setStatusFilter(s);
+    applyFilters(all, searchQuery, s);
+  };
+
+  /* ── approve / reject ── */
+  const handleStatusChange = async (
+    id: string,
+    newStatus: 'approved' | 'rejected' | 'pending'
+  ) => {
+    setUpdatingId(id);
+    try {
+      await updatePartnerApplicationStatus(id, newStatus);
+      setAll((prev) => {
+        const updated = prev.map((p) =>
+          p.id === id ? { ...p, status: newStatus } : p
+        );
+        applyFilters(updated, searchQuery, statusFilter);
+        // keep selected in sync
+        setSelected((s) => (s?.id === id ? { ...s, status: newStatus } : s));
+        return updated;
+      });
+    } catch (err) {
+      console.error('Error updating status:', err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  /* ── csv export ── */
   const downloadCSV = () => {
-    if (filteredPartners.length === 0) return;
-
-    const headers = [
-      'Full Name',
-      'Business Name',
-      'Mobile',
-      'Email',
-      'Address',
-      'Offered Price',
-      'Markup',
-      'Status',
-      'Date Registered',
-    ];
-
-    const rows = filteredPartners.map((p) => [
-      p.full_name,
-      p.business_name,
-      p.mobile_number,
-      p.email,
-      p.business_address,
-      `₱${p.offered_price}`,
-      `₱${p.markup}`,
-      p.status || 'pending',
-      p.created_at || '-',
+    if (filtered.length === 0) return;
+    const headers = ['Full Name','Business Name','Mobile','Email','Address','Offered Price','Markup','Status','Date Registered'];
+    const rows = filtered.map((p) => [
+      p.full_name, p.business_name, p.mobile_number, p.email,
+      p.business_address, `₱${p.offered_price}`, `₱${p.markup}`,
+      p.status || 'pending', p.created_at || '-',
     ]);
-
-    const csv = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const a = document.createElement('a');
-    a.href = url;
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `partners-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
+  /* ── counts ── */
+  const counts = {
+    all:      all.length,
+    pending:  all.filter((p) => p.status === 'pending').length,
+    approved: all.filter((p) => p.status === 'approved').length,
+    rejected: all.filter((p) => p.status === 'rejected').length,
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2">Registered Partners</h1>
-        <p className="text-slate-600 dark:text-slate-400">View and manage all registered partners in the program</p>
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+
+      {/* ── Page header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+            Registered Partners
+            {counts.pending > 0 && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-500 text-white rounded-full text-sm font-black">
+                <Bell className="w-3.5 h-3.5" />
+                {counts.pending} pending
+              </span>
+            )}
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+            Real-time — bagong registrations ay lalabas agad dito
+          </p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          onClick={() => { setNewCount(0); load(); }}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-sm transition-all"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+          {newCount > 0 && (
+            <span className="w-5 h-5 bg-[#E8191A] text-white text-xs font-black rounded-full flex items-center justify-center">
+              {newCount}
+            </span>
+          )}
+        </motion.button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          label="Total Partners"
-          value={partners.length}
-          icon={<User className="w-6 h-6" />}
-          color="blue"
-        />
-        <StatCard
-          label="Total Revenue (Markup)"
-          value={`₱${partners.reduce((sum, p) => sum + (p.markup || 0), 0).toLocaleString()}`}
-          icon={<TrendingUp className="w-6 h-6" />}
-          color="green"
-        />
-        <StatCard
-          label="Avg Markup"
-          value={`₱${Math.round(partners.reduce((sum, p) => sum + (p.markup || 0), 0) / (partners.length || 1)).toLocaleString()}`}
-          icon={<Building2 className="w-6 h-6" />}
-          color="orange"
-        />
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Total" value={counts.all}      icon={<User className="w-5 h-5"/>}         color="blue"   />
+        <StatCard label="Pending"  value={counts.pending}  icon={<Clock className="w-5 h-5"/>}       color="amber"  />
+        <StatCard label="Approved" value={counts.approved} icon={<CheckCircle2 className="w-5 h-5"/>} color="green"  />
+        <StatCard label="Rejected" value={counts.rejected} icon={<XCircle className="w-5 h-5"/>}      color="red"    />
       </div>
 
-      {/* Search & Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* ── Search & filter bar ── */}
+      <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-700 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search by name, business, email, or mobile..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-orange-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-[#E8191A] text-sm"
             />
           </div>
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={downloadCSV}
-            disabled={filteredPartners.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg font-bold transition-all"
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:bg-zinc-300 text-white dark:text-zinc-900 rounded-lg font-bold text-sm transition-all"
           >
             <Download className="w-4 h-4" />
             Export CSV
           </motion.button>
         </div>
 
-        {/* Status Filters */}
+        {/* status pills */}
         <div className="flex flex-wrap gap-2">
-          {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
-            <motion.button
-              key={status}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                statusFilter === status
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600'
+          {(['all','pending','approved','rejected'] as StatusFilter[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => handleStatusFilter(s)}
+              className={`px-4 py-1.5 rounded-full font-bold text-xs transition-all border ${
+                statusFilter === s
+                  ? 'bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-900'
+                  : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
               }`}
             >
-              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
-            </motion.button>
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+              <span className="ml-1.5 opacity-60">{counts[s]}</span>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Partners Grid */}
-      <div>
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-slate-600 dark:text-slate-400">Loading partners...</p>
-          </div>
-        ) : filteredPartners.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-600 dark:text-slate-400">No partners found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPartners.map((partner, idx) => (
-              <motion.div
-                key={partner.id || idx}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
-              >
-                {/* Profile Picture */}
-                <div className="h-40 bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/20 dark:to-red-900/20 flex items-center justify-center overflow-hidden relative">
-                  {partner.profile_picture_url ? (
-                    <img
-                      src={partner.profile_picture_url}
-                      alt={partner.full_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-16 h-16 text-slate-400" />
+      {/* ── Grid ── */}
+      {isLoading ? (
+        <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">Loading partners...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">
+          {searchQuery || statusFilter !== 'all' ? 'Walang nahanap na partner.' : 'Wala pang partner na nagsumite.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <AnimatePresence>
+            {filtered.map((partner, idx) => {
+              const st = (partner.status || 'pending') as keyof typeof STATUS_CONFIG;
+              const cfg = STATUS_CONFIG[st];
+              const StatusIcon = cfg.Icon;
+
+              return (
+                <motion.div
+                  key={partner.id || idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className={`bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border transition-shadow hover:shadow-lg ${
+                    st === 'pending'
+                      ? 'border-amber-300 dark:border-amber-700 shadow-amber-100 dark:shadow-amber-900/20'
+                      : 'border-zinc-200 dark:border-zinc-700'
+                  }`}
+                >
+                  {/* pending top bar */}
+                  {st === 'pending' && (
+                    <div className="bg-amber-500 px-4 py-1.5 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-white" />
+                      <span className="text-xs font-black text-white uppercase tracking-widest">New — Awaiting Review</span>
+                    </div>
                   )}
-                </div>
 
-                {/* Content */}
-                <div className="p-5 space-y-4">
-                  {/* Name & Business */}
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white">{partner.full_name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      <Building2 className="w-3.5 h-3.5" />
-                      {partner.business_name}
-                    </div>
+                  {/* profile pic */}
+                  <div className="h-36 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center overflow-hidden">
+                    {partner.profile_picture_url ? (
+                      <img src={partner.profile_picture_url} alt={partner.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-14 h-14 text-zinc-400" />
+                    )}
                   </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <Mail className="w-4 h-4" />
-                      <span className="truncate">{partner.email}</span>
+                  <div className="p-5 space-y-3">
+                    {/* name + status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base font-black text-zinc-900 dark:text-white leading-tight">{partner.full_name}</h3>
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          <Building2 className="w-3 h-3" />
+                          {partner.business_name}
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${cfg.bg} ${cfg.text}`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {cfg.label}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <Phone className="w-4 h-4" />
-                      {partner.mobile_number}
+
+                    {/* contact */}
+                    <div className="space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /><span className="truncate">{partner.email}</span></div>
+                      <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{partner.mobile_number}</div>
+                      <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /><span className="truncate">{partner.business_address}</span></div>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <MapPin className="w-4 h-4" />
-                      <span className="truncate">{partner.business_address}</span>
+
+                    {/* pricing */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700">
+                      <div>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase">Offered</p>
+                        <p className="text-sm font-black text-[#E8191A]">₱{partner.offered_price.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase">Markup</p>
+                        <p className="text-sm font-black text-green-600 dark:text-green-400">₱{partner.markup.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700">
+                      {/* quick approve/reject */}
+                      {st !== 'approved' && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleStatusChange(partner.id!, 'approved')}
+                          disabled={updatingId === partner.id}
+                          className="flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-xs transition-all disabled:opacity-50"
+                        >
+                          ✓ Approve
+                        </motion.button>
+                      )}
+                      {st !== 'rejected' && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleStatusChange(partner.id!, 'rejected')}
+                          disabled={updatingId === partner.id}
+                          className="flex-1 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg font-bold text-xs transition-all disabled:opacity-50"
+                        >
+                          ✕ Reject
+                        </motion.button>
+                      )}
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelected(partner)}
+                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4 text-zinc-400" />
+                      </motion.button>
                     </div>
                   </div>
-
-                  {/* Pricing */}
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">Offered Price</p>
-                      <p className="text-lg font-black text-orange-600 dark:text-orange-400">₱{partner.offered_price.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">Markup</p>
-                      <p className="text-lg font-black text-green-600 dark:text-green-400">₱{partner.markup.toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Status Badge & Button */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 text-xs font-bold">
-                      ✓ Approved
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setSelectedPartner(partner)}
-                      className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                    >
-                      <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Detail Modal */}
-      {selectedPartner && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setSelectedPartner(null)}
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6 border border-slate-200 dark:border-slate-700"
-          >
-            {/* Profile Picture */}
-            {selectedPartner.profile_picture_url && (
-              <div className="mb-6 rounded-xl overflow-hidden h-48">
-                <img
-                  src={selectedPartner.profile_picture_url}
-                  alt={selectedPartner.full_name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">{selectedPartner.full_name}</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">{selectedPartner.business_name}</p>
-
-            {/* Details */}
-            <div className="space-y-4">
-              <DetailRow label="Email" value={selectedPartner.email} />
-              <DetailRow label="Mobile" value={selectedPartner.mobile_number} />
-              <DetailRow label="Address" value={selectedPartner.business_address} />
-              {selectedPartner.area_coverage && (
-                <DetailRow label="Area Coverage" value={selectedPartner.area_coverage} />
-              )}
-              <DetailRow label="Offered Price" value={`₱${selectedPartner.offered_price.toLocaleString()}`} />
-              <DetailRow label="Markup" value={`₱${selectedPartner.markup.toLocaleString()}`} />
-              <DetailRow label="Profit Margin" value={`${Math.round((selectedPartner.markup / selectedPartner.offered_price) * 100)}%`} />
-              <DetailRow label="Registered" value={selectedPartner.created_at || selectedPartner.stamp_date} />
-              <DetailRow label="Status" value={selectedPartner.status || 'approved'} />
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSelectedPartner(null)}
-              className="w-full mt-6 py-2.5 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition-all"
-            >
-              Close
-            </motion.button>
-          </motion.div>
-        </motion.div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
       )}
+
+      {/* ── Detail modal ── */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelected(null)}
+            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-zinc-800 rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto border border-zinc-200 dark:border-zinc-700 shadow-2xl"
+            >
+              {/* modal header */}
+              {selected.profile_picture_url ? (
+                <div className="h-48 overflow-hidden">
+                  <img src={selected.profile_picture_url} alt={selected.full_name} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="h-24 bg-gradient-to-r from-[#E8191A] to-[#c0121a] flex items-center justify-center">
+                  <User className="w-10 h-10 text-white/50" />
+                </div>
+              )}
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white">{selected.full_name}</h2>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">{selected.business_name}</p>
+                </div>
+
+                {[
+                  ['Email', selected.email],
+                  ['Mobile', selected.mobile_number],
+                  ['Address', selected.business_address],
+                  ...(selected.area_coverage ? [['Area Coverage', selected.area_coverage]] : []),
+                  ['Offered Price', `₱${selected.offered_price.toLocaleString()}`],
+                  ['Markup', `₱${selected.markup.toLocaleString()}`],
+                  ['Stamp Date', selected.stamp_date],
+                  ['Registered', selected.created_at?.split('T')[0] || '-'],
+                ].map(([label, value]) => (
+                  <div key={label} className="border-b border-zinc-100 dark:border-zinc-700 pb-3 last:border-0">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest">{label}</p>
+                    <p className="text-sm text-zinc-900 dark:text-white font-semibold mt-0.5">{value}</p>
+                  </div>
+                ))}
+
+                {/* status change */}
+                <div className="pt-2">
+                  <p className="text-xs font-bold uppercase text-zinc-400 mb-3 tracking-widest">Change Status</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['pending','approved','rejected'] as const).map((s) => (
+                      <motion.button
+                        key={s}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleStatusChange(selected.id!, s)}
+                        disabled={updatingId === selected.id || selected.status === s}
+                        className={`py-2 rounded-xl font-bold text-xs transition-all disabled:opacity-40 ${
+                          s === 'approved' ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : s === 'rejected' ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : 'bg-amber-500 hover:bg-amber-600 text-white'
+                        }`}
+                      >
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelected(null)}
+                  className="w-full py-2.5 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-sm transition-all"
+                >
+                  Isara
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
+/* ── Stat card ── */
 function StatCard({
-  label,
-  value,
-  icon,
-  color,
+  label, value, icon, color,
 }: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: 'blue' | 'green' | 'orange';
+  label: string; value: number; icon: React.ReactNode;
+  color: 'blue' | 'amber' | 'green' | 'red';
 }) {
-  const colorClasses = {
-    blue: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+  const colors = {
+    blue:  'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+    amber: 'bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
     green: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    orange: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+    red:   'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
   };
-
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
-      <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-3`}>
-        {icon}
-      </div>
-      <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase">{label}</p>
-      <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{value}</p>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border-b border-slate-200 dark:border-slate-700 pb-3 last:border-0">
-      <p className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase">{label}</p>
-      <p className="text-sm text-slate-900 dark:text-white font-semibold mt-1">{value}</p>
+    <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700">
+      <div className={`w-10 h-10 rounded-lg ${colors[color]} flex items-center justify-center mb-3`}>{icon}</div>
+      <p className="text-xs font-bold uppercase text-zinc-500 dark:text-zinc-400 tracking-wide">{label}</p>
+      <p className="text-3xl font-black text-zinc-900 dark:text-white mt-1">{value}</p>
     </div>
   );
 }
