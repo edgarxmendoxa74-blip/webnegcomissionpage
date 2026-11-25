@@ -1,222 +1,317 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, User, RefreshCw } from 'lucide-react';
 
-const OWNER_NAME = 'John Angelo David';
+/* ─── constants ──────────────────────────────────────────────────────────── */
+const OWNER_NAME  = 'John Angelo David';
 const OWNER_TITLE = 'Founder & Owner';
-const COMPANY = 'SmartMenu';
-const TAGLINE = 'Growing Restaurants. Together.';
+const COMPANY     = 'SmartMenu';
+const TAGLINE     = 'Growing Restaurants. Together.';
 
-/* ─── helpers ─────────────────────────────────────────────────────────── */
-function today(): string {
+function todayFormatted() {
   return new Date().toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 }
 
-/* ─── Certificate canvas renderer ────────────────────────────────────── */
-async function drawCertificate(
-  canvas: HTMLCanvasElement,
-  employeeName: string,
-  logoSrc: string,
-) {
-  const W = 1122, H = 794; // A4 landscape px @96dpi
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
+/* ─── Build the HTML that becomes the PDF ───────────────────────────────── */
+function buildCertificateHTML(employeeName: string, logoUrl: string): string {
+  const date = todayFormatted();
 
-  /* background */
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, W, H);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Certificate of Employment – ${employeeName}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lato:wght@300;400;700&display=swap');
 
-  /* outer border – thick red */
-  ctx.strokeStyle = '#E8191A';
-  ctx.lineWidth = 14;
-  ctx.strokeRect(28, 28, W - 56, H - 56);
+  * { margin:0; padding:0; box-sizing:border-box; }
 
-  /* inner border – thin amber */
-  ctx.strokeStyle = '#F5A623';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(44, 44, W - 88, H - 88);
+  body {
+    width:297mm; height:210mm;
+    font-family:'Lato', Arial, sans-serif;
+    background:#fff;
+    display:flex; align-items:stretch;
+    overflow:hidden;
+  }
 
-  /* amber corner squares */
-  const corners = [[44, 44], [W - 60, 44], [44, H - 60], [W - 60, H - 60]] as [number, number][];
-  corners.forEach(([x, y]) => {
-    ctx.fillStyle = '#F5A623';
-    ctx.fillRect(x, y, 16, 16);
-  });
+  /* ── left accent bar ── */
+  .accent-bar {
+    width:16px; min-height:100%;
+    background: linear-gradient(to bottom, #E8191A 60%, #F5A623 100%);
+    flex-shrink:0;
+  }
 
-  /* red top header band */
-  ctx.fillStyle = '#E8191A';
-  ctx.fillRect(44, 44, W - 88, 72);
+  /* ── main content ── */
+  .page {
+    flex:1;
+    padding: 18mm 20mm 14mm 18mm;
+    display:flex; flex-direction:column;
+    border:3px solid #E8191A;
+    border-left:none;
+    position:relative;
+  }
 
-  /* "CERTIFICATE OF EMPLOYMENT" text in header */
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 28px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('CERTIFICATE OF EMPLOYMENT', W / 2, 92);
+  /* outer amber line */
+  .page::before {
+    content:'';
+    position:absolute;
+    inset:6px;
+    border:1.5px solid #F5A623;
+    pointer-events:none;
+  }
 
-  /* amber sub-stripe */
-  ctx.fillStyle = '#F5A623';
-  ctx.fillRect(44, 116, W - 88, 6);
+  /* ── header row ── */
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:10px;
+    border-bottom:2px solid #E8191A;
+    margin-bottom:12px;
+  }
 
-  /* load + draw logo */
-  await new Promise<void>((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const lw = 110, lh = 110;
-      ctx.drawImage(img, W / 2 - lw / 2, 136, lw, lh);
-      resolve();
-    };
-    img.onerror = () => resolve(); // skip if fails
-    img.src = logoSrc;
-  });
+  .logo { width:88px; height:88px; object-fit:contain; }
 
-  /* "To Whom It May Concern" */
-  ctx.fillStyle = '#555555';
-  ctx.font = 'italic 16px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('To Whom It May Concern:', W / 2, 268);
+  .header-text { text-align:center; flex:1; padding:0 16px; }
 
-  /* body text */
-  ctx.fillStyle = '#222222';
-  ctx.font = '18px Georgia, serif';
-  ctx.textAlign = 'center';
-  const line1 = 'This is to certify that';
-  ctx.fillText(line1, W / 2, 304);
+  .cert-label {
+    font-family:'Lato', sans-serif;
+    font-size:10pt; font-weight:700; letter-spacing:5px;
+    color:#F5A623; text-transform:uppercase;
+    margin-bottom:4px;
+  }
 
-  /* employee name – big, red */
-  ctx.font = 'bold 42px Georgia, serif';
-  ctx.fillStyle = '#E8191A';
-  ctx.fillText(employeeName.toUpperCase(), W / 2, 364);
+  .cert-title {
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:24pt; font-weight:900; color:#E8191A;
+    line-height:1.1;
+    text-transform:uppercase; letter-spacing:2px;
+  }
 
-  /* underline below name */
-  const nameW = ctx.measureText(employeeName.toUpperCase()).width;
-  ctx.strokeStyle = '#F5A623';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - nameW / 2 - 10, 374);
-  ctx.lineTo(W / 2 + nameW / 2 + 10, 374);
-  ctx.stroke();
+  .cert-of {
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:13pt; font-weight:400; color:#555;
+    letter-spacing:3px; text-transform:uppercase;
+  }
 
-  /* body paragraph */
-  ctx.fillStyle = '#333333';
-  ctx.font = '17px Georgia, serif';
-  ctx.textAlign = 'center';
-  const bodyLines = [
-    `is a bonafide employee of ${COMPANY}.`,
-    'This certificate is issued upon the request of the above-named employee',
-    'for whatever legal purpose it may serve.',
-  ];
-  bodyLines.forEach((line, i) => ctx.fillText(line, W / 2, 406 + i * 28));
+  /* ── body ── */
+  .body { flex:1; display:flex; flex-direction:column; justify-content:center; text-align:center; }
 
-  /* issue date */
-  ctx.font = 'italic 15px Georgia, serif';
-  ctx.fillStyle = '#777777';
-  ctx.fillText(`Issued on: ${today()}`, W / 2, 500);
+  .to-whom {
+    font-family:'Lato', sans-serif;
+    font-size:9.5pt; font-style:italic; color:#888;
+    margin-bottom:10px;
+  }
 
-  /* amber horizontal rule */
-  ctx.strokeStyle = '#F5A623';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(100, 530);
-  ctx.lineTo(W - 100, 530);
-  ctx.stroke();
+  .certify-line {
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:12pt; font-style:italic; color:#444;
+    margin-bottom:8px;
+  }
 
-  /* signature block – left side */
-  const sigX = W / 2 - 160;
-  ctx.fillStyle = '#222222';
-  ctx.font = 'bold 17px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(OWNER_NAME, sigX, 582);
+  .employee-name {
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:30pt; font-weight:900; color:#E8191A;
+    line-height:1.1; margin:4px 0 2px;
+    text-transform:uppercase;
+  }
 
-  ctx.strokeStyle = '#333333';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(sigX - 110, 590);
-  ctx.lineTo(sigX + 110, 590);
-  ctx.stroke();
+  .name-rule {
+    display:block; height:2px;
+    background:linear-gradient(to right, transparent, #F5A623, transparent);
+    margin:0 auto 14px; width:70%;
+  }
 
-  ctx.fillStyle = '#555555';
-  ctx.font = '14px Georgia, serif';
-  ctx.fillText(OWNER_TITLE, sigX, 610);
-  ctx.fillText(COMPANY, sigX, 628);
+  .body-text {
+    font-family:'Lato', sans-serif;
+    font-size:11pt; color:#333; line-height:1.75;
+    max-width:420px; margin:0 auto;
+  }
 
-  /* small logo on right of signature block */
-  await new Promise<void>((resolve) => {
-    const img2 = new Image();
-    img2.crossOrigin = 'anonymous';
-    img2.onload = () => {
-      ctx.drawImage(img2, W / 2 + 60, 548, 80, 80);
-      resolve();
-    };
-    img2.onerror = () => resolve();
-    img2.src = logoSrc;
-  });
+  .body-text strong { color:#E8191A; }
 
-  /* footer tagline */
-  ctx.fillStyle = '#F5A623';
-  ctx.font = 'bold 12px Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${COMPANY}  ·  ${TAGLINE}`, W / 2, 696);
+  .issued-date {
+    font-family:'Lato', sans-serif;
+    font-size:9pt; font-style:italic; color:#999;
+    margin-top:14px;
+  }
 
-  /* red bottom stripe */
-  ctx.fillStyle = '#E8191A';
-  ctx.fillRect(44, 706, W - 88, 10);
+  /* ── footer / signature ── */
+  .footer {
+    padding-top:12px;
+    border-top:1.5px solid #eee;
+    display:flex; align-items:flex-end; justify-content:space-between;
+  }
+
+  .sig-block { text-align:center; }
+
+  .sig-name {
+    font-family:'Playfair Display', Georgia, serif;
+    font-size:13pt; font-weight:700; color:#1a1a1a;
+    border-bottom:1.5px solid #333;
+    padding-bottom:4px; margin-bottom:4px;
+    min-width:200px; display:inline-block;
+  }
+
+  .sig-title {
+    font-family:'Lato', sans-serif;
+    font-size:9pt; color:#555; font-weight:700;
+    text-transform:uppercase; letter-spacing:1px;
+  }
+
+  .sig-company {
+    font-family:'Lato', sans-serif;
+    font-size:8.5pt; color:#E8191A; font-weight:700;
+  }
+
+  .footer-brand {
+    text-align:right;
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+  }
+
+  .footer-logo { width:52px; height:52px; object-fit:contain; }
+
+  .footer-tagline {
+    font-family:'Lato', sans-serif;
+    font-size:7.5pt; font-weight:700; color:#F5A623;
+    letter-spacing:2px; text-transform:uppercase;
+  }
+
+  /* ── print settings ── */
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+  @media print {
+    html, body { width:297mm; height:210mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="accent-bar"></div>
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+      <img src="${logoUrl}" alt="SmartMenu Logo" class="logo"/>
+
+      <div class="header-text">
+        <div class="cert-label">${COMPANY} &nbsp;·&nbsp; Official Document</div>
+        <div class="cert-title">Certificate</div>
+        <div class="cert-of">of Employment</div>
+      </div>
+
+      <img src="${logoUrl}" alt="SmartMenu Logo" class="logo" style="opacity:0.18;"/>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+      <div class="to-whom">To Whom It May Concern:</div>
+
+      <div class="certify-line">This is to certify that</div>
+
+      <div class="employee-name">${employeeName}</div>
+      <span class="name-rule"></span>
+
+      <p class="body-text">
+        is a <strong>bonafide employee</strong> of <strong>${COMPANY}</strong>.<br/>
+        This certificate is issued upon the request of the above-named employee
+        for whatever legal purpose it may serve.
+      </p>
+
+      <div class="issued-date">Issued on: ${date}</div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="sig-block">
+        <span class="sig-name">${OWNER_NAME}</span><br/>
+        <span class="sig-title">${OWNER_TITLE}</span><br/>
+        <span class="sig-company">${COMPANY}</span>
+      </div>
+
+      <div class="footer-brand">
+        <img src="${logoUrl}" alt="SmartMenu" class="footer-logo"/>
+        <div class="footer-tagline">${TAGLINE}</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>`;
 }
 
-/* ─── Component ────────────────────────────────────────────────────────── */
+/* ─── Print-to-PDF via hidden iframe ────────────────────────────────────── */
+function printToPDF(html: string): void {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:297mm;height:210mm;border:0;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) { document.body.removeChild(iframe); return; }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Wait for images to load, then print
+  iframe.contentWindow?.addEventListener('load', () => {
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 2000);
+    }, 500);
+  });
+}
+
+/* ─── Component ─────────────────────────────────────────────────────────── */
 export function CertificateGenerator() {
-  const [name, setName] = useState('');
-  const [generated, setGenerated] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [name, setName]           = useState('');
+  const [previewing, setPreviewing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewHTML, setPreviewHTML]   = useState('');
 
-  // logo path relative to the deployed origin
-  const logoSrc = `${window.location.origin}/smartmenu-logo.jpg`;
+  const logoUrl = `${window.location.origin}/smartmenu-logo.jpg`;
 
-  const handleGenerate = async () => {
-    if (!name.trim() || !canvasRef.current) return;
-    setIsDrawing(true);
-    await drawCertificate(canvasRef.current, name.trim(), logoSrc);
-    setGenerated(true);
-    setIsDrawing(false);
+  const handleGenerate = () => {
+    if (!name.trim()) return;
+    setIsGenerating(true);
+    const html = buildCertificateHTML(name.trim(), logoUrl);
+    setPreviewHTML(html);
+    setPreviewing(true);
+    setIsGenerating(false);
   };
 
-  const handleDownload = () => {
-    if (!canvasRef.current || !generated) return;
-    const link = document.createElement('a');
-    link.href = canvasRef.current.toDataURL('image/png');
-    link.download = `SmartMenu-Certificate-${name.trim().replace(/\s+/g, '-')}.png`;
-    link.click();
+  const handleDownloadPDF = () => {
+    if (!previewHTML) return;
+    printToPDF(previewHTML);
   };
 
   const handleReset = () => {
     setName('');
-    setGenerated(false);
-    // clear canvas
-    const ctx = canvasRef.current?.getContext('2d');
-    if (ctx && canvasRef.current) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    setPreviewing(false);
+    setPreviewHTML('');
   };
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
 
-      {/* header */}
+      {/* ── page header ── */}
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
           <FileText className="w-6 h-6 text-[#E8191A]" />
         </div>
         <div>
           <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Certificate of Employment</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">I-generate ang official certificate para sa empleyado</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            I-generate ang official PDF certificate para sa empleyado
+          </p>
         </div>
       </div>
 
-      {/* input card */}
+      {/* ── input card ── */}
       <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-sm">
-        <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-wide">
+        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-widest">
           Full Name ng Empleyado *
         </label>
         <div className="flex gap-3">
@@ -225,7 +320,7 @@ export function CertificateGenerator() {
             <input
               type="text"
               value={name}
-              onChange={(e) => { setName(e.target.value); setGenerated(false); }}
+              onChange={(e) => { setName(e.target.value); setPreviewing(false); }}
               onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
               placeholder="Juan Dela Cruz"
               className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-[#E8191A] transition-colors text-sm font-medium"
@@ -235,24 +330,24 @@ export function CertificateGenerator() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleGenerate}
-            disabled={!name.trim() || isDrawing}
+            disabled={!name.trim() || isGenerating}
             className={`px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shrink-0 ${
-              !name.trim() || isDrawing
+              !name.trim() || isGenerating
                 ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                : 'bg-[#E8191A] hover:bg-red-700 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30'
+                : 'bg-[#E8191A] hover:bg-red-700 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30 cursor-pointer'
             }`}
           >
             <FileText className="w-4 h-4" />
-            {isDrawing ? 'Generating...' : 'Generate'}
+            {isGenerating ? 'Generating...' : 'Generate'}
           </motion.button>
         </div>
         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-          Ilagay ang buong pangalan ng empleyado, tapos pindutin ang Generate.
+          I-type ang buong pangalan ng empleyado, tapos pindutin ang Generate para makita ang preview.
         </p>
       </div>
 
-      {/* certificate preview + actions */}
-      {generated && (
+      {/* ── preview + actions ── */}
+      {previewing && previewHTML && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -262,11 +357,11 @@ export function CertificateGenerator() {
           <div className="flex flex-wrap items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl font-bold text-sm transition-all shadow"
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-200 dark:shadow-red-900/30"
             >
               <Download className="w-4 h-4" />
-              I-download ang Certificate (PNG)
+              I-download bilang PDF
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -277,24 +372,20 @@ export function CertificateGenerator() {
               Bago Muli
             </motion.button>
             <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-auto hidden sm:block">
-              Preview ng certificate — ang PNG ay high-resolution (1122 × 794 px)
+              Kapag pinindot ang "I-download bilang PDF", mag-aappear ang print dialog — piliin ang "Save as PDF"
             </span>
           </div>
 
-          {/* canvas preview */}
+          {/* iframe preview — shows the actual certificate HTML */}
           <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-xl bg-white">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-auto block"
-              style={{ maxWidth: '100%' }}
+            <iframe
+              srcDoc={previewHTML}
+              title="Certificate Preview"
+              className="w-full block"
+              style={{ height: '520px', border: 'none' }}
             />
           </div>
         </motion.div>
-      )}
-
-      {/* empty canvas (hidden until generated) */}
-      {!generated && (
-        <canvas ref={canvasRef} className="hidden" />
       )}
     </div>
   );
