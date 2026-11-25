@@ -29,6 +29,7 @@ import {
     Fingerprint,
     ShieldCheck,
     AlertCircle,
+    BarChart3,
     Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -92,12 +93,13 @@ export const EmployeeDashboard: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeSection, setActiveSection] = useState<'deals' | 'audit' | 'profile'>('deals');
+    const [activeSection, setActiveSection] = useState<'deals' | 'audit' | 'analytics' | 'profile'>('deals');
     const [showTerms, setShowTerms] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
     const [mobileDealsView, setMobileDealsView] = useState<'cards' | 'sheet'>('cards');
     const [expandedDealId, setExpandedDealId] = useState<string | null>(null);
+    const [analyticsPeriod, setAnalyticsPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
     const dealsTableScrollRef = useRef<HTMLDivElement>(null);
     const slideDealsTable = (dir: 1 | -1) => {
         const el = dealsTableScrollRef.current;
@@ -364,6 +366,127 @@ export const EmployeeDashboard: React.FC = () => {
 
     const totalCommission = leads.reduce((sum, l) => sum + getCommission(l), 0);
 
+    // Analytics helper functions
+    const getClosedDeals = () => leads.filter(l => l.status === 'closed');
+
+    const getClosedDealsForPeriod = () => {
+        const now = new Date();
+        const closed = getClosedDeals();
+        
+        if (analyticsPeriod === 'day') {
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return closed.filter(l => {
+                const d = new Date(l.created_at);
+                return d >= today;
+            }).length;
+        } else if (analyticsPeriod === 'week') {
+            const weekStart = new Date(now);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            return closed.filter(l => new Date(l.created_at) >= weekStart).length;
+        } else if (analyticsPeriod === 'month') {
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            return closed.filter(l => {
+                const d = new Date(l.created_at);
+                return d.getFullYear() === monthStart.getFullYear() && d.getMonth() === monthStart.getMonth();
+            }).length;
+        } else {
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            return closed.filter(l => new Date(l.created_at).getFullYear() === yearStart.getFullYear()).length;
+        }
+    };
+
+    const getClosedDealsAmountForPeriod = () => {
+        const now = new Date();
+        const closed = getClosedDeals();
+        
+        if (analyticsPeriod === 'day') {
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return closed.filter(l => new Date(l.created_at) >= today).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+        } else if (analyticsPeriod === 'week') {
+            const weekStart = new Date(now);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            return closed.filter(l => new Date(l.created_at) >= weekStart).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+        } else if (analyticsPeriod === 'month') {
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            return closed.filter(l => {
+                const d = new Date(l.created_at);
+                return d.getFullYear() === monthStart.getFullYear() && d.getMonth() === monthStart.getMonth();
+            }).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+        } else {
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            return closed.filter(l => new Date(l.created_at).getFullYear() === yearStart.getFullYear()).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+        }
+    };
+
+    const getAverageDealValue = () => {
+        const count = getClosedDealsForPeriod();
+        const amount = getClosedDealsAmountForPeriod();
+        return count > 0 ? Math.round(amount / count) : 0;
+    };
+
+    const getClosedDealsChartData = () => {
+        const now = new Date();
+        const closed = getClosedDeals();
+
+        if (analyticsPeriod === 'day') {
+            return Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(now);
+                d.setDate(d.getDate() - (6 - i));
+                d.setHours(0, 0, 0, 0);
+                const nextDay = new Date(d);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const count = closed.filter(l => {
+                    const ld = new Date(l.created_at);
+                    return ld >= d && ld < nextDay;
+                }).length;
+                return {
+                    label: d.toLocaleDateString('default', { month: 'short', day: 'numeric' }),
+                    count
+                };
+            });
+        } else if (analyticsPeriod === 'week') {
+            return Array.from({ length: 8 }, (_, i) => {
+                const d = new Date(now);
+                d.setDate(d.getDate() - (7 - i) * 7);
+                d.setHours(0, 0, 0, 0);
+                const weekEnd = new Date(d);
+                weekEnd.setDate(weekEnd.getDate() + 7);
+                const count = closed.filter(l => {
+                    const ld = new Date(l.created_at);
+                    return ld >= d && ld < weekEnd;
+                }).length;
+                return {
+                    label: `W${Math.ceil(d.getDate() / 7)}`,
+                    count
+                };
+            });
+        } else if (analyticsPeriod === 'month') {
+            return Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+                const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+                const count = closed.filter(l => {
+                    const ld = new Date(l.created_at);
+                    return ld >= d && ld < monthEnd;
+                }).length;
+                return {
+                    label: d.toLocaleDateString('default', { month: 'short' }),
+                    count
+                };
+            });
+        } else {
+            return Array.from({ length: 4 }, (_, i) => {
+                const yr = now.getFullYear() - (3 - i);
+                const count = closed.filter(l => new Date(l.created_at).getFullYear() === yr).length;
+                return {
+                    label: String(yr),
+                    count
+                };
+            });
+        }
+    };
+
     const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString() : '—');
 
     // Balance: If Fully Paid, total package minus commission (e.g. 5499 - 300 = 5199, or 3499 - 250 = 3249).
@@ -515,7 +638,7 @@ export const EmployeeDashboard: React.FC = () => {
 
     const handleDownloadCSV = () => {
         const headers = [
-            'Month', 'Date', 'Client Name', 'Webdev', 'Package Avail',
+            'Month', 'Date', 'Client Name', 'Sales Consultant', 'Package Avail',
             'Down Payment', 'Down Payment Date', 'Full Payment', 'Full Payment Date',
             'Paid Balance', 'Paid Balance Date', 'Tip', 'Payment Status', 'Balance', 'Commission'
         ];
@@ -640,9 +763,10 @@ export const EmployeeDashboard: React.FC = () => {
             {/* Tab Switcher */}
             {/* Phone: bottom tab bar (same style as the owner side) */}
             <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-zinc-200 pb-safe" aria-label="Sections">
-                <div className="grid grid-cols-3 px-1 pt-1.5 pb-1.5">
+                <div className="grid grid-cols-4 px-1 pt-1.5 pb-1.5">
                     {([
                         { id: 'deals', label: 'My Deals', icon: Handshake },
+                        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                         { id: 'audit', label: 'Audit', icon: ClipboardList },
                         { id: 'profile', label: 'Profile', icon: User },
                     ] as const).map(({ id, label, icon: Icon }) => {
@@ -673,6 +797,13 @@ export const EmployeeDashboard: React.FC = () => {
                             }`}
                     >
                         My Deals
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('analytics')}
+                        className={`px-4 lg:px-8 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'analytics' ? 'bg-ink text-white shadow-lg' : 'text-zinc-400 hover:text-black'
+                            }`}
+                    >
+                        Analytics
                     </button>
                     <button
                         onClick={() => setActiveSection('audit')}
@@ -1046,7 +1177,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 <div className="px-3.5 py-2.5 bg-slate-50/50 border-t border-slate-100 text-xs space-y-2">
                                                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                                                         <div>
-                                                                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Webdev</span>
+                                                                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Sales Consultant</span>
                                                                             <span className="font-semibold text-slate-800">{lead.webdev?.name || 'Unassigned'}</span>
                                                                         </div>
                                                                         <div>
@@ -1138,7 +1269,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                             <th className="px-2 py-2 border-r border-slate-200 text-right">Downpayment</th>
                                                             <th className="px-2 py-2 border-r border-slate-200 text-right">Balance</th>
                                                             <th className="px-2 py-2 border-r border-slate-200 text-right">Commission</th>
-                                                            <th className="px-2 py-2 border-r border-slate-200">Webdev</th>
+                                                            <th className="px-2 py-2 border-r border-slate-200">Sales Consultant</th>
                                                             <th className="px-2 py-2 border-r border-slate-200">Date</th>
                                                         </tr>
                                                     </thead>
@@ -1205,7 +1336,7 @@ export const EmployeeDashboard: React.FC = () => {
                                             <thead>
                                                 <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300 text-xs font-bold uppercase tracking-wider select-none sticky top-0 z-20">
                                                     <th className="px-3 py-2.5 border-r border-slate-200 min-w-[180px]">Client</th>
-                                                    <th className="px-3 py-2.5 border-r border-slate-200">Webdev</th>
+                                                    <th className="px-3 py-2.5 border-r border-slate-200">Sales Consultant</th>
                                                     <th className="px-3 py-2.5 border-r border-slate-200 text-right">Package</th>
                                                     <th className="px-3 py-2.5 border-r border-slate-200 text-right">Down Payment</th>
                                                     <th className="px-3 py-2.5 border-r border-slate-200 text-right">Full Payment</th>
@@ -1298,7 +1429,7 @@ export const EmployeeDashboard: React.FC = () => {
                                                                 )}
                                                             </td>
 
-                                                            {/* Webdev */}
+                                                            {/* Sales Consultant */}
                                                             <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">
                                                                 <span className={cn(
                                                                     "font-medium",
@@ -1689,6 +1820,72 @@ export const EmployeeDashboard: React.FC = () => {
                                                 </tr>
                                             )}
                                         </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : activeSection === 'analytics' ? (
+                        <motion.div key="analytics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                            {/* ANALYTICS SECTION */}
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">Performance</p>
+                                    <h2 className="text-2xl font-black tracking-tighter text-ink uppercase">Closed Deals Analytics</h2>
+                                    <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Track your performance by period</p>
+                                </div>
+
+                                {/* Period Switcher */}
+                                <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-xl w-fit">
+                                    {(['day', 'week', 'month', 'year'] as const).map(p => (
+                                        <button
+                                            key={p}
+                                            type="button"
+                                            onClick={() => setAnalyticsPeriod(p)}
+                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer capitalize ${analyticsPeriod === p ? 'bg-black text-white shadow-sm' : 'text-zinc-500 hover:text-black'}`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Closed deals stats grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5">
+                                        <p className="text-[8px] font-bold text-blue-600 uppercase tracking-widest">Closed This Period</p>
+                                        <p className="text-4xl font-black text-blue-900 mt-2 tabular-nums">{getClosedDealsForPeriod()}</p>
+                                        <p className="text-xs text-blue-700 font-semibold mt-2">deals completed</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-5">
+                                        <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest">Total This Period</p>
+                                        <p className="text-4xl font-black text-emerald-900 mt-2 tabular-nums">₱{getClosedDealsAmountForPeriod().toLocaleString()}</p>
+                                        <p className="text-xs text-emerald-700 font-semibold mt-2">sales value</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-5">
+                                        <p className="text-[8px] font-bold text-amber-600 uppercase tracking-widest">Avg per Deal</p>
+                                        <p className="text-4xl font-black text-amber-900 mt-2 tabular-nums">₱{getAverageDealValue().toLocaleString()}</p>
+                                        <p className="text-xs text-amber-700 font-semibold mt-2">average value</p>
+                                    </div>
+                                </div>
+
+                                {/* Bar chart */}
+                                <div className="bg-white border border-zinc-100 rounded-2xl p-6 shadow-sm">
+                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Closed deals distribution</p>
+                                    <div className="flex gap-2 items-end h-40">
+                                        {getClosedDealsChartData().map((data, i) => (
+                                            <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-2 group relative">
+                                                {data.count > 0 && (
+                                                    <span className="text-[9px] font-black text-zinc-700">{data.count}</span>
+                                                )}
+                                                <div
+                                                    className="w-full bg-black rounded-t-lg transition-all group-hover:bg-zinc-800"
+                                                    style={{
+                                                        height: `${Math.max((data.count / Math.max(...getClosedDealsChartData().map(d => d.count), 1)) * 100, data.count > 0 ? 10 : 2)}%`,
+                                                    }}
+                                                    title={`${data.label}: ${data.count} closed`}
+                                                />
+                                                <span className="text-[8px] font-bold text-zinc-500 text-center truncate w-full px-0.5">{data.label}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -2111,11 +2308,7 @@ export const EmployeeDashboard: React.FC = () => {
                             </div>
 
                             <div className="overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-5 sm:space-y-6">
-                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                    <div className="bg-ink text-white rounded-xl sm:rounded-2xl p-2.5 sm:p-4 min-w-0">
-                                        <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Commission</p>
-                                        <p className="text-xl sm:text-2xl font-black tracking-tighter tabular-nums mt-1.5">{workerRate}%</p>
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                     <div className="bg-zinc-50 border border-zinc-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 min-w-0">
                                         <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">Payout</p>
                                         <p className="text-xs sm:text-lg font-black tracking-tighter text-ink mt-1.5 leading-tight">Every 2 weeks</p>
@@ -2132,7 +2325,7 @@ export const EmployeeDashboard: React.FC = () => {
                                         title: 'Commission & Payouts',
                                         items: [
                                             ['Payout schedule', 'Commissions are released every 2 weeks.'],
-                                            ['When you earn', `You earn ${workerRate}% of the package value once a project is Fully Paid.`],
+                                            ['When you earn', `You earn commission once a project is Fully Paid.`],
                                             ['No commission', 'Down-payment-only and cancelled projects earn nothing until they are fully paid.'],
                                             ['Payout details', 'Keep your GCash number and QR code in Edit Profile up to date. We cannot release a payout to wrong or missing details.'],
                                         ],
@@ -2283,94 +2476,20 @@ export const EmployeeDashboard: React.FC = () => {
                                     />
                                 </div>
 
-                                {/* Package Selection: 3499 or 5499 with balance/commission details */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between px-2">
-                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">
-                                            Select Package (₱)
-                                        </span>
-                                        <span className="text-[10px] font-bold text-slate-500">
-                                            {addForm.deal_value === 5499 ? '₱5,499 Package Selected' : addForm.deal_value === 3499 ? '₱3,499 Package Selected' : 'Custom Package'}
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => setAddForm(prev => ({ ...prev, deal_value: 3499 }))}
-                                            className={cn(
-                                                "p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden",
-                                                addForm.deal_value === 3499
-                                                    ? "border-black bg-zinc-900 text-white shadow-md ring-2 ring-black/10"
-                                                    : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
-                                            )}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-black uppercase tracking-wider">3,499 Package</span>
-                                                {addForm.deal_value === 3499 && (
-                                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                                )}
-                                            </div>
-                                            <p className={cn("text-xl font-black tracking-tight tabular-nums mt-1", addForm.deal_value === 3499 ? "text-white" : "text-black")}>
-                                                ₱3,499
-                                            </p>
-                                            <div className="mt-2 pt-2 border-t border-zinc-200/40 text-[10px] space-y-0.5">
-                                                <p className={addForm.deal_value === 3499 ? "text-zinc-300" : "text-zinc-600"}>
-                                                    Commission: <strong className="text-emerald-400 font-bold">₱250</strong> (Fully Paid)
-                                                </p>
-                                                <p className={addForm.deal_value === 3499 ? "text-zinc-300" : "text-zinc-600"}>
-                                                    Balance: <strong className="font-bold">₱3,249</strong> (3,499 - 250)
-                                                </p>
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setAddForm(prev => ({ ...prev, deal_value: 5499 }))}
-                                            className={cn(
-                                                "p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden",
-                                                addForm.deal_value === 5499
-                                                    ? "border-black bg-zinc-900 text-white shadow-md ring-2 ring-black/10"
-                                                    : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
-                                            )}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-black uppercase tracking-wider">5,499 Package</span>
-                                                {addForm.deal_value === 5499 && (
-                                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                                )}
-                                            </div>
-                                            <p className={cn("text-xl font-black tracking-tight tabular-nums mt-1", addForm.deal_value === 5499 ? "text-white" : "text-black")}>
-                                                ₱5,499
-                                            </p>
-                                            <div className="mt-2 pt-2 border-t border-zinc-200/40 text-[10px] space-y-0.5">
-                                                <p className={addForm.deal_value === 5499 ? "text-zinc-300" : "text-zinc-600"}>
-                                                    Commission: <strong className="text-emerald-400 font-bold">₱300</strong> (Fully Paid)
-                                                </p>
-                                                <p className={addForm.deal_value === 5499 ? "text-zinc-300" : "text-zinc-600"}>
-                                                    Balance: <strong className="font-bold">₱5,199</strong> (5,499 - 300)
-                                                </p>
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    {/* Or custom package */}
-                                    <div className="pt-1 flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider shrink-0 px-1">Other:</span>
-                                        <div className="relative flex-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">₱</span>
-                                            <input
-                                                type="text"
-                                                inputMode="numeric"
-                                                title="Custom Package Value"
-                                                placeholder="Custom package amount..."
-                                                className="w-full pl-7 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-bold text-zinc-900 focus:bg-white focus:border-black outline-none transition-all tabular-nums"
-                                                value={addForm.deal_value || ''}
-                                                onChange={(e) => {
-                                                    const val = Number(e.target.value.replace(/[^0-9]/g, ""));
-                                                    setAddForm(prev => ({ ...prev, deal_value: val }));
-                                                }}
-                                            />
-                                        </div>
+                                {/* Package Price Input */}
+                                <div className="space-y-1 lg:space-y-2">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block px-2">Package Price (₱)</span>
+                                    <div className="relative">
+                                        <span className="absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-sm lg:text-base font-bold text-zinc-400">₱</span>
+                                        <input
+                                            type="number"
+                                            required
+                                            title="Package Price"
+                                            placeholder="0.00"
+                                            className="w-full pl-9 lg:pl-12 pr-4 lg:pr-6 py-2.5 lg:py-4 bg-zinc-50 border border-zinc-100 rounded-2xl focus:border-black outline-none font-bold text-xs lg:text-sm transition-all tabular-nums"
+                                            value={addForm.deal_value || ''}
+                                            onChange={(e) => setAddForm({ ...addForm, deal_value: Number(e.target.value) })}
+                                        />
                                     </div>
                                 </div>
 

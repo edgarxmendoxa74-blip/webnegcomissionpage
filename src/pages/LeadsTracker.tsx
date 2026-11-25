@@ -45,6 +45,7 @@ interface Lead {
     webdev?: { name: string };
     is_hidden: boolean;
     commission_rate?: number;
+    commission_amount?: number | null;
     created_at: string;
     month?: string | null;
     down_payment_date?: string | null;
@@ -105,6 +106,7 @@ export const LeadsTracker: React.FC = () => {
         deal_value: 0,
         down_payment: 0,
         tip: 0,
+        commission_amount: 0,
         payment_status: 'Downpayment Only' as string
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,6 +199,7 @@ export const LeadsTracker: React.FC = () => {
                     deal_value: dealValue,
                     down_payment: formData.down_payment,
                     tip: formData.tip,
+                    commission_amount: formData.commission_amount || null,
                     payment_status: formData.payment_status,
                     webdev_id: formData.webdev_id || null,
                     closed_at: new Date().toISOString()
@@ -205,10 +208,12 @@ export const LeadsTracker: React.FC = () => {
 
             if (leadError) throw leadError;
 
-            const commissionAmount = dealCommission(
-                { payment_status: formData.payment_status, deal_value: dealValue, down_payment: formData.down_payment, commission_rate: closingLead.commission_rate },
-                closingLead.worker?.commission_percentage ?? 0
-            );
+            const commissionAmount = formData.commission_amount > 0
+                ? formData.commission_amount
+                : dealCommission(
+                    { payment_status: formData.payment_status, deal_value: dealValue, down_payment: formData.down_payment, commission_rate: closingLead.commission_rate },
+                    closingLead.worker?.commission_percentage ?? 0
+                );
 
             const { error: commError } = await supabase
                 .from('commissions')
@@ -318,7 +323,7 @@ export const LeadsTracker: React.FC = () => {
     // Excel-style export
     const exportToCSV = () => {
         const headers = [
-            'Month', 'Date', 'Employee', 'Client Name', 'Webdev', 'Total Package',
+            'Month', 'Date', 'Employee', 'Client Name', 'Sales Consultant', 'Total Package',
             'Downpayment', 'Downpayment Date', 'Full Payment', 'Full Payment Date',
             'Paid Balance', 'Paid Balance Date', 'Tip', 'Total Balance', 'Status', 'Commission', 'Paid Stamp'
         ];
@@ -426,6 +431,24 @@ export const LeadsTracker: React.FC = () => {
                                     onChange={(e) => setFormData({ ...formData, tip: Number(e.target.value) })}
                                 />
                             </div>
+                            <p className="text-[10px] font-semibold text-amber-600 mt-1 flex items-start gap-1">
+                                <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                                <span>Tips must be sent to the sales consultant's personal e-wallet, NOT the company e-wallet</span>
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Commission Amount (₱)</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₱</span>
+                                <input
+                                    type="number"
+                                    className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-base font-bold text-slate-900 focus:border-slate-800 focus:bg-white transition-all tabular-nums"
+                                    placeholder="0.00"
+                                    value={formData.commission_amount || ''}
+                                    onChange={(e) => setFormData({ ...formData, commission_amount: Number(e.target.value) })}
+                                />
+                            </div>
                         </div>
 
                         <div>
@@ -442,13 +465,13 @@ export const LeadsTracker: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Webdev Assigned</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Sales Consultant Assigned</label>
                             <select
                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold text-slate-900 focus:border-slate-800 focus:bg-white transition-all"
                                 value={formData.webdev_id}
                                 onChange={(e) => setFormData({ ...formData, webdev_id: e.target.value })}
                             >
-                                <option value="">Select Webdev</option>
+                                <option value="">Select Sales Consultant</option>
                                 {workers.map(worker => (
                                     <option key={worker.id} value={worker.id}>{worker.name}</option>
                                 ))}
@@ -456,7 +479,29 @@ export const LeadsTracker: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    {/* Terms & Policies Section */}
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-start gap-2 mb-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <h3 className="text-xs font-black uppercase tracking-wider text-amber-900">Payment Terms & Policies</h3>
+                        </div>
+                        <div className="space-y-2 text-[11px] text-amber-800 font-semibold leading-relaxed">
+                            <p className="flex items-start gap-2">
+                                <span className="text-amber-600 shrink-0">•</span>
+                                <span><strong>Tips Payment Method:</strong> All tips must be sent directly to the sales consultant's personal e-wallet (GCash, PayMaya, etc.).</span>
+                            </p>
+                            <p className="flex items-start gap-2">
+                                <span className="text-amber-600 shrink-0">•</span>
+                                <span><strong>Company Payment Separation:</strong> Tips should NOT be sent to the company's official e-wallet or bank account.</span>
+                            </p>
+                            <p className="flex items-start gap-2">
+                                <span className="text-amber-600 shrink-0">•</span>
+                                <span><strong>Direct to Consultant:</strong> Always confirm the sales consultant's personal e-wallet details before sending tips.</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-4">
                         <button
                             onClick={() => handleCloseDeal(formData.deal_value)}
                             disabled={isSubmitting}
@@ -553,7 +598,7 @@ export const LeadsTracker: React.FC = () => {
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Search client, employee, webdev, contact..."
+                            placeholder="Search client, employee, sales consultant, contact..."
                             className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-800 outline-none transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -873,7 +918,7 @@ export const LeadsTracker: React.FC = () => {
                                                 )}
                                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                                     <div>
-                                                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Webdev</span>
+                                                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Sales Consultant</span>
                                                         <span className="font-semibold text-slate-800">{lead.webdev?.name || 'Unassigned'}</span>
                                                     </div>
                                                     <div>
@@ -1050,7 +1095,7 @@ export const LeadsTracker: React.FC = () => {
                                 <th className="px-3 py-2.5 border-r border-slate-200">Employee</th>
                                 <th className="px-3 py-2.5 border-r border-slate-200 min-w-[180px]">Client</th>
                                 <th className="px-3 py-2.5 border-r border-slate-200">Date</th>
-                                <th className="px-3 py-2.5 border-r border-slate-200">Webdev</th>
+                                <th className="px-3 py-2.5 border-r border-slate-200">Sales Consultant</th>
                                 <th className="px-3 py-2.5 border-r border-slate-200 text-right">Package</th>
                                 <th className="px-3 py-2.5 border-r border-slate-200 text-right">Down Payment</th>
                                 <th className="px-3 py-2.5 border-r border-slate-200 text-right">Full Payment</th>
