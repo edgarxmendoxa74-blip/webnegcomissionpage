@@ -391,7 +391,7 @@ export const LeadsTracker: React.FC = () => {
 
                     <div className="space-y-4 mb-6 text-left">
                         <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Package Value (₱)</label>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Deal Value (₱)</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₱</span>
                                 <input

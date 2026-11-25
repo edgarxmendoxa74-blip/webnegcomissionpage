@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Download, User, Building2, Mail, Phone, MapPin,
   Eye, CheckCircle2, XCircle, Clock, RefreshCw, Bell,
+  LayoutGrid, List,
 } from 'lucide-react';
 import {
   fetchPartnerApplications,
@@ -12,6 +13,7 @@ import {
 import { supabase } from '../lib/supabase';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type ViewMode = 'grid' | 'sheet';
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pending',  bg: 'bg-amber-100 dark:bg-amber-900/30',  text: 'text-amber-700 dark:text-amber-300',  Icon: Clock        },
@@ -27,7 +29,8 @@ export function PartnersList() {
   const [statusFilter, setStatusFilter]   = useState<StatusFilter>('all');
   const [selected, setSelected]           = useState<PartnerApplication | null>(null);
   const [updatingId, setUpdatingId]       = useState<string | null>(null);
-  const [newCount, setNewCount]           = useState(0);   // badge for newly arrived rows
+  const [newCount, setNewCount]           = useState(0);
+  const [viewMode, setViewMode]           = useState<ViewMode>('grid');
 
   /* ── load ── */
   const load = useCallback(async () => {
@@ -218,6 +221,31 @@ export function PartnersList() {
             <Download className="w-4 h-4" />
             Export CSV
           </motion.button>
+          {/* Grid / Sheet toggle */}
+          <div className="flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                  : 'bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode('sheet')}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold transition-all ${
+                viewMode === 'sheet'
+                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                  : 'bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              Sheet
+            </button>
+          </div>
         </div>
 
         {/* status pills */}
@@ -239,14 +267,15 @@ export function PartnersList() {
         </div>
       </div>
 
-      {/* ── Grid ── */}
+      {/* ── Grid / Sheet ── */}
       {isLoading ? (
         <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">Loading partners...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">
           {searchQuery || statusFilter !== 'all' ? 'Walang nahanap na partner.' : 'Wala pang partner na nagsumite.'}
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
+        /* ── GRID VIEW ── */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <AnimatePresence>
             {filtered.map((partner, idx) => {
@@ -267,7 +296,6 @@ export function PartnersList() {
                       : 'border-zinc-200 dark:border-zinc-700'
                   }`}
                 >
-                  {/* pending top bar */}
                   {st === 'pending' && (
                     <div className="bg-amber-500 px-4 py-1.5 flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-white" />
@@ -275,7 +303,6 @@ export function PartnersList() {
                     </div>
                   )}
 
-                  {/* profile pic */}
                   <div className="h-36 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center overflow-hidden">
                     {partner.profile_picture_url ? (
                       <img src={partner.profile_picture_url} alt={partner.full_name} className="w-full h-full object-cover" />
@@ -285,7 +312,6 @@ export function PartnersList() {
                   </div>
 
                   <div className="p-5 space-y-3">
-                    {/* name + status */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="text-base font-black text-zinc-900 dark:text-white leading-tight">{partner.full_name}</h3>
@@ -300,14 +326,12 @@ export function PartnersList() {
                       </span>
                     </div>
 
-                    {/* contact */}
                     <div className="space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                       <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /><span className="truncate">{partner.email}</span></div>
                       <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{partner.mobile_number}</div>
                       <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /><span className="truncate">{partner.business_address}</span></div>
                     </div>
 
-                    {/* pricing */}
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700">
                       <div>
                         <p className="text-[10px] text-zinc-400 font-bold uppercase">Offered</p>
@@ -319,34 +343,23 @@ export function PartnersList() {
                       </div>
                     </div>
 
-                    {/* actions */}
                     <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700">
-                      {/* quick approve/reject */}
                       {st !== 'approved' && (
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
+                        <motion.button whileTap={{ scale: 0.95 }}
                           onClick={() => handleStatusChange(partner.id!, 'approved')}
                           disabled={updatingId === partner.id}
                           className="flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-xs transition-all disabled:opacity-50"
-                        >
-                          ✓ Approve
-                        </motion.button>
+                        >✓ Approve</motion.button>
                       )}
                       {st !== 'rejected' && (
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
+                        <motion.button whileTap={{ scale: 0.95 }}
                           onClick={() => handleStatusChange(partner.id!, 'rejected')}
                           disabled={updatingId === partner.id}
                           className="flex-1 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg font-bold text-xs transition-all disabled:opacity-50"
-                        >
-                          ✕ Reject
-                        </motion.button>
+                        >✕ Reject</motion.button>
                       )}
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setSelected(partner)}
-                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-                      >
+                      <motion.button whileTap={{ scale: 0.95 }} onClick={() => setSelected(partner)}
+                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                         <Eye className="w-4 h-4 text-zinc-400" />
                       </motion.button>
                     </div>
@@ -355,6 +368,98 @@ export function PartnersList() {
               );
             })}
           </AnimatePresence>
+        </div>
+      ) : (
+        /* ── SHEET VIEW ── */
+        <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[900px]">
+              <thead>
+                <tr className="bg-zinc-50 dark:bg-zinc-700/50 border-b border-zinc-200 dark:border-zinc-700">
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Partner</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Mobile</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Address</th>
+                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Offered</th>
+                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Markup</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence>
+                  {filtered.map((partner, idx) => {
+                    const st = (partner.status || 'pending') as keyof typeof STATUS_CONFIG;
+                    const cfg = STATUS_CONFIG[st];
+                    const StatusIcon = cfg.Icon;
+                    return (
+                      <motion.tr
+                        key={partner.id || idx}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors ${
+                          st === 'pending' ? 'bg-amber-50/40 dark:bg-amber-900/5' : ''
+                        }`}
+                      >
+                        {/* name + photo */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 shrink-0">
+                              {partner.profile_picture_url ? (
+                                <img src={partner.profile_picture_url} alt={partner.full_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <User className="w-5 h-5 text-zinc-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-black text-zinc-900 dark:text-white text-sm leading-tight">{partner.full_name}</p>
+                              <p className="text-xs text-zinc-400 truncate max-w-[140px]">{partner.business_name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400 max-w-[160px] truncate">{partner.email}</td>
+                        <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400 whitespace-nowrap">{partner.mobile_number}</td>
+                        <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400 max-w-[160px] truncate">{partner.business_address}</td>
+                        <td className="px-4 py-3 text-right font-black text-[#E8191A] whitespace-nowrap">₱{partner.offered_price.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-black text-green-600 dark:text-green-400 whitespace-nowrap">₱{partner.markup.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {cfg.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {st !== 'approved' && (
+                              <button onClick={() => handleStatusChange(partner.id!, 'approved')}
+                                disabled={updatingId === partner.id}
+                                className="px-2.5 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-xs transition-all disabled:opacity-50">
+                                ✓
+                              </button>
+                            )}
+                            {st !== 'rejected' && (
+                              <button onClick={() => handleStatusChange(partner.id!, 'rejected')}
+                                disabled={updatingId === partner.id}
+                                className="px-2.5 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg font-bold text-xs transition-all disabled:opacity-50">
+                                ✕
+                              </button>
+                            )}
+                            <button onClick={() => setSelected(partner)}
+                              className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                              <Eye className="w-3.5 h-3.5 text-zinc-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
