@@ -21,6 +21,7 @@ import { EmployeeDashboard } from './pages/EmployeeDashboard';
 import { PartnerProgram } from './pages/PartnerProgram';
 import { PartnerAdmin } from './pages/PartnerAdmin';
 import { PartnersList } from './pages/PartnersList';
+import { CertificateGenerator } from './pages/CertificateGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
@@ -67,6 +68,8 @@ function AppContent() {
         return <LeadsTracker />;
       case 'Partners':
         return <PartnersList />;
+      case 'Certificate':
+        return <CertificateGenerator />;
       default:
         return (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground text-center">
