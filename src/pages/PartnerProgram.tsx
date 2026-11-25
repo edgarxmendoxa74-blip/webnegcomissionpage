@@ -53,6 +53,19 @@ export function PartnerProgram() {
   const stampRef = useRef<HTMLDivElement>(null);
   const registrationFormRef = useRef<HTMLDivElement>(null);
 
+  // Cheap field-presence check used only for disabling the button
+  const isFormValid =
+    !!formData.fullName.trim() &&
+    !!formData.businessName.trim() &&
+    /^09\d{2}\s\d{3}\s\d{4}$/.test(formData.mobileNumber) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+    !!formData.businessAddress.trim() &&
+    !!formData.offeredPrice.trim() &&
+    !isNaN(Number(formData.offeredPrice.replace(/,/g, ''))) &&
+    !!formData.markup.trim() &&
+    !isNaN(Number(formData.markup.replace(/,/g, ''))) &&
+    Number(formData.markup.replace(/,/g, '')) <= Number(formData.offeredPrice.replace(/,/g, ''));
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -312,7 +325,7 @@ webnegosyo3@gmail.com
   };
 
   if (submitted && submittedData && stampDate) {
-    return <SuccessScreen data={submittedData} stampDate={stampDate} onDownloadPDF={handleDownloadPDF} />;
+    return <SuccessScreen data={submittedData} stampDate={stampDate} stampRef={stampRef} onDownloadPDF={handleDownloadPDF} />;
   }
 
   return (
@@ -558,16 +571,11 @@ webnegosyo3@gmail.com
               whileHover={!isLoading && !stampDate ? { scale: 1.02 } : {}}
               whileTap={!isLoading && !stampDate ? { scale: 0.98 } : {}}
               onClick={handleStamp}
-              disabled={
-                isLoading ||
-                !validateForm() ||
-                !termsAccepted ||
-                !!stampDate
-              }
+              disabled={isLoading || !isFormValid || !termsAccepted || !!stampDate}
               className={`w-full mt-8 py-4 px-6 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all ${
                 isLoading || !!stampDate
                   ? 'bg-gray-400 cursor-not-allowed text-gray-600'
-                  : !validateForm() || !termsAccepted
+                  : !isFormValid || !termsAccepted
                   ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                   : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg'
               }`}
@@ -669,10 +677,12 @@ function TermsContent() {
 function SuccessScreen({
   data,
   stampDate,
+  stampRef,
   onDownloadPDF,
 }: {
   data: FormState & { stampDate: string };
   stampDate: string;
+  stampRef: React.RefObject<HTMLDivElement | null>;
   onDownloadPDF: () => void;
 }) {
   return (
@@ -735,7 +745,7 @@ function SuccessScreen({
           </div>
 
           {/* Stamp Display */}
-          <div ref={undefined} className="mb-8 py-8">
+          <div ref={stampRef} className="mb-8 py-8">
             <div
               className="inline-block relative"
               style={{
