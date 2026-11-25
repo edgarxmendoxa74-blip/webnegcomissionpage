@@ -18,6 +18,8 @@ import { TrainingVideoManager } from './components/TrainingVideoManager';
 import { ApplicantPortal } from './pages/ApplicantPortal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { EmployeeDashboard } from './pages/EmployeeDashboard';
+import { PartnerProgram } from './pages/PartnerProgram';
+import { PartnerAdmin } from './pages/PartnerAdmin';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
@@ -505,12 +507,41 @@ const isHiringPath = (): boolean => {
   );
 };
 
+const isPartnerPath = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  return (
+    path === '/partners' ||
+    path === '/partners/' ||
+    path.startsWith('/partners/') ||
+    hash === '#/partners' ||
+    hash === '#partners'
+  );
+};
+
+const isPartnerAdminPath = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  return (
+    path === '/partners/admin' ||
+    path === '/partners/admin/' ||
+    hash === '#/partners/admin' ||
+    hash === '#partners/admin'
+  );
+};
+
 function App() {
   const [isHiring, setIsHiring] = React.useState(isHiringPath);
+  const [isPartner, setIsPartner] = React.useState(isPartnerPath);
+  const [isPartnerAdmin, setIsPartnerAdmin] = React.useState(isPartnerAdminPath);
 
   React.useEffect(() => {
     const handleLocationChange = () => {
       setIsHiring(isHiringPath());
+      setIsPartner(isPartnerPath());
+      setIsPartnerAdmin(isPartnerAdminPath());
     };
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
@@ -524,6 +555,14 @@ function App() {
     window.history.pushState({}, '', '/');
     setIsHiring(false);
   };
+
+  if (isPartnerAdmin) {
+    return <PartnerAdmin />;
+  }
+
+  if (isPartner) {
+    return <PartnerProgram />;
+  }
 
   if (isHiring) {
     return <ApplicantPortal onBackToSelection={handleBackToSelection} />;
