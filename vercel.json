@@ -1,5 +1,11 @@
 {
   "rewrites": [
+    { "source": "/partners/admin", "destination": "/index.html" },
+    { "source": "/partners/admin/", "destination": "/index.html" },
+    { "source": "/partners", "destination": "/index.html" },
+    { "source": "/partners/", "destination": "/index.html" },
+    { "source": "/hiring", "destination": "/index.html" },
+    { "source": "/hiring/", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

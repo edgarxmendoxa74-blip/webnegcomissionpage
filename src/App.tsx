@@ -536,9 +536,9 @@ const isPartnerAdminPath = (): boolean => {
 };
 
 function App() {
-  const [isHiring, setIsHiring] = React.useState(isHiringPath);
-  const [isPartner, setIsPartner] = React.useState(isPartnerPath);
-  const [isPartnerAdmin, setIsPartnerAdmin] = React.useState(isPartnerAdminPath);
+  const [isHiring, setIsHiring] = React.useState(() => isHiringPath());
+  const [isPartner, setIsPartner] = React.useState(() => isPartnerPath());
+  const [isPartnerAdmin, setIsPartnerAdmin] = React.useState(() => isPartnerAdminPath());
 
   React.useEffect(() => {
     const handleLocationChange = () => {
