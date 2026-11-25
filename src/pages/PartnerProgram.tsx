@@ -12,6 +12,9 @@ import {
   DollarSign,
   User,
   Building2,
+  ExternalLink,
+  Play,
+  BookOpen,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PARTNER_PROGRAM_CONFIG } from '../lib/partnerConfig';
@@ -96,6 +99,7 @@ export function PartnerProgram() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const stampRef = useRef<HTMLDivElement>(null);
   const registrationFormRef = useRef<HTMLDivElement>(null);
 
@@ -170,6 +174,10 @@ export function PartnerProgram() {
     }
     setFormData((prev) => ({ ...prev, profilePicture: file }));
     setErrors((prev) => { const n = { ...prev }; delete n.profilePicture; return n; });
+    // Show thumbnail preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfilePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleStamp = async () => {
@@ -184,15 +192,26 @@ export function PartnerProgram() {
       if (emailExists) { setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateEmail); return; }
       if (mobileExists) { setGeneralError(PARTNER_PROGRAM_CONFIG.validationMessages.duplicateMobile); return; }
 
-      /* upload picture */
+      /* upload picture — non-blocking, errors shown to user */
       let profilePictureUrl: string | undefined;
       if (formData.profilePicture) {
-        const ext = formData.profilePicture.name.split('.').pop();
-        const fileName = `${Date.now()}-${formData.email}.${ext}`;
+        const ext = formData.profilePicture.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const safeEmail = formData.email.replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `${Date.now()}_${safeEmail}.${ext}`;
         const { error: upErr } = await supabase.storage
-          .from('partner_profiles').upload(`public/${fileName}`, formData.profilePicture);
-        if (!upErr) {
-          const { data: pub } = supabase.storage.from('partner_profiles').getPublicUrl(`public/${fileName}`);
+          .from('partner_profiles')
+          .upload(`public/${fileName}`, formData.profilePicture, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: formData.profilePicture.type,
+          });
+        if (upErr) {
+          console.warn('Profile picture upload failed:', upErr.message);
+          // Non-blocking: continue without picture rather than blocking submission
+        } else {
+          const { data: pub } = supabase.storage
+            .from('partner_profiles')
+            .getPublicUrl(`public/${fileName}`);
           profilePictureUrl = pub.publicUrl;
         }
       }
@@ -351,6 +370,132 @@ export function PartnerProgram() {
         </div>
       </section>
 
+      {/* ── SMARTMENU DETAILS + DEMO VIDEO ───────────────────────────── */}
+      <section className="py-14 sm:py-18 px-4 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-black tracking-widest text-[#F5A623] uppercase mb-3">
+              Alamin ang SmartMenu
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 dark:text-white">
+              Ano ang Ioofer Mo sa Iyong Clients?
+            </h2>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-3 max-w-xl mx-auto text-sm leading-relaxed">
+              Bago mag-register, basahin muna ang lahat ng detalye ng SmartMenu at panoorin ang demo video para maging handa ka.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Card 1 — SmartMenu Details */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="bg-gradient-to-r from-[#E8191A] to-[#c0121a] px-6 py-5 flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">SmartMenu Details & Inclusions</h3>
+                  <p className="text-xs text-red-200 mt-0.5">Lahat ng features at packages</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-5">
+                  Basahin ang kumpletong detalye ng SmartMenu — ang features, packages, at ang lahat ng kasama sa bawat subscription. Dito mo malalaman kung magkano ang ioffer mo sa iyong mga kliyente.
+                </p>
+                <ul className="space-y-2.5 mb-6">
+                  {[
+                    'Digital Menu na may QR Code',
+                    'Restaurant Management System',
+                    'Online Ordering Integration',
+                    'Sales & Analytics Dashboard',
+                    'Customer Loyalty Program',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300">
+                      <span className="w-5 h-5 rounded-full bg-[#E8191A]/10 text-[#E8191A] flex items-center justify-center shrink-0 text-xs font-black">✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="https://www.webnegosyo.com/university"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 px-5 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-red-200 dark:shadow-red-900/30"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Basahin ang SmartMenu Details
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <p className="text-center text-xs text-zinc-400 mt-2">
+                  webnegosyo.com/university
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Card 2 — Demo Video */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="bg-gradient-to-r from-zinc-800 to-zinc-900 px-6 py-5 flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Play className="w-5 h-5 text-[#F5A623]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">Demo Video</h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">Panoorin kung paano gumagana ang SmartMenu</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-5">
+                  Panoorin ang demo video para makita mo mismo kung paano gumagana ang SmartMenu. Ito ang ipapakita mo sa iyong mga prospective clients para makuha ang kanilang interes.
+                </p>
+                {/* Video thumbnail with play button */}
+                <a
+                  href="https://www.facebook.com/share/v/1Kta2qo4x1/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block relative rounded-xl overflow-hidden mb-5 group"
+                >
+                  <div className="w-full aspect-video bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center gap-3">
+                    <div className="w-16 h-16 rounded-full bg-[#1877F2] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">SmartMenu Demo Video</p>
+                      <p className="text-xs text-zinc-400 mt-1">I-click para manood sa Facebook</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-[#1877F2]/20 rounded-full">
+                      <svg className="w-3.5 h-3.5 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                      <span className="text-xs font-bold text-[#1877F2]">Facebook Video</span>
+                    </div>
+                  </div>
+                </a>
+                <a
+                  href="https://www.facebook.com/share/v/1Kta2qo4x1/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 px-5 bg-[#1877F2] hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-200 dark:shadow-blue-900/30"
+                >
+                  <Play className="w-4 h-4" fill="white" />
+                  Panoorin ang Demo Video
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ── REGISTRATION FORM ─────────────────────────────────────────────── */}
       <section ref={registrationFormRef} className="py-16 sm:py-20 px-4">
         <div className="max-w-2xl mx-auto">
@@ -435,16 +580,28 @@ export function PartnerProgram() {
                   <input type="file" accept="image/*" onChange={handleProfilePictureChange}
                     className="hidden" id="profile-picture-input" />
                   <label htmlFor="profile-picture-input" className="cursor-pointer block">
-                    <div className="w-full px-4 py-5 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl hover:border-[#E8191A] dark:hover:border-[#E8191A] transition-colors bg-zinc-50 dark:bg-zinc-800 flex flex-col items-center gap-1.5">
-                      <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
-                        <User className="w-5 h-5 text-zinc-400" />
-                      </div>
-                      {formData.profilePicture ? (
-                        <p className="text-sm font-bold text-[#E8191A]">{formData.profilePicture.name}</p>
+                    <div className={`w-full px-4 py-5 border-2 border-dashed rounded-xl transition-colors flex items-center gap-4 ${
+                      profilePreview
+                        ? 'border-[#E8191A] bg-red-50 dark:bg-red-900/10'
+                        : 'border-zinc-300 dark:border-zinc-700 hover:border-[#E8191A] dark:hover:border-[#E8191A] bg-zinc-50 dark:bg-zinc-800'
+                    }`}>
+                      {profilePreview ? (
+                        <>
+                          <img src={profilePreview} alt="Preview" className="w-14 h-14 rounded-full object-cover shrink-0 ring-2 ring-[#E8191A]" />
+                          <div>
+                            <p className="text-sm font-bold text-[#E8191A]">{formData.profilePicture?.name}</p>
+                            <p className="text-xs text-zinc-400 mt-0.5">I-click para palitan</p>
+                          </div>
+                        </>
                       ) : (
                         <>
-                          <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">I-upload ang larawan</p>
-                          <p className="text-xs text-zinc-400">JPG, PNG — max 5 MB</p>
+                          <div className="w-14 h-14 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
+                            <User className="w-7 h-7 text-zinc-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">I-upload ang larawan</p>
+                            <p className="text-xs text-zinc-400">JPG, PNG, WEBP — max 5 MB</p>
+                          </div>
                         </>
                       )}
                     </div>
