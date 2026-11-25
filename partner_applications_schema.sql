@@ -56,14 +56,21 @@ DROP POLICY IF EXISTS "Allow authenticated users to read partner applications"
 DROP POLICY IF EXISTS "Allow authenticated users to update partner applications"
   ON partner_applications;
 
+-- Allow anyone (anon + authenticated) to INSERT — the sign-up form is public
 CREATE POLICY "Allow public to insert partner applications"
   ON partner_applications FOR INSERT
+  TO anon, authenticated
   WITH CHECK (TRUE);
 
+-- Allow authenticated users (admin) to read
 CREATE POLICY "Allow authenticated users to read partner applications"
   ON partner_applications FOR SELECT
-  USING (auth.role() = 'authenticated');
+  TO authenticated
+  USING (TRUE);
 
+-- Allow authenticated users (admin) to update status
 CREATE POLICY "Allow authenticated users to update partner applications"
   ON partner_applications FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  TO authenticated
+  USING (TRUE)
+  WITH CHECK (TRUE);
