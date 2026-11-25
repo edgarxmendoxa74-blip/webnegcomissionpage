@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, User, RefreshCw } from 'lucide-react';
 
-/* ─── constants ──────────────────────────────────────────────────────────── */
 const OWNER_NAME  = 'John Angelo David';
 const OWNER_TITLE = 'Founder & Owner';
 const COMPANY     = 'SmartMenu';
-const TAGLINE     = 'Growing Restaurants. Together.';
 
 function todayFormatted() {
   return new Date().toLocaleDateString('en-US', {
@@ -22,433 +20,282 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>Certificate of Employment</title>
+<title>Certificate of Employment – ${employeeName}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
   html, body {
-    width: 297mm; height: 210mm;
+    width: 210mm;
+    height: 297mm;
     overflow: hidden;
-    background: #0d0d0d;
+    background: #fff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* ══ PAGE SHELL ══════════════════════════════════════════════════════════ */
   .page {
-    width: 297mm; height: 210mm;
-    position: relative;
-    overflow: hidden;
-    background: #fff;
+    width: 210mm;
+    height: 297mm;
+    background: #ffffff;
     display: flex;
     flex-direction: column;
   }
 
-  /* ── deep red top band ── */
-  .top-band {
-    background: linear-gradient(135deg, #8B0000 0%, #C0121A 50%, #E8191A 100%);
-    height: 28mm;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20mm;
-    flex-shrink: 0;
-  }
-
-  /* diagonal cut on top-band */
-  .top-band::after {
-    content: '';
-    position: absolute;
-    bottom: -8mm; left: 0; right: 0;
+  /* ─ red top stripe ─ */
+  .top-stripe {
+    width: 100%;
     height: 10mm;
-    background: #fff;
-    clip-path: polygon(0 100%, 100% 100%, 100% 0);
-  }
-
-  /* ── amber accent line under top-band ── */
-  .amber-rule {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(to right, #F5A623, #FFD700, #F5A623);
-  }
-
-  /* ── header logo ── */
-  .header-logo {
-    width: 18mm; height: 18mm;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-    position: relative; z-index: 2;
-    margin-right: 5mm;
+    background: #E8191A;
     flex-shrink: 0;
   }
 
-  /* ── header text ── */
-  .header-text { text-align: center; position: relative; z-index: 2; }
-
-  .header-eyebrow {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 6pt; font-weight: 700;
-    letter-spacing: 5px;
-    color: rgba(255,255,255,0.65);
-    text-transform: uppercase;
-    margin-bottom: 1.5mm;
+  /* ─ amber line ─ */
+  .amber-line {
+    width: 100%;
+    height: 3px;
+    background: #F5A623;
+    flex-shrink: 0;
   }
 
-  .header-title {
-    font-family: 'Cinzel', serif;
-    font-size: 20pt; font-weight: 900;
-    color: #fff;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    line-height: 1;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-
-  .header-subtitle {
-    font-family: 'Cinzel', serif;
-    font-size: 9pt; font-weight: 400;
-    color: rgba(255,255,255,0.75);
-    letter-spacing: 8px;
-    text-transform: uppercase;
-    margin-top: 1.5mm;
-  }
-
-  /* ══ BODY ════════════════════════════════════════════════════════════════ */
+  /* ─ main body ─ */
   .body {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10mm 24mm 6mm;
-    position: relative;
-  }
-
-  /* ── watermark ── */
-  .watermark {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 85mm; height: 85mm;
-    opacity: 0.035;
-    pointer-events: none;
-  }
-  .watermark img { width: 100%; height: 100%; object-fit: contain; }
-
-  /* ── left border ornament ── */
-  .body::before {
-    content: '';
-    position: absolute;
-    left: 8mm; top: 8mm; bottom: 8mm;
-    width: 3px;
-    background: linear-gradient(to bottom, transparent, #E8191A 20%, #E8191A 80%, transparent);
-  }
-
-  /* ── right border ornament ── */
-  .body::after {
-    content: '';
-    position: absolute;
-    right: 8mm; top: 8mm; bottom: 8mm;
-    width: 3px;
-    background: linear-gradient(to bottom, transparent, #F5A623 20%, #F5A623 80%, transparent);
-  }
-
-  .to-whom {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 9.5pt; font-style: italic;
-    color: #aaa;
-    letter-spacing: 1px;
-    margin-bottom: 3mm;
-  }
-
-  .certify-line {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 12pt; font-style: italic;
-    color: #666;
-    margin-bottom: 3mm;
-  }
-
-  /* ── employee name ── */
-  .name-wrap {
-    position: relative;
+    padding: 10mm 22mm 8mm;
     text-align: center;
+  }
+
+  .logo {
+    width: 30mm;
+    height: 30mm;
+    object-fit: contain;
+    margin-bottom: 4mm;
+  }
+
+  .company-name {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #E8191A;
+    text-transform: uppercase;
+    margin-bottom: 1mm;
+  }
+
+  .tagline {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 7pt;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: #F5A623;
+    text-transform: uppercase;
+    margin-bottom: 7mm;
+  }
+
+  .divider-line {
+    width: 50mm;
+    height: 1px;
+    background: #e8e8e8;
+    margin: 0 auto 7mm;
+  }
+
+  .doc-label {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    letter-spacing: 5px;
+    color: #bbb;
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+  }
+
+  .cert-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 25pt;
+    font-weight: 900;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 9mm;
+  }
+
+  .certify-text {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #888;
     margin-bottom: 4mm;
   }
 
   .employee-name {
-    font-family: 'Cinzel', serif;
-    font-size: 30pt; font-weight: 700;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 26pt;
+    font-weight: 700;
+    font-style: italic;
     color: #1a1a1a;
-    letter-spacing: 2px;
     line-height: 1.1;
-    display: block;
+    margin-bottom: 3mm;
   }
 
-  /* red glow under name */
-  .name-glow {
-    display: block;
+  .name-rule {
+    width: 70mm;
     height: 2px;
-    margin: 1.5mm auto 0;
-    width: 80%;
-    background: linear-gradient(to right, transparent, #E8191A 25%, #E8191A 75%, transparent);
+    background: #E8191A;
+    margin: 0 auto 7mm;
   }
 
-  /* ── ornamental divider ── */
-  .ornament {
-    display: flex;
-    align-items: center;
-    gap: 2.5mm;
-    margin: 0 0 4mm;
-  }
-  .ornament .bar { flex: 1; height: 1px; background: #ddd; }
-  .ornament .gem {
-    width: 6px; height: 6px;
-    transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-
-  /* ── body paragraph ── */
-  .body-text {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 11.5pt;
-    color: #444;
+  .body-para {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: 400;
+    color: #555;
     line-height: 1.85;
-    text-align: center;
-    max-width: 185mm;
-  }
-  .body-text .em  { color: #E8191A; font-weight: 600; }
-  .body-text .em2 { color: #8B0000; font-style: italic; }
-
-  /* ══ FOOTER ══════════════════════════════════════════════════════════════ */
-  .footer-band {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-    height: 24mm;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16mm;
-    flex-shrink: 0;
-    position: relative;
+    max-width: 148mm;
+    margin-bottom: 9mm;
   }
 
-  /* diagonal cut on footer-band top */
-  .footer-band::before {
-    content: '';
-    position: absolute;
-    top: -8mm; left: 0; right: 0;
-    height: 10mm;
-    background: #fff;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
+  .body-para strong { color: #1a1a1a; font-weight: 600; }
+
+  .issued {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 8pt;
+    color: #bbb;
+    letter-spacing: 0.5px;
+    margin-bottom: 10mm;
   }
 
-  /* amber top rule on footer */
-  .footer-rule {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(to right, #F5A623, #FFD700, #F5A623);
-  }
-
-  /* left: issue date */
-  .footer-left {
-    display: flex;
-    flex-direction: column;
-    gap: 1mm;
-    min-width: 55mm;
-  }
-  .footer-label {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 5.5pt; font-weight: 700;
-    color: #F5A623;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-  }
-  .footer-date {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 9.5pt; font-style: italic;
-    color: rgba(255,255,255,0.75);
-  }
-
-  /* center: signature */
-  .sig-block {
-    text-align: center;
+  /* ─ signature ─ */
+  .sig-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1mm;
-    min-width: 70mm;
   }
+
   .sig-line {
-    width: 60mm; height: 1px;
-    background: rgba(255,255,255,0.3);
-    margin-bottom: 1.5mm;
-  }
-  .sig-name {
-    font-family: 'Cinzel', serif;
-    font-size: 11pt; font-weight: 700;
-    color: #fff;
-    letter-spacing: 1px;
-  }
-  .sig-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 6.5pt; font-weight: 600;
-    color: #F5A623;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-  }
-  .sig-company {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 6pt; font-weight: 400;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 2px;
-    text-transform: uppercase;
+    width: 52mm;
+    height: 1px;
+    background: #333;
+    margin-bottom: 2.5mm;
   }
 
-  /* right: branding */
-  .footer-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 1.5mm;
-    min-width: 55mm;
+  .sig-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 1mm;
   }
-  .footer-logo {
-    width: 14mm; height: 14mm;
+
+  .sig-title {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #E8191A;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 0.5mm;
+  }
+
+  .sig-co {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 7pt;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* ─ bottom ─ */
+  .bottom-amber { width:100%; height:3px; background:#F5A623; flex-shrink:0; }
+
+  .bottom-stripe {
+    width: 100%;
+    height: 10mm;
+    background: #E8191A;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5mm;
+  }
+
+  .bottom-logo {
+    width: 7mm; height: 7mm;
     object-fit: contain;
     filter: brightness(0) invert(1);
     opacity: 0.85;
   }
-  .footer-tagline {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 5.5pt; font-weight: 700;
-    color: #F5A623;
-    letter-spacing: 2.5px;
+
+  .bottom-text {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    letter-spacing: 2px;
     text-transform: uppercase;
   }
 
-  /* ══ BORDER FRAME ════════════════════════════════════════════════════════ */
-  .frame {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-  }
-  /* red outer ring */
-  .frame::before {
-    content: '';
-    position: absolute;
-    inset: 4mm;
-    border: 2.5px solid rgba(232,25,26,0.25);
-  }
-  /* amber inner ring */
-  .frame::after {
-    content: '';
-    position: absolute;
-    inset: 6mm;
-    border: 1px solid rgba(245,166,35,0.2);
-  }
-
-  /* ── print ── */
-  @page { size: A4 landscape; margin: 0; }
-  @media print {
-    html, body { width:297mm; height:210mm; }
-  }
+  @page { size: A4 portrait; margin: 0; }
+  @media print { html, body { width: 210mm; height: 297mm; } }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- absolute frame rings -->
-  <div class="frame"></div>
+  <div class="top-stripe"></div>
+  <div class="amber-line"></div>
 
-  <!-- ═══ TOP BAND ═══ -->
-  <div class="top-band">
-    <div class="amber-rule"></div>
-    <img src="${logoUrl}" alt="SmartMenu" class="header-logo"/>
-    <div class="header-text">
-      <div class="header-eyebrow">${COMPANY} &nbsp;·&nbsp; Official Human Resources Document</div>
-      <div class="header-title">Certificate of Employment</div>
-      <div class="header-subtitle">Republic of the Philippines</div>
-    </div>
-  </div>
-
-  <!-- ═══ BODY ═══ -->
   <div class="body">
+    <img src="${logoUrl}" alt="SmartMenu" class="logo"/>
+    <div class="company-name">SmartMenu</div>
+    <div class="tagline">Growing Restaurants. Together.</div>
 
-    <!-- watermark -->
-    <div class="watermark"><img src="${logoUrl}" alt=""/></div>
+    <div class="divider-line"></div>
 
-    <div class="to-whom">To Whom It May Concern:</div>
-    <div class="certify-line">This is to certify that</div>
+    <div class="doc-label">Official Document</div>
+    <div class="cert-title">Certificate of Employment</div>
 
-    <div class="name-wrap">
-      <span class="employee-name">${employeeName}</span>
-      <span class="name-glow"></span>
-    </div>
+    <div class="certify-text">This is to certify that</div>
+    <div class="employee-name">${employeeName}</div>
+    <div class="name-rule"></div>
 
-    <div class="ornament">
-      <div class="bar"></div>
-      <div class="gem" style="background:#F5A623"></div>
-      <div class="gem" style="background:#E8191A;width:8px;height:8px"></div>
-      <div class="gem" style="background:#F5A623"></div>
-      <div class="bar"></div>
-    </div>
-
-    <p class="body-text">
-      is a <span class="em">bonafide and active employee</span> of
-      <span class="em">SmartMenu</span>,
-      a company duly registered and operating under Philippine laws.<br/>
-      This certificate is issued upon the
-      <span class="em2">personal request</span> of the above-named employee
+    <p class="body-para">
+      is a <strong>bonafide and active employee</strong> of <strong>SmartMenu</strong>.<br/>
+      This certificate is issued upon the request of the above-named person
       for whatever legal purpose it may serve.
     </p>
 
-  </div>
+    <div class="issued">Date Issued: ${date}</div>
 
-  <!-- ═══ FOOTER BAND ═══ -->
-  <div class="footer-band">
-    <div class="footer-rule"></div>
-
-    <div class="footer-left">
-      <div class="footer-label">Date Issued</div>
-      <div class="footer-date">${date}</div>
-    </div>
-
-    <div class="sig-block">
+    <div class="sig-wrap">
       <div class="sig-line"></div>
       <div class="sig-name">${OWNER_NAME}</div>
       <div class="sig-title">${OWNER_TITLE}</div>
-      <div class="sig-company">${COMPANY}</div>
+      <div class="sig-co">${COMPANY}</div>
     </div>
-
-    <div class="footer-right">
-      <img src="${logoUrl}" alt="${COMPANY}" class="footer-logo"/>
-      <div class="footer-tagline">${TAGLINE}</div>
-    </div>
-
   </div>
+
+  <div class="bottom-amber"></div>
+  <div class="bottom-stripe">
+    <img src="${logoUrl}" alt="" class="bottom-logo"/>
+    <span class="bottom-text">SmartMenu &nbsp;·&nbsp; Growing Restaurants. Together.</span>
+  </div>
+
 </div>
 </body>
 </html>`;
 }
 
-/* ─── Print via hidden iframe → Save as PDF ─────────────────────────────── */
+/* ─── Print via iframe ───────────────────────────────────────────────────── */
 function printToPDF(html: string): void {
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:297mm;height:210mm;border:0;visibility:hidden;';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
-
   const doc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!doc) { document.body.removeChild(iframe); return; }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
+  doc.open(); doc.write(html); doc.close();
   iframe.contentWindow?.addEventListener('load', () => {
     setTimeout(() => {
       iframe.contentWindow?.focus();
@@ -460,10 +307,10 @@ function printToPDF(html: string): void {
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 export function CertificateGenerator() {
-  const [name, setName]             = useState('');
-  const [previewing, setPreviewing] = useState(false);
+  const [name, setName]               = useState('');
+  const [previewing, setPreviewing]   = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [previewHTML, setPreviewHTML]   = useState('');
+  const [previewHTML, setPreviewHTML] = useState('');
 
   const logoUrl = `${window.location.origin}/smartmenu-logo.jpg`;
 
@@ -488,7 +335,7 @@ export function CertificateGenerator() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
 
       {/* header */}
       <div className="flex items-center gap-3">
@@ -536,7 +383,7 @@ export function CertificateGenerator() {
           </motion.button>
         </div>
         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-          I-type ang buong pangalan ng empleyado, tapos pindutin ang Generate para makita ang preview.
+          I-type ang buong pangalan, tapos pindutin ang Generate para makita ang preview.
         </p>
       </div>
 
@@ -569,12 +416,12 @@ export function CertificateGenerator() {
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-2xl bg-zinc-900">
+          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-xl">
             <iframe
               srcDoc={previewHTML}
               title="Certificate Preview"
               className="w-full block"
-              style={{ height: '530px', border: 'none' }}
+              style={{ height: '600px', border: 'none', background: '#fff' }}
             />
           </div>
         </motion.div>
