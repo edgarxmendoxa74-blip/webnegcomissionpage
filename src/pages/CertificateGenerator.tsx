@@ -22,7 +22,7 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 <meta charset="UTF-8"/>
 <title>Certificate of Employment – ${employeeName}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
@@ -38,75 +38,131 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
   .page {
     width: 210mm;
     height: 297mm;
-    background: #ffffff;
+    background: #fff;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
 
-  /* ─ red top stripe ─ */
-  .top-stripe {
+  /* ── Corner ornaments ── */
+  .corner {
+    position: absolute;
+    width: 22mm;
+    height: 22mm;
+    z-index: 2;
+  }
+  .corner svg { width: 100%; height: 100%; }
+  .corner.tl { top: 6mm; left: 6mm; }
+  .corner.tr { top: 6mm; right: 6mm; transform: scaleX(-1); }
+  .corner.bl { bottom: 6mm; left: 6mm; transform: scaleY(-1); }
+  .corner.br { bottom: 6mm; right: 6mm; transform: scale(-1); }
+
+  /* ── Outer border ── */
+  .outer-border {
+    position: absolute;
+    top: 5mm; left: 5mm; right: 5mm; bottom: 5mm;
+    border: 2.5px solid #E8191A;
+    z-index: 1;
+  }
+
+  /* ── Inner border ── */
+  .inner-border {
+    position: absolute;
+    top: 7.5mm; left: 7.5mm; right: 7.5mm; bottom: 7.5mm;
+    border: 0.8px solid #F5A623;
+    z-index: 1;
+  }
+
+  /* ── Top band ── */
+  .top-band {
     width: 100%;
-    height: 10mm;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 14mm;
+    padding-bottom: 5mm;
+    position: relative;
+    z-index: 3;
+  }
+
+  .logo-wrap {
+    width: 28mm;
+    height: 28mm;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #F5A623;
+    box-shadow: 0 0 0 4px rgba(232,25,26,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 3.5mm;
+  }
+
+  .logo {
+    width: 24mm;
+    height: 24mm;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 15pt;
+    font-weight: 700;
+    color: #E8191A;
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 1mm;
+  }
+  .brand-name span { color: #1a1a1a; }
+
+  .tagline {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 6.5pt;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: #F5A623;
+    text-transform: uppercase;
+  }
+
+  /* ── Gold divider ── */
+  .gold-divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3mm;
+    padding: 0 20mm;
+    margin-bottom: 5mm;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 3;
+  }
+  .gold-divider .line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #F5A623, #E8191A, #F5A623, transparent); }
+  .gold-divider .diamond {
+    width: 3mm; height: 3mm;
     background: #E8191A;
+    transform: rotate(45deg);
     flex-shrink: 0;
   }
 
-  /* ─ amber line ─ */
-  .amber-line {
-    width: 100%;
-    height: 3px;
-    background: #F5A623;
-    flex-shrink: 0;
-  }
-
-  /* ─ main body ─ */
+  /* ── Body ── */
   .body {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10mm 22mm 8mm;
+    padding: 0 22mm 6mm;
     text-align: center;
-  }
-
-  .logo {
-    width: 30mm;
-    height: 30mm;
-    object-fit: contain;
-    margin-bottom: 4mm;
-  }
-
-  .company-name {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 10.5pt;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: #E8191A;
-    text-transform: uppercase;
-    margin-bottom: 1mm;
-  }
-
-  .tagline {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 7pt;
-    font-weight: 400;
-    letter-spacing: 2px;
-    color: #F5A623;
-    text-transform: uppercase;
-    margin-bottom: 7mm;
-  }
-
-  .divider-line {
-    width: 50mm;
-    height: 1px;
-    background: #e8e8e8;
-    margin: 0 auto 7mm;
+    position: relative;
+    z-index: 3;
   }
 
   .doc-label {
     font-family: 'Inter', Arial, sans-serif;
-    font-size: 7pt;
+    font-size: 6.5pt;
     font-weight: 600;
     letter-spacing: 5px;
     color: #bbb;
@@ -115,59 +171,87 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
   }
 
   .cert-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 25pt;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 22pt;
     font-weight: 900;
     color: #1a1a1a;
-    line-height: 1;
-    margin-bottom: 9mm;
+    line-height: 1.1;
+    margin-bottom: 2mm;
+    letter-spacing: 1px;
+  }
+
+  .cert-title-sub {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 9pt;
+    font-weight: 400;
+    color: #E8191A;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 7mm;
   }
 
   .certify-text {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 9.5pt;
-    color: #888;
-    margin-bottom: 4mm;
-  }
-
-  .employee-name {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 26pt;
-    font-weight: 700;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 11pt;
     font-style: italic;
-    color: #1a1a1a;
-    line-height: 1.1;
+    color: #777;
     margin-bottom: 3mm;
   }
 
+  .employee-name {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 29pt;
+    font-weight: 600;
+    font-style: italic;
+    color: #1a1a1a;
+    line-height: 1.1;
+    margin-bottom: 2mm;
+  }
+
   .name-rule {
-    width: 70mm;
-    height: 2px;
-    background: #E8191A;
+    width: 80mm;
+    height: 1.5px;
+    background: linear-gradient(to right, transparent, #E8191A, transparent);
     margin: 0 auto 7mm;
   }
 
   .body-para {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 9.5pt;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 11pt;
     font-weight: 400;
     color: #555;
-    line-height: 1.85;
+    line-height: 2;
     max-width: 148mm;
-    margin-bottom: 9mm;
+    margin-bottom: 7mm;
   }
 
   .body-para strong { color: #1a1a1a; font-weight: 600; }
 
-  .issued {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 8pt;
-    color: #bbb;
-    letter-spacing: 0.5px;
-    margin-bottom: 10mm;
+  .issued-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1mm;
+    margin-bottom: 8mm;
   }
 
-  /* ─ signature ─ */
+  .issued-label {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 6.5pt;
+    font-weight: 600;
+    color: #ccc;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .issued-date {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 10.5pt;
+    font-style: italic;
+    color: #555;
+  }
+
+  /* ── Signature ── */
   .sig-wrap {
     display: flex;
     flex-direction: column;
@@ -175,18 +259,19 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
   }
 
   .sig-line {
-    width: 52mm;
+    width: 55mm;
     height: 1px;
-    background: #333;
+    background: linear-gradient(to right, transparent, #333, transparent);
     margin-bottom: 2.5mm;
   }
 
   .sig-name {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 11.5pt;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 11pt;
     font-weight: 700;
     color: #1a1a1a;
     margin-bottom: 1mm;
+    letter-spacing: 1px;
   }
 
   .sig-title {
@@ -195,26 +280,34 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
     font-weight: 600;
     color: #E8191A;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     margin-bottom: 0.5mm;
   }
 
   .sig-co {
     font-family: 'Inter', Arial, sans-serif;
-    font-size: 7pt;
+    font-size: 6.5pt;
     color: #bbb;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
   }
 
-  /* ─ bottom ─ */
-  .bottom-amber { width:100%; height:3px; background:#F5A623; flex-shrink:0; }
+  /* ── Bottom band ── */
+  .bottom-band {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 14mm;
+    position: relative;
+    z-index: 3;
+  }
 
   .bottom-stripe {
     width: 100%;
-    height: 10mm;
+    padding: 2.5mm 0;
     background: #E8191A;
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -222,7 +315,7 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
   }
 
   .bottom-logo {
-    width: 7mm; height: 7mm;
+    width: 6mm; height: 6mm;
     object-fit: contain;
     filter: brightness(0) invert(1);
     opacity: 0.85;
@@ -230,11 +323,30 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 
   .bottom-text {
     font-family: 'Inter', Arial, sans-serif;
-    font-size: 7pt;
+    font-size: 6.5pt;
     font-weight: 600;
-    color: rgba(255,255,255,0.75);
-    letter-spacing: 2px;
+    color: rgba(255,255,255,0.80);
+    letter-spacing: 2.5px;
     text-transform: uppercase;
+  }
+
+  .amber-bottom { width:100%; height:2.5px; background:#F5A623; }
+
+  /* ── Watermark ── */
+  .watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 60pt;
+    font-weight: 900;
+    color: rgba(232,25,26,0.04);
+    letter-spacing: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
   }
 
   @page { size: A4 portrait; margin: 0; }
@@ -244,18 +356,72 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 <body>
 <div class="page">
 
-  <div class="top-stripe"></div>
-  <div class="amber-line"></div>
+  <!-- decorative borders -->
+  <div class="outer-border"></div>
+  <div class="inner-border"></div>
 
-  <div class="body">
-    <img src="${logoUrl}" alt="SmartMenu" class="logo"/>
-    <div class="company-name">SmartMenu</div>
+  <!-- watermark -->
+  <div class="watermark">SmartMenu</div>
+
+  <!-- corner ornaments -->
+  <div class="corner tl">
+    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
+      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
+      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
+    </svg>
+  </div>
+  <div class="corner tr">
+    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
+      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
+      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
+    </svg>
+  </div>
+  <div class="corner bl">
+    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
+      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
+      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
+    </svg>
+  </div>
+  <div class="corner br">
+    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
+      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
+      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
+    </svg>
+  </div>
+
+  <!-- top branding band -->
+  <div class="top-band">
+    <div class="logo-wrap">
+      <img src="${logoUrl}" alt="SmartMenu" class="logo"/>
+    </div>
+    <div class="brand-name"><span>Smart</span>Menu</div>
     <div class="tagline">Growing Restaurants. Together.</div>
+  </div>
 
-    <div class="divider-line"></div>
+  <!-- decorative gold divider -->
+  <div class="gold-divider">
+    <div class="line"></div>
+    <div class="diamond"></div>
+    <div class="line"></div>
+  </div>
 
+  <!-- main content -->
+  <div class="body">
     <div class="doc-label">Official Document</div>
     <div class="cert-title">Certificate of Employment</div>
+    <div class="cert-title-sub">Sales Consultant</div>
 
     <div class="certify-text">This is to certify that</div>
     <div class="employee-name">${employeeName}</div>
@@ -267,7 +433,10 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
       for whatever legal purpose it may serve.
     </p>
 
-    <div class="issued">Date Issued: ${date}</div>
+    <div class="issued-wrap">
+      <span class="issued-label">Date Issued</span>
+      <span class="issued-date">${date}</span>
+    </div>
 
     <div class="sig-wrap">
       <div class="sig-line"></div>
@@ -277,10 +446,13 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
     </div>
   </div>
 
-  <div class="bottom-amber"></div>
-  <div class="bottom-stripe">
-    <img src="${logoUrl}" alt="" class="bottom-logo"/>
-    <span class="bottom-text">SmartMenu &nbsp;·&nbsp; Growing Restaurants. Together.</span>
+  <!-- bottom band -->
+  <div class="bottom-band">
+    <div class="amber-bottom"></div>
+    <div class="bottom-stripe">
+      <img src="${logoUrl}" alt="" class="bottom-logo"/>
+      <span class="bottom-text">SmartMenu &nbsp;·&nbsp; Growing Restaurants. Together.</span>
+    </div>
   </div>
 
 </div>
