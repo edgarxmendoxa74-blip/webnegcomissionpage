@@ -1,20 +1,43 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Download, User, RefreshCw } from 'lucide-react';
+import { FileText, Download, User, RefreshCw, Briefcase, Calendar, MapPin, Target } from 'lucide-react';
 
 const OWNER_NAME  = 'John Angelo David';
-const OWNER_TITLE = 'Founder & Owner';
+const OWNER_TITLE = 'Owner / Founder';
 const COMPANY     = 'SmartMenu';
 
-function todayFormatted() {
-  return new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+function todayParts() {
+  const d = new Date();
+  return {
+    day: d.getDate().toString(),
+    month: d.toLocaleDateString('en-US', { month: 'long' }),
+    year: d.getFullYear().toString().slice(-2),
+    full: d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+  };
 }
 
-/* ─── Certificate HTML ───────────────────────────────────────────────────── */
-function buildCertificateHTML(employeeName: string, logoUrl: string): string {
-  const date = todayFormatted();
+/* ─── Certificate HTML — exact match of uploaded PDF template ─────────────── */
+function buildCertificateHTML(
+  employeeName: string,
+  logoUrl: string,
+  position: string,
+  dateFrom: string,
+  dateTo: string,
+  purpose: string,
+  issuedCity: string,
+  issuedDay: string,
+  issuedMonth: string,
+  issuedYear: string,
+): string {
+  const { day, month, year } = todayParts();
+  const issDay   = issuedDay   || day;
+  const issMon   = issuedMonth || month;
+  const issYear  = issuedYear  || year;
+  const issCity  = issuedCity  || 'Cebu City';
+  const pos      = position    || '______________________________';
+  const dFrom    = dateFrom    || '____________________';
+  const dTo      = dateTo      || '____________________';
+  const purp     = purpose     || '______________________________';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -22,438 +45,246 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 <meta charset="UTF-8"/>
 <title>Certificate of Employment – ${employeeName}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
 
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
   html, body {
-    width: 210mm;
-    height: 297mm;
+    width: 612pt;
+    height: 792pt;
     overflow: hidden;
     background: #fff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
   }
 
   .page {
-    width: 210mm;
-    height: 297mm;
+    width: 612pt;
+    height: 792pt;
     background: #fff;
     display: flex;
     flex-direction: column;
     position: relative;
   }
 
-  /* ── Corner ornaments ── */
-  .corner {
-    position: absolute;
-    width: 22mm;
-    height: 22mm;
-    z-index: 2;
-  }
-  .corner svg { width: 100%; height: 100%; }
-  .corner.tl { top: 6mm; left: 6mm; }
-  .corner.tr { top: 6mm; right: 6mm; transform: scaleX(-1); }
-  .corner.bl { bottom: 6mm; left: 6mm; transform: scaleY(-1); }
-  .corner.br { bottom: 6mm; right: 6mm; transform: scale(-1); }
-
-  /* ── Outer border ── */
-  .outer-border {
-    position: absolute;
-    top: 5mm; left: 5mm; right: 5mm; bottom: 5mm;
-    border: 2.5px solid #E8191A;
-    z-index: 1;
-  }
-
-  /* ── Inner border ── */
-  .inner-border {
-    position: absolute;
-    top: 7.5mm; left: 7.5mm; right: 7.5mm; bottom: 7.5mm;
-    border: 0.8px solid #F5A623;
-    z-index: 1;
-  }
-
-  /* ── Top band ── */
-  .top-band {
+  /* ── Top red bar (height ~14pt at top) ── */
+  .top-bar {
     width: 100%;
+    height: 14pt;
+    background: #E3063F;  /* rgb(0.890, 0.024, 0.075) */
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 14mm;
-    padding-bottom: 5mm;
-    position: relative;
-    z-index: 3;
   }
 
-  .logo-wrap {
-    width: 28mm;
-    height: 28mm;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #F5A623;
-    box-shadow: 0 0 0 4px rgba(232,25,26,0.08);
+  /* ── Gold line ── */
+  .gold-line-top {
+    width: 100%;
+    height: 4pt;
+    background: #F9A800;  /* rgb(0.976, 0.659, 0) */
+    flex-shrink: 0;
+  }
+
+  /* ── Logo section ── */
+  .logo-section {
     display: flex;
-    align-items: center;
     justify-content: center;
-    overflow: hidden;
-    margin-bottom: 3.5mm;
+    padding: 14pt 0 0;
+    flex-shrink: 0;
   }
 
   .logo {
-    width: 24mm;
-    height: 24mm;
+    width: 115pt;
+    height: 92pt;
     object-fit: contain;
   }
 
-  .brand-name {
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 15pt;
-    font-weight: 700;
-    color: #E8191A;
-    letter-spacing: 3px;
-    line-height: 1;
-    margin-bottom: 1mm;
-  }
-  .brand-name span { color: #1a1a1a; }
-
-  .tagline {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 6.5pt;
-    font-weight: 500;
-    letter-spacing: 3px;
-    color: #F5A623;
-    text-transform: uppercase;
-  }
-
-  /* ── Gold divider ── */
-  .gold-divider {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3mm;
-    padding: 0 20mm;
-    margin-bottom: 5mm;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 3;
-  }
-  .gold-divider .line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #F5A623, #E8191A, #F5A623, transparent); }
-  .gold-divider .diamond {
-    width: 3mm; height: 3mm;
-    background: #E8191A;
-    transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-
-  /* ── Body ── */
+  /* ── Main body ── */
   .body {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0 22mm 6mm;
-    text-align: center;
-    position: relative;
-    z-index: 3;
+    padding: 0 72pt 0;
   }
 
-  .doc-label {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 6.5pt;
-    font-weight: 600;
-    letter-spacing: 5px;
-    color: #bbb;
-    text-transform: uppercase;
-    margin-bottom: 2mm;
-  }
-
+  /* Title */
   .cert-title {
-    font-family: 'Cinzel', Georgia, serif;
+    text-align: center;
     font-size: 22pt;
     font-weight: 900;
-    color: #1a1a1a;
-    line-height: 1.1;
-    margin-bottom: 2mm;
+    color: #000;
     letter-spacing: 1px;
+    margin-top: 4pt;
+    margin-bottom: 2pt;
   }
 
-  .cert-title-sub {
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 9pt;
-    font-weight: 400;
-    color: #E8191A;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    margin-bottom: 7mm;
+  /* Red underline below title */
+  .title-rule {
+    width: 120pt;
+    height: 2.5pt;
+    background: #E3063F;
+    margin: 0 auto 10pt;
   }
 
-  .certify-text {
-    font-family: 'EB Garamond', Georgia, serif;
+  /* Date line */
+  .date-line {
     font-size: 11pt;
-    font-style: italic;
-    color: #777;
-    margin-bottom: 3mm;
+    color: #000;
+    margin-bottom: 10pt;
   }
 
-  .employee-name {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 29pt;
-    font-weight: 600;
-    font-style: italic;
-    color: #1a1a1a;
-    line-height: 1.1;
-    margin-bottom: 2mm;
-  }
-
-  .name-rule {
-    width: 80mm;
-    height: 1.5px;
-    background: linear-gradient(to right, transparent, #E8191A, transparent);
-    margin: 0 auto 7mm;
-  }
-
-  .body-para {
-    font-family: 'EB Garamond', Georgia, serif;
+  /* TO WHOM IT MAY CONCERN */
+  .to-whom {
     font-size: 11pt;
-    font-weight: 400;
-    color: #555;
-    line-height: 2;
-    max-width: 148mm;
-    margin-bottom: 7mm;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 12pt;
   }
 
-  .body-para strong { color: #1a1a1a; font-weight: 600; }
-
-  .issued-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1mm;
-    margin-bottom: 8mm;
+  /* Body paragraphs */
+  .para {
+    font-size: 11.5pt;
+    color: #000;
+    line-height: 18pt;
+    margin-bottom: 14pt;
   }
 
-  .issued-label {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 6.5pt;
-    font-weight: 600;
-    color: #ccc;
-    letter-spacing: 3px;
-    text-transform: uppercase;
+  .para strong {
+    font-weight: 700;
   }
 
-  .issued-date {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 10.5pt;
-    font-style: italic;
-    color: #555;
+  /* Compensation line */
+  .comp-line {
+    font-size: 11.5pt;
+    color: #000;
+    margin-bottom: 14pt;
+    line-height: 18pt;
   }
 
-  /* ── Signature ── */
-  .sig-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  /* Issued line */
+  .issued-line {
+    font-size: 11.5pt;
+    color: #000;
+    line-height: 18pt;
+    margin-bottom: 24pt;
+  }
+
+  /* Signature block */
+  .sig-area {
+    margin-top: 4pt;
   }
 
   .sig-line {
-    width: 55mm;
-    height: 1px;
-    background: linear-gradient(to right, transparent, #333, transparent);
-    margin-bottom: 2.5mm;
+    width: 188pt;
+    height: 0.8pt;
+    background: #000;
+    margin-bottom: 2.5pt;
   }
 
   .sig-name {
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 700;
-    color: #1a1a1a;
-    margin-bottom: 1mm;
-    letter-spacing: 1px;
+    color: #000;
+    margin-bottom: 1pt;
   }
 
   .sig-title {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 7pt;
-    font-weight: 600;
-    color: #E8191A;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 0.5mm;
+    font-size: 11pt;
+    color: #000;
+    margin-bottom: 1pt;
   }
 
-  .sig-co {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 6.5pt;
-    color: #bbb;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+  .sig-company {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #E3063F;
   }
 
-  /* ── Bottom band ── */
-  .bottom-band {
+  /* ── Bottom gold line ── */
+  .gold-line-bottom {
     width: 100%;
+    height: 1.5pt;
+    background: #F9A800;
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-bottom: 14mm;
-    position: relative;
-    z-index: 3;
+    /* this is drawn as rule at y=52 in PDF — push it via flex */
+    margin-top: auto;
   }
 
-  .bottom-stripe {
+  /* ── Footer tagline ── */
+  .footer-tagline {
+    text-align: center;
+    font-size: 9.5pt;
+    font-style: italic;
+    color: #555;
+    padding: 4pt 0;
+    flex-shrink: 0;
+  }
+
+  /* ── Bottom red bar ── */
+  .bottom-bar {
     width: 100%;
-    padding: 2.5mm 0;
-    background: #E8191A;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2.5mm;
+    height: 10pt;
+    background: #E3063F;
+    flex-shrink: 0;
   }
 
-  .bottom-logo {
-    width: 6mm; height: 6mm;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-    opacity: 0.85;
-  }
-
-  .bottom-text {
-    font-family: 'Inter', Arial, sans-serif;
-    font-size: 6.5pt;
-    font-weight: 600;
-    color: rgba(255,255,255,0.80);
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-  }
-
-  .amber-bottom { width:100%; height:2.5px; background:#F5A623; }
-
-  /* ── Watermark ── */
-  .watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 60pt;
-    font-weight: 900;
-    color: rgba(232,25,26,0.04);
-    letter-spacing: 8px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 0;
-    user-select: none;
-  }
-
-  @page { size: A4 portrait; margin: 0; }
-  @media print { html, body { width: 210mm; height: 297mm; } }
+  @page { size: letter portrait; margin: 0; }
+  @media print { html, body { width: 612pt; height: 792pt; } }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- decorative borders -->
-  <div class="outer-border"></div>
-  <div class="inner-border"></div>
+  <div class="top-bar"></div>
+  <div class="gold-line-top"></div>
 
-  <!-- watermark -->
-  <div class="watermark">SmartMenu</div>
-
-  <!-- corner ornaments -->
-  <div class="corner tl">
-    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
-      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
-      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
-    </svg>
-  </div>
-  <div class="corner tr">
-    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
-      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
-      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
-    </svg>
-  </div>
-  <div class="corner bl">
-    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
-      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
-      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
-    </svg>
-  </div>
-  <div class="corner br">
-    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4 L4 56" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M4 4 L56 4" stroke="#E8191A" stroke-width="2" stroke-linecap="round"/>
-      <path d="M10 4 Q10 10 4 10" stroke="#F5A623" stroke-width="1.2" fill="none"/>
-      <circle cx="4" cy="4" r="2.5" fill="#E8191A"/>
-      <path d="M4 18 L18 4" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="2 2"/>
-    </svg>
+  <div class="logo-section">
+    <img src="${logoUrl}" alt="SmartMenu" class="logo"/>
   </div>
 
-  <!-- top branding band -->
-  <div class="top-band">
-    <div class="logo-wrap">
-      <img src="${logoUrl}" alt="SmartMenu" class="logo"/>
-    </div>
-    <div class="brand-name"><span>Smart</span>Menu</div>
-    <div class="tagline">Growing Restaurants. Together.</div>
-  </div>
-
-  <!-- decorative gold divider -->
-  <div class="gold-divider">
-    <div class="line"></div>
-    <div class="diamond"></div>
-    <div class="line"></div>
-  </div>
-
-  <!-- main content -->
   <div class="body">
-    <div class="doc-label">Official Document</div>
-    <div class="cert-title">Certificate of Employment</div>
-    <div class="cert-title-sub">Sales Consultant</div>
 
-    <div class="certify-text">This is to certify that</div>
-    <div class="employee-name">${employeeName}</div>
-    <div class="name-rule"></div>
+    <div class="cert-title">CERTIFICATE OF EMPLOYMENT</div>
+    <div class="title-rule"></div>
 
-    <p class="body-para">
-      is a <strong>bonafide and active employee</strong> of <strong>SmartMenu</strong>.<br/>
-      This certificate is issued upon the request of the above-named person
-      for whatever legal purpose it may serve.
+    <div class="date-line">Date: ____________________</div>
+
+    <div class="to-whom">TO WHOM IT MAY CONCERN:</div>
+
+    <p class="para">
+      This is to certify that <strong>${employeeName}</strong> has been employed with
+      <strong>SmartMenu</strong> as <strong>${pos}</strong> from <strong>${dFrom}</strong> to <strong>${dTo}</strong>.
     </p>
 
-    <div class="issued-wrap">
-      <span class="issued-label">Date Issued</span>
-      <span class="issued-date">${date}</span>
-    </div>
+    <p class="para">
+      During the period of employment, he/she has rendered services with diligence,
+      professionalism, and dedication, and has performed his/her duties and responsibilities
+      satisfactorily.
+    </p>
 
-    <div class="sig-wrap">
+    <p class="comp-line">
+      Monthly compensation (optional): PHP ______________________
+    </p>
+
+    <p class="para">
+      This certification is being issued upon the request of the above-named person for
+      <strong>${purp}</strong> purposes, and for whatever legal purpose it may serve.
+    </p>
+
+    <p class="issued-line">
+      Issued this <strong>${issDay}</strong> day of <strong>${issMon}</strong>, 20<strong>${issYear}</strong>, at
+      <strong>${issCity}</strong>, Philippines.
+    </p>
+
+    <div class="sig-area">
       <div class="sig-line"></div>
       <div class="sig-name">${OWNER_NAME}</div>
       <div class="sig-title">${OWNER_TITLE}</div>
-      <div class="sig-co">${COMPANY}</div>
+      <div class="sig-company">${COMPANY}</div>
     </div>
+
   </div>
 
-  <!-- bottom band -->
-  <div class="bottom-band">
-    <div class="amber-bottom"></div>
-    <div class="bottom-stripe">
-      <img src="${logoUrl}" alt="" class="bottom-logo"/>
-      <span class="bottom-text">SmartMenu &nbsp;·&nbsp; Growing Restaurants. Together.</span>
-    </div>
-  </div>
+  <div class="gold-line-bottom"></div>
+  <div class="footer-tagline">GROWING RESTAURANTS. TOGETHER.</div>
+  <div class="bottom-bar"></div>
 
 </div>
 </body>
@@ -463,7 +294,7 @@ function buildCertificateHTML(employeeName: string, logoUrl: string): string {
 /* ─── Print via iframe ───────────────────────────────────────────────────── */
 function printToPDF(html: string): void {
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:0;visibility:hidden;';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:612pt;height:792pt;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
   const doc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!doc) { document.body.removeChild(iframe); return; }
@@ -480,6 +311,15 @@ function printToPDF(html: string): void {
 /* ─── Component ─────────────────────────────────────────────────────────── */
 export function CertificateGenerator() {
   const [name, setName]               = useState('');
+  const [position, setPosition]       = useState('Sales Consultant');
+  const [dateFrom, setDateFrom]       = useState('');
+  const [dateTo, setDateTo]           = useState('present');
+  const [purpose, setPurpose]         = useState('reference');
+  const [issuedCity, setIssuedCity]   = useState('Cebu City');
+  const { day, month, year }          = todayParts();
+  const [issuedDay, setIssuedDay]     = useState(day);
+  const [issuedMonth, setIssuedMonth] = useState(month);
+  const [issuedYear]                  = useState(year);
   const [previewing, setPreviewing]   = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewHTML, setPreviewHTML] = useState('');
@@ -489,7 +329,10 @@ export function CertificateGenerator() {
   const handleGenerate = () => {
     if (!name.trim()) return;
     setIsGenerating(true);
-    const html = buildCertificateHTML(name.trim(), logoUrl);
+    const html = buildCertificateHTML(
+      name.trim(), logoUrl, position, dateFrom, dateTo,
+      purpose, issuedCity, issuedDay, issuedMonth, issuedYear
+    );
     setPreviewHTML(html);
     setPreviewing(true);
     setIsGenerating(false);
@@ -506,57 +349,143 @@ export function CertificateGenerator() {
     setPreviewHTML('');
   };
 
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border-2 border-zinc-200 bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#E3063F] transition-colors text-sm font-medium";
+  const labelCls = "block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5";
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
 
       {/* header */}
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-          <FileText className="w-6 h-6 text-[#E8191A]" />
+        <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+          <FileText className="w-6 h-6 text-[#E3063F]" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Certificate of Employment</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            I-generate ang official PDF certificate para sa empleyado
-          </p>
+          <h1 className="text-2xl font-black text-zinc-900">Certificate of Employment</h1>
+          <p className="text-sm text-zinc-500">I-generate ang official PDF certificate para sa empleyado</p>
         </div>
       </div>
 
-      {/* input */}
-      <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-sm">
-        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2 uppercase tracking-widest">
-          Full Name ng Empleyado *
-        </label>
-        <div className="flex gap-3">
-          <div className="relative flex-1">
+      {/* form */}
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-sm space-y-5">
+
+        {/* Row 1: Full Name */}
+        <div>
+          <label className={labelCls}>Full Name ng Empleyado *</label>
+          <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
             <input
-              type="text"
-              value={name}
+              type="text" value={name}
               onChange={(e) => { setName(e.target.value); setPreviewing(false); }}
               onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
               placeholder="Juan Dela Cruz"
-              className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-[#E8191A] transition-colors text-sm font-medium"
+              className={`${inputCls} pl-10`}
             />
           </div>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleGenerate}
-            disabled={!name.trim() || isGenerating}
-            className={`px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shrink-0 ${
-              !name.trim() || isGenerating
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                : 'bg-[#E8191A] hover:bg-red-700 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30 cursor-pointer'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            {isGenerating ? 'Generating...' : 'Generate'}
-          </motion.button>
         </div>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-          I-type ang buong pangalan, tapos pindutin ang Generate para makita ang preview.
-        </p>
+
+        {/* Row 2: Position */}
+        <div>
+          <label className={labelCls}>Posisyon / Job Title</label>
+          <div className="relative">
+            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+            <input
+              type="text" value={position}
+              onChange={(e) => { setPosition(e.target.value); setPreviewing(false); }}
+              placeholder="Sales Consultant"
+              className={`${inputCls} pl-10`}
+            />
+          </div>
+        </div>
+
+        {/* Row 3: Date From / To */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Date From</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+              <input
+                type="text" value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPreviewing(false); }}
+                placeholder="e.g. January 2025"
+                className={`${inputCls} pl-10`}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Date To</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+              <input
+                type="text" value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPreviewing(false); }}
+                placeholder="present"
+                className={`${inputCls} pl-10`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 4: Purpose */}
+        <div>
+          <label className={labelCls}>Layunin (Purpose)</label>
+          <div className="relative">
+            <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+            <input
+              type="text" value={purpose}
+              onChange={(e) => { setPurpose(e.target.value); setPreviewing(false); }}
+              placeholder="reference / loan / visa / etc."
+              className={`${inputCls} pl-10`}
+            />
+          </div>
+        </div>
+
+        {/* Row 5: Issuance details */}
+        <div>
+          <label className={labelCls}>Lugar at Petsa ng Pag-isyu</label>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="col-span-2">
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                <input
+                  type="text" value={issuedCity}
+                  onChange={(e) => { setIssuedCity(e.target.value); setPreviewing(false); }}
+                  placeholder="City"
+                  className={`${inputCls} pl-10`}
+                />
+              </div>
+            </div>
+            <input type="text" value={issuedDay}
+              onChange={(e) => { setIssuedDay(e.target.value); setPreviewing(false); }}
+              placeholder="Day"
+              className={inputCls}
+            />
+            <input type="text" value={issuedMonth}
+              onChange={(e) => { setIssuedMonth(e.target.value); setPreviewing(false); }}
+              placeholder="Month"
+              className={inputCls}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-400 mt-1.5">
+            Year defaults to current year (20{year}). Issued this [Day] day of [Month], 20{issuedYear}, at [City], Philippines.
+          </p>
+        </div>
+
+        {/* Generate button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={handleGenerate}
+          disabled={!name.trim() || isGenerating}
+          className={`w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+            !name.trim() || isGenerating
+              ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+              : 'bg-[#E3063F] hover:bg-red-700 text-white shadow-lg shadow-red-200 cursor-pointer'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          {isGenerating ? 'Generating...' : 'Generate Certificate Preview'}
+        </motion.button>
       </div>
 
       {/* preview */}
@@ -570,7 +499,7 @@ export function CertificateGenerator() {
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-200 dark:shadow-red-900/30"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#E3063F] hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-200"
             >
               <Download className="w-4 h-4" />
               I-download bilang PDF
@@ -578,22 +507,22 @@ export function CertificateGenerator() {
             <motion.button
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2.5 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-sm transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 border-2 border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl font-bold text-sm transition-all"
             >
               <RefreshCw className="w-4 h-4" />
               Bago Muli
             </motion.button>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-auto hidden sm:block">
+            <span className="text-xs text-zinc-400 ml-auto hidden sm:block">
               Sa print dialog → Destination → "Save as PDF"
             </span>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-zinc-700 shadow-xl">
+          <div className="rounded-2xl overflow-hidden border-2 border-zinc-200 shadow-xl">
             <iframe
               srcDoc={previewHTML}
               title="Certificate Preview"
               className="w-full block"
-              style={{ height: '600px', border: 'none', background: '#fff' }}
+              style={{ height: '750px', border: 'none', background: '#fff' }}
             />
           </div>
         </motion.div>
