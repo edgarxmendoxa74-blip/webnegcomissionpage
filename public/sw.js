@@ -5,6 +5,9 @@ const CACHE_SHELL = `webnegosyo-shell-${CACHE_VERSION}`;
 const CACHE_STATIC = `webnegosyo-static-${CACHE_VERSION}`;
 const CACHE_DYNAMIC = `webnegosyo-dynamic-${CACHE_VERSION}`;
 
+// Deployed base path (e.g. "/" locally, "/repo/" on GitHub Pages project sites)
+const BASE_PATH = new URL(self.registration.scope).pathname;
+
 // Core app shell files that need to be available offline
 const SHELL_FILES = [
     './',
@@ -195,12 +198,12 @@ self.addEventListener('message', (event) => {
         event.waitUntil(
             self.registration.showNotification('New Applicant! 🎉', {
                 body: `${name} just applied via the hiring portal.`,
-                icon: '/icons/icon-192.png',
-                badge: '/icons/icon-192.png',
+                icon: `${BASE_PATH}icons/icon-192.png`,
+                badge: `${BASE_PATH}icons/icon-192.png`,
                 tag: 'new-applicant',          // replaces previous notif of same tag
                 renotify: true,                // vibrate/sound even if same tag
                 requireInteraction: false,
-                data: { url: '/' },
+                data: { url: BASE_PATH },
                 actions: [
                     { action: 'view', title: 'View Applicants' },
                     { action: 'dismiss', title: 'Dismiss' },
@@ -225,7 +228,7 @@ self.addEventListener('notificationclick', (event) => {
                 return;
             }
             // Otherwise open a new window
-            return self.clients.openWindow('/');
+            return self.clients.openWindow(BASE_PATH);
         })
     );
 });

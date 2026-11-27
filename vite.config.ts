@@ -2,9 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
+// `VITE_BASE_PATH` lets CI build for a sub-path host (e.g. GitHub Pages
+// project sites serve from /<repo>/), while local dev keeps the root path.
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  base: process.env.VITE_BASE_PATH || '/',
   build: {
     chunkSizeWarningLimit: 2000,
     // Optimize for PWA

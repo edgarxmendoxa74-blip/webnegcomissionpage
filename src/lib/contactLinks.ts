@@ -52,6 +52,39 @@ export const getMailtoHref = (
 };
 
 /**
+ * Opens Gmail's web compose window addressed to the given email. Used on desktop
+ * where `mailto:` often does nothing because no mail client is configured.
+ */
+export const getGmailComposeHref = (
+    raw?: string | null,
+    subject?: string,
+    body?: string
+): string | null => {
+    const email = (raw || '').trim().replace(/\s+/g, '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+
+    const params = new URLSearchParams({ view: 'cm', fs: '1', to: email });
+    if (subject) params.set('su', subject);
+    if (body) params.set('body', body);
+
+    return `https://mail.google.com/mail/?${params.toString()}`;
+};
+
+/**
+ * Email action that lands in Gmail: the Gmail app/browser handler on phones
+ * (`mailto:`) and the Gmail web composer on desktop.
+ */
+export const getEmailHref = (
+    raw?: string | null,
+    subject?: string,
+    body?: string
+): string | null => {
+    const isMobile =
+        typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    return isMobile ? getMailtoHref(raw, subject, body) : getGmailComposeHref(raw, subject, body);
+};
+
+/**
  * Accepts a full URL, "facebook.com/username", "@username", a bare username,
  * a "profile.php?id=..." path, or a plain display name. Plain names cannot be
  * resolved into a profile URL, so they fall back to a Facebook search.

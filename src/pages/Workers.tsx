@@ -7,6 +7,7 @@ import {
     ExternalLink,
     X,
     Phone,
+    PhoneCall,
     User,
     Key,
     Trash2,
@@ -17,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
+import { getTelHref, getEmailHref } from '../lib/contactLinks';
 import { WorkerAudit } from '../components/WorkerAudit';
 
 function cn(...inputs: ClassValue[]) {
@@ -110,6 +112,12 @@ export const WorkersPage: React.FC = () => {
          w.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
+    // Contact actions for the open profile (validated so empty/invalid values render no button)
+    const selectedPhoneHref = selectedWorker ? getTelHref(selectedWorker.phone) : null;
+    const selectedEmailHref = selectedWorker
+        ? getEmailHref(selectedWorker.contact_email, `Hi ${selectedWorker.name}!`)
+        : null;
+
     return (
         <div className="space-y-5 animate-in fade-in duration-700">
             {selectedWorker ? (
@@ -160,18 +168,40 @@ export const WorkersPage: React.FC = () => {
 
                             <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
                                 <div className="w-8 h-8 shrink-0 bg-white rounded-lg flex items-center justify-center shadow-sm"><Mail className="w-4 h-4 text-zinc-400" /></div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Contact Email</p>
                                     <p className="font-bold text-xs text-black truncate">{selectedWorker.contact_email || '—'}</p>
                                 </div>
+                                {selectedEmailHref && (
+                                    <a
+                                        href={selectedEmailHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Email here"
+                                        className="shrink-0 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-orange-500/20"
+                                    >
+                                        <Mail className="w-4 h-4" />
+                                        Email Here
+                                    </a>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
                                 <div className="w-8 h-8 shrink-0 bg-white rounded-lg flex items-center justify-center shadow-sm"><Phone className="w-4 h-4 text-zinc-400" /></div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Contact Number</p>
                                     <p className="font-bold text-xs text-black">{selectedWorker.phone || 'Not Provided'}</p>
                                 </div>
+                                {selectedPhoneHref && (
+                                    <a
+                                        href={selectedPhoneHref}
+                                        title="Call here"
+                                        className="shrink-0 px-4 py-2.5 bg-green-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-green-500/20"
+                                    >
+                                        <PhoneCall className="w-4 h-4" />
+                                        Call Here
+                                    </a>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
@@ -301,11 +331,41 @@ export const WorkersPage: React.FC = () => {
                                         </div>
                                     </div>
                                     {worker.contact_email && (
-                                        <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                                            <div className="w-6 h-6 rounded-md bg-zinc-50 flex items-center justify-center group-hover:bg-black/5 transition-colors">
-                                                <Mail className="w-3 h-3 text-black" />
+                                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 font-medium pr-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-6 h-6 shrink-0 rounded-md bg-zinc-50 flex items-center justify-center group-hover:bg-black/5 transition-colors">
+                                                    <Mail className="w-3 h-3 text-black" />
+                                                </div>
+                                                <span className="truncate">{worker.contact_email}</span>
                                             </div>
-                                            <span className="truncate">{worker.contact_email}</span>
+                                            <a
+                                                href={getEmailHref(worker.contact_email, `Hi ${worker.name}!`) || undefined}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title="Email here"
+                                                className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-orange-50 text-orange-600 text-[7px] font-black uppercase tracking-widest border border-orange-100 hover:bg-orange-500 hover:text-white transition-all active:scale-95"
+                                            >
+                                                <Mail className="w-3 h-3" />
+                                                Email Here
+                                            </a>
+                                        </div>
+                                    )}
+                                    {getTelHref(worker.phone) && (
+                                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 font-medium pr-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-6 h-6 shrink-0 rounded-md bg-zinc-50 flex items-center justify-center group-hover:bg-black/5 transition-colors">
+                                                    <Phone className="w-3 h-3 text-black" />
+                                                </div>
+                                                <span className="truncate">{worker.phone}</span>
+                                            </div>
+                                            <a
+                                                href={getTelHref(worker.phone) || undefined}
+                                                title="Call here"
+                                                className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-green-50 text-green-600 text-[7px] font-black uppercase tracking-widest border border-green-100 hover:bg-green-500 hover:text-white transition-all active:scale-95"
+                                            >
+                                                <PhoneCall className="w-3 h-3" />
+                                                Call Here
+                                            </a>
                                         </div>
                                     )}
                                     <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
