@@ -27,8 +27,8 @@ export interface Applicant {
 
 export interface SalesQuestion {
     id: string;
-    category: 'personality' | 'sales_call';
-    section: 'HR & Personality' | 'Sales Call Scenarios';
+    category: 'personality';
+    section: 'HR & Personality';
     badge: string;
     question: string;
     hint: string;
@@ -78,59 +78,6 @@ export const SALES_QUESTIONS: SalesQuestion[] = [
         badge: 'Handling Pressure & Work Ethic',
         question: '5. How do you handle work pressure, stressful days, and stay self-disciplined in a remote work environment?',
         hint: 'Explain how you stay calm, organized, and maintain high energy when facing challenges.'
-    },
-
-    // =========================================================================
-    // SECTION 2: SALES CALL SCENARIOS
-    // (Live Pitching, Price Objection, Busy Client, and Closing Deals)
-    // =========================================================================
-    {
-        id: 'q_sales_first_minute',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: 'First 60 Seconds Hook',
-        question: '6. When calling a busy restaurant owner or prospect, how do you hook their interest and build trust within the first 60 seconds?',
-        hint: 'Share your exact opening pitch or approach to prevent them from hanging up.'
-    },
-    {
-        id: 'q_sales_price_objection',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: 'Price Objection',
-        question: '7. The client on the call says: "Your solution is too expensive! We can find free tools or cheaper alternatives." How do you handle this objection?',
-        hint: 'Demonstrate return on investment (ROI), tangible business value, and why SmartMenu pays for itself.'
-    },
-    {
-        id: 'q_sales_busy_client',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: 'Busy Restaurant Owner',
-        question: '8. The prospect replies: "I don\'t have time for this right now, I am swamped running my restaurant daily." How do you address their pain point?',
-        hint: 'Explain how SmartMenu actually frees up their time and simplifies daily operations.'
-    },
-    {
-        id: 'q_sales_think_about_it',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: '"I\'ll Think About It"',
-        question: '9. The prospect says: "Let me think about it, just call me next week." What do you do before ending the call, and how do you follow up?',
-        hint: 'How do you avoid getting ghosted and keep the sales momentum alive?'
-    },
-    {
-        id: 'q_sales_closing_deal',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: 'Closing Deal & Downpayment',
-        question: '10. The client shows clear interest in the solution. How do you confidently ask for the close and secure their commitment or downpayment?',
-        hint: 'Share your closing technique, transition, and call-to-action.'
-    },
-    {
-        id: 'q_sales_rejection_resilience',
-        category: 'sales_call',
-        section: 'Sales Call Scenarios',
-        badge: 'Mindset: Rejection Resilience',
-        question: '11. If you encounter a tough week filled with rejections and zero closed deals, how do you bounce back and keep your energy high?',
-        hint: 'How do you process hearing "no" and maintain motivation toward your next "yes"?'
     }
 ];
 

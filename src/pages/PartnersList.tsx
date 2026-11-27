@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Download, User, Building2, Mail, Phone, MapPin,
   Eye, CheckCircle2, XCircle, Clock, RefreshCw, Bell,
-  LayoutGrid, List,
+  LayoutGrid, List, Trash2, AlertTriangle,
 } from 'lucide-react';
 import {
   fetchPartnerApplications,
   updatePartnerApplicationStatus,
+  deletePartnerApplication,
   type PartnerApplication,
 } from '../lib/partners';
 import { supabase } from '../lib/supabase';
@@ -31,6 +32,9 @@ export function PartnersList() {
   const [updatingId, setUpdatingId]       = useState<string | null>(null);
   const [newCount, setNewCount]           = useState(0);
   const [viewMode, setViewMode]           = useState<ViewMode>('grid');
+  const [deleteTarget, setDeleteTarget]   = useState<PartnerApplication | null>(null);
+  const [isDeleting, setIsDeleting]       = useState(false);
+  const [deleteError, setDeleteError]     = useState<string | null>(null);
 
   /* ── load ── */
   const load = useCallback(async () => {
@@ -74,6 +78,15 @@ export function PartnersList() {
               applyFilters(updated, searchQuery, statusFilter);
               return updated;
             });
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as PartnerApplication)?.id;
+            if (deletedId) {
+              setAll((prev) => {
+                const updated = prev.filter((p) => p.id !== deletedId);
+                applyFilters(updated, searchQuery, statusFilter);
+                return updated;
+              });
+            }
           }
         }
       )
@@ -133,6 +146,30 @@ export function PartnersList() {
     }
   };
 
+  /* ── delete (with confirmation) ── */
+  const handleDeleteConfirmed = async () => {
+    const id = deleteTarget?.id;
+    if (!id) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deletePartnerApplication(id);
+      setAll((prev) => {
+        const updated = prev.filter((p) => p.id !== id);
+        applyFilters(updated, searchQuery, statusFilter);
+        return updated;
+      });
+      setSelected((s) => (s?.id === id ? null : s));
+      setDeleteTarget(null);
+    } catch (err: any) {
+      console.error('Error deleting partner:', err);
+      setDeleteError(err?.message || 'Hindi natanggal ang partner. Subukan ulit.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   /* ── csv export ── */
   const downloadCSV = () => {
     if (filtered.length === 0) return;
@@ -163,7 +200,7 @@ export function PartnersList() {
       {/* ── Page header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-3xl font-black text-black flex items-center gap-3">
             Registered Partners
             {counts.pending > 0 && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-500 text-white rounded-full text-sm font-black">
@@ -362,6 +399,13 @@ export function PartnersList() {
                         className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                         <Eye className="w-4 h-4 text-zinc-400" />
                       </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => { setDeleteError(null); setDeleteTarget(partner); }}
+                        title="Delete partner"
+                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </motion.button>
                     </div>
                   </div>
                 </motion.div>
@@ -451,6 +495,12 @@ export function PartnersList() {
                               className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                               <Eye className="w-3.5 h-3.5 text-zinc-400" />
                             </button>
+                            <button
+                              onClick={() => { setDeleteError(null); setDeleteTarget(partner); }}
+                              title="Delete partner"
+                              className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </button>
                           </div>
                         </td>
                       </motion.tr>
@@ -537,11 +587,82 @@ export function PartnersList() {
 
                 <motion.button
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => { setDeleteError(null); setDeleteTarget(selected); }}
+                  className="w-full py-2.5 border-2 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Partner
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   onClick={() => setSelected(null)}
                   className="w-full py-2.5 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-sm transition-all"
                 >
                   Isara
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete confirmation modal ── */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => { if (!isDeleting) setDeleteTarget(null); }}
+            className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-zinc-800 rounded-2xl max-w-sm w-full border border-zinc-200 dark:border-zinc-700 shadow-2xl p-6 space-y-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-zinc-900 dark:text-white leading-tight">
+                    Sigurado ka ba?
+                  </h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                    Are you sure you want to delete{' '}
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{deleteTarget.full_name}</span>
+                    {deleteTarget.business_name ? ` (${deleteTarget.business_name})` : ''}? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              {deleteError && (
+                <p className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl px-3 py-2">
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirmed}
+                  disabled={isDeleting || !deleteTarget.id}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
               </div>
             </motion.div>
           </motion.div>

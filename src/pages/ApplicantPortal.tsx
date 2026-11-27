@@ -25,7 +25,6 @@ import {
     ChevronLeft,
     ChevronRight,
     UserCheck,
-    PhoneCall,
     Briefcase,
     X,
     Video,
@@ -213,10 +212,8 @@ export const ApplicantPortal: React.FC = () => {
     };
 
     const personalityQuestions = SALES_QUESTIONS.filter(q => q.category === 'personality');
-    const salesQuestions = SALES_QUESTIONS.filter(q => q.category === 'sales_call');
     const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
     const personalityAnswered = personalityQuestions.filter(q => answers[q.id]?.trim()).length;
-    const salesAnswered = salesQuestions.filter(q => answers[q.id]?.trim()).length;
 
     // Autoplay slideshow on the home view (3 slides)
     useEffect(() => {
@@ -930,19 +927,22 @@ export const ApplicantPortal: React.FC = () => {
 
                                     <div className="space-y-1">
                                         <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600">
-                                            Facebook Account Name *
+                                            Facebook Profile Link or Account Name *
                                         </label>
                                         <div className="relative">
                                             <input
                                                 type="text"
                                                 required
-                                                placeholder="e.g. Juan Dela Cruz"
+                                                placeholder="facebook.com/juan or Juan Dela Cruz"
                                                 value={fbLink}
                                                 onChange={(e) => setFbLink(e.target.value)}
                                                 className="w-full pl-8 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl font-bold text-xs outline-none focus:border-red-500"
                                             />
                                             <Facebook className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                                         </div>
+                                        <p className="text-[9px] text-zinc-400 font-medium">
+                                            Best kung i-paste ang exact profile link para siguradong mabubuksan ng recruiter.
+                                        </p>
                                     </div>
 
                                     <div className="space-y-1">
@@ -974,7 +974,7 @@ export const ApplicantPortal: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ===== STAGE 2: Q&A ASSESSMENT (PERSONALITY & SALES SECTIONS) ===== */}
+                        {/* ===== STAGE 2: Q&A ASSESSMENT (HR & PERSONALITY) ===== */}
                         {currentStep === 2 && (
                             <div className="bg-white/95 border border-amber-100 rounded-2xl p-3 sm:p-5 shadow-md shadow-orange-500/5 space-y-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-zinc-100">
@@ -988,7 +988,7 @@ export const ApplicantPortal: React.FC = () => {
                                             </span>
                                         </div>
                                         <p className="text-[10px] text-zinc-500 font-bold mt-0.5">
-                                            2 Sections • {SALES_QUESTIONS.length} Questions (Kailangang masagutan lahat)
+                                            HR & Personality • {SALES_QUESTIONS.length} Questions (Kailangang masagutan lahat)
                                         </p>
                                     </div>
                                     <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${
@@ -1051,81 +1051,6 @@ export const ApplicantPortal: React.FC = () => {
                                                             </span>
                                                             <span className="text-[9px] font-bold text-zinc-400">
                                                                 #{idx + 1}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <p className="font-extrabold text-xs text-zinc-900 leading-snug">
-                                                        {q.question} <span className="text-red-500">*</span>
-                                                    </p>
-
-                                                    <textarea
-                                                        required
-                                                        rows={2}
-                                                        placeholder="Required: Write your answer here..."
-                                                        value={answers[q.id] || ''}
-                                                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                                                        className={`w-full p-2 bg-white border rounded-lg text-xs outline-none focus:border-red-500 resize-y min-h-[56px] ${
-                                                            isAnswered ? 'border-emerald-300' : 'border-zinc-200'
-                                                        }`}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* SECTION 2: SALES CALL SCENARIOS */}
-                                <div className="space-y-2.5 pt-1">
-                                    <div className="p-2.5 bg-gradient-to-r from-red-600/10 via-rose-500/10 to-orange-50/40 border border-rose-200/80 rounded-xl flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center font-black text-xs shadow-2xs">
-                                                <PhoneCall className="w-3.5 h-3.5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-[11px] font-black uppercase text-rose-950 leading-tight">
-                                                    Section 2: Sales Call Scenarios *
-                                                </h4>
-                                                <p className="text-[9px] text-rose-800 font-medium">
-                                                    Live pitching, price objections & closing deals
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
-                                            salesAnswered === salesQuestions.length
-                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                                : 'bg-white/90 text-rose-900 border-rose-200/80'
-                                        }`}>
-                                            {salesAnswered}/{salesQuestions.length}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-2.5">
-                                        {salesQuestions.map((q, idx) => {
-                                            const isAnswered = !!answers[q.id]?.trim();
-                                            return (
-                                                <div
-                                                    key={q.id}
-                                                    className={`rounded-xl p-3 space-y-1.5 transition-all border ${
-                                                        isAnswered
-                                                            ? 'bg-emerald-50/20 border-emerald-200'
-                                                            : 'bg-zinc-50/90 border-zinc-200/80'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-100 text-rose-900">
-                                                            {q.badge}
-                                                        </span>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                                isAnswered
-                                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                                                    : 'bg-rose-100 text-rose-700 border border-rose-200'
-                                                            }`}>
-                                                                {isAnswered ? 'Answered ✓' : 'Required *'}
-                                                            </span>
-                                                            <span className="text-[9px] font-bold text-zinc-400">
-                                                                #{personalityQuestions.length + idx + 1}
                                                             </span>
                                                         </div>
                                                     </div>

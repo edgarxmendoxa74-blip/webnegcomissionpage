@@ -118,6 +118,21 @@ export const updatePartnerApplicationStatus = async (
 };
 
 /**
+ * Delete a partner application (admin only)
+ */
+export const deletePartnerApplication = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('partner_applications')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting partner application:', error);
+    throw new Error(`Failed to delete partner: ${error.message}`);
+  }
+};
+
+/**
  * Search partner applications
  */
 export const searchPartnerApplications = async (

@@ -31,8 +31,18 @@ export const ReceiptsPage: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
 
     const receiptRef = useRef<HTMLDivElement>(null);
+    const calculatorRef = useRef<HTMLDivElement>(null);
     // Stable per session so it doesn't change on every keystroke
     const [serial] = useState(() => `WN-${Math.floor(100000 + Math.random() * 900000)}`);
+
+    // Calculator now sits at the bottom of the page — scroll to it when opened
+    useEffect(() => {
+        if (!showCalculator) return;
+        const t = setTimeout(() => {
+            calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 80);
+        return () => clearTimeout(t);
+    }, [showCalculator]);
 
     const selectedWorker = workers.find(w => w.id === selectedWorkerId);
 
@@ -253,18 +263,6 @@ export const ReceiptsPage: React.FC = () => {
                                 />
                             </div>
                         </div>
-
-                        {showCalculator && (
-                            <ReceiptCalculator
-                                onApplyAmount={(calculated) => setAmount(calculated)}
-                                initialPrice={packagePrice}
-                                workerCommission={selectedWorker?.commission_percentage}
-                                workerName={selectedWorker?.name}
-                                dealsCount={validClientNames.length > 0 ? validClientNames.length : 1}
-                                currentAmount={amount}
-                                onClose={() => setShowCalculator(false)}
-                            />
-                        )}
                     </div>
 
                     <button
@@ -383,6 +381,21 @@ export const ReceiptsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* ── Receipt Calculator (bottom of page) ── */}
+            {showCalculator && (
+                <div ref={calculatorRef} className="w-full max-w-md mx-auto">
+                    <ReceiptCalculator
+                        onApplyAmount={(calculated) => setAmount(calculated)}
+                        initialPrice={packagePrice}
+                        workerCommission={selectedWorker?.commission_percentage}
+                        workerName={selectedWorker?.name}
+                        dealsCount={validClientNames.length > 0 ? validClientNames.length : 1}
+                        currentAmount={amount}
+                        onClose={() => setShowCalculator(false)}
+                    />
+                </div>
+            )}
         </div>
     );
 };

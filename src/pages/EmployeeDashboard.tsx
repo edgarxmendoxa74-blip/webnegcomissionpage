@@ -489,6 +489,36 @@ export const EmployeeDashboard: React.FC = () => {
 
     const fmtDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString() : '—');
 
+    // Deals inside the selected analytics period (same date basis as the stat cards above)
+    const getDealsForAnalyticsPeriod = () => {
+        const now = new Date();
+        const closed = getClosedDeals();
+
+        if (analyticsPeriod === 'day') {
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return closed.filter(l => new Date(l.created_at) >= today);
+        }
+        if (analyticsPeriod === 'week') {
+            const weekStart = new Date(now);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            return closed.filter(l => new Date(l.created_at) >= weekStart);
+        }
+        if (analyticsPeriod === 'month') {
+            return closed.filter(l => {
+                const d = new Date(l.created_at);
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            });
+        }
+        return closed.filter(l => new Date(l.created_at).getFullYear() === now.getFullYear());
+    };
+
+    const analyticsDeals = getDealsForAnalyticsPeriod().sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    const closedDealsList = analyticsDeals.filter(l => l.payment_status === 'Fully Paid');
+    const downpaymentDealsList = analyticsDeals.filter(l => !l.payment_status || l.payment_status === 'Downpayment Only');
+
     // Balance: If Fully Paid, total package minus commission (e.g. 5499 - 300 = 5199, or 3499 - 250 = 3249).
     const getBalance = (lead: Lead) =>
         dealBalance(lead, workerRate);
@@ -1886,6 +1916,81 @@ export const EmployeeDashboard: React.FC = () => {
                                                 <span className="text-[8px] font-bold text-zinc-500 text-center truncate w-full px-0.5">{data.label}</span>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Deals breakdown: closed (fully paid) vs downpayment only */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Closed deals */}
+                                    <div className="bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden">
+                                        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-zinc-100 bg-emerald-50/70">
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Closed Deals</p>
+                                                    <p className="text-[8px] font-bold uppercase tracking-widest text-emerald-600/80">Fully paid deals in this period</p>
+                                                </div>
+                                            </div>
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black tabular-nums shrink-0">
+                                                {closedDealsList.length}
+                                            </span>
+                                        </div>
+                                        {closedDealsList.length === 0 ? (
+                                            <p className="py-8 text-center text-[9px] font-black uppercase tracking-widest text-zinc-300">No closed deals this period</p>
+                                        ) : (
+                                            <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
+                                                {closedDealsList.map(l => (
+                                                    <li key={l.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-black text-ink truncate">{l.client_name}</p>
+                                                            <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400 tabular-nums">
+                                                                {fmtDate(l.full_payment_date || (l.created_at ? l.created_at.split('T')[0] : null))}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-xs font-black text-emerald-600 tabular-nums">₱{(Number(l.deal_value) || 0).toLocaleString()}</p>
+                                                            <p className="text-[8px] font-bold text-zinc-400 tabular-nums">Comm. ₱{getCommission(l).toLocaleString()}</p>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+
+                                    {/* Downpayment only */}
+                                    <div className="bg-white border border-zinc-100 rounded-2xl shadow-sm overflow-hidden">
+                                        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-zinc-100 bg-amber-50/70">
+                                            <div className="flex items-center gap-2">
+                                                <Wallet className="w-4 h-4 text-amber-600 shrink-0" />
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-800">Downpayment Only</p>
+                                                    <p className="text-[8px] font-bold uppercase tracking-widest text-amber-600/80">Balance still unpaid</p>
+                                                </div>
+                                            </div>
+                                            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black tabular-nums shrink-0">
+                                                {downpaymentDealsList.length}
+                                            </span>
+                                        </div>
+                                        {downpaymentDealsList.length === 0 ? (
+                                            <p className="py-8 text-center text-[9px] font-black uppercase tracking-widest text-zinc-300">No downpayment-only deals this period</p>
+                                        ) : (
+                                            <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
+                                                {downpaymentDealsList.map(l => (
+                                                    <li key={l.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-black text-ink truncate">{l.client_name}</p>
+                                                            <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400 tabular-nums">
+                                                                {fmtDate(l.down_payment_date || (l.created_at ? l.created_at.split('T')[0] : null))}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-xs font-black text-amber-600 tabular-nums">DP ₱{(Number(l.down_payment) || 0).toLocaleString()}</p>
+                                                            <p className="text-[8px] font-bold text-zinc-400 tabular-nums">Total ₱{(Number(l.deal_value) || 0).toLocaleString()}</p>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
                                     </div>
                                 </div>
                             </div>

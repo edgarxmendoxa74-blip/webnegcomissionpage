@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AUDIT_STATUS_STYLE, type DailyAuditRow, type AuditRecord } from './EmployeeDailyAudit';
-import { RefreshCw, AlertCircle, LayoutGrid, Table2, Download } from 'lucide-react';
+import { RefreshCw, AlertCircle, LayoutGrid, Table2, Download, Trash2, AlertTriangle, Check } from 'lucide-react';
 
 const STATUSES: DailyAuditRow['status'][] = ['Submitted', 'Reviewed', 'Needs Review'];
 
@@ -35,6 +35,10 @@ export const MasterAuditPanel: React.FC = () => {
     const [filter, setFilter] = useState<'All' | DailyAuditRow['status']>('All');
     const [savingId, setSavingId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'sheet'>('grid');
+    const [deleteTarget, setDeleteTarget] = useState<DayGroup | 'all' | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
 
     const load = async () => {
         try {
@@ -127,6 +131,12 @@ export const MasterAuditPanel: React.FC = () => {
 
     const workerOf = (id: string) => workers.find(w => w.id === id);
 
+    /* ── delete one audit day / all visible audits ── */
+    const requestDelete = (target: DayGroup | 'all') => {
+        setDeleteError(null);
+        setDeleteTarget(target);
+    };
+
     const exportCSV = () => {
         // Header rows
         const auditHeaders = ['Account', 'Role', 'Date', 'Clients Added', 'Deals Closed', 'Total Sales', 'Commission', 'Status', 'Notes'];
@@ -211,6 +221,48 @@ export const MasterAuditPanel: React.FC = () => {
         (filter === 'All' || g.report?.status === filter)
     );
 
+    /* ── delete one audit day / all visible audits ── */
+    const targetsToDelete: DayGroup[] = deleteTarget
+        ? (deleteTarget === 'all' ? visible : [deleteTarget])
+        : [];
+    const deleteRecordCount = targetsToDelete.reduce((n, g) => n + g.records.length, 0);
+
+    const runDelete = async () => {
+        if (targetsToDelete.length === 0) return;
+        setIsDeleting(true);
+        setDeleteError(null);
+
+        const recordIds = targetsToDelete.flatMap(g => g.records.map(r => r.id));
+        const reportIds = targetsToDelete.map(g => g.report?.id).filter((id): id is string => !!id);
+
+        try {
+            if (recordIds.length > 0) {
+                const { error } = await supabase.from('audit_records').delete().in('id', recordIds);
+                if (error) throw error;
+            }
+            if (reportIds.length > 0) {
+                const { error } = await supabase.from('daily_audits').delete().in('id', reportIds);
+                if (error) throw error;
+            }
+
+            setRecords(prev => prev.filter(r => !recordIds.includes(r.id)));
+            setReports(prev => prev.filter(r => !reportIds.includes(r.id)));
+            setDeleteTarget(null);
+            setNotice(
+                targetsToDelete.length === 1
+                    ? 'Audit entry deleted'
+                    : `${targetsToDelete.length} audit entries deleted`
+            );
+            setTimeout(() => setNotice(null), 3000);
+            load();
+        } catch (err: any) {
+            console.error('Error deleting audit:', err);
+            setDeleteError(err?.message || 'Could not delete. Please try again.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const counts = useMemo(() => {
         const c: Record<DailyAuditRow['status'], number> = { 'Submitted': 0, 'Reviewed': 0, 'Needs Review': 0 };
         groups
@@ -241,6 +293,16 @@ export const MasterAuditPanel: React.FC = () => {
                     >
                         <Download className="w-3.5 h-3.5" />
                         <span>Export CSV</span>
+                    </button>
+
+                    <button
+                        onClick={() => requestDelete('all')}
+                        disabled={visible.length === 0}
+                        title="Delete every audit shown below"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white border border-red-600 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete All</span>
                     </button>
                 </div>
 
@@ -398,6 +460,14 @@ export const MasterAuditPanel: React.FC = () => {
                                                     {g.records.length} client record{g.records.length === 1 ? '' : 's'}
                                                 </span>
                                             )}
+                                            <button
+                                                type="button"
+                                                onClick={() => requestDelete(g)}
+                                                title="Delete this audit entry"
+                                                className="self-end sm:self-auto p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-100 transition-all active:scale-95"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
 
                                         {r?.notes && (
@@ -464,6 +534,7 @@ export const MasterAuditPanel: React.FC = () => {
                                             <th className="text-right px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Client Records</th>
                                             <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Status</th>
                                             <th className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Notes</th>
+                                            <th className="text-center px-4 py-3 text-[9px] font-black uppercase tracking-wider text-zinc-500 whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100">
@@ -529,6 +600,18 @@ export const MasterAuditPanel: React.FC = () => {
                                                     <td className="px-4 py-3 text-zinc-500 font-medium max-w-[200px] truncate">
                                                         {r?.notes || <span className="text-zinc-300">—</span>}
                                                     </td>
+
+                                                    {/* Actions */}
+                                                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => requestDelete(g)}
+                                                            title="Delete this audit entry"
+                                                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all active:scale-90"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -538,6 +621,88 @@ export const MasterAuditPanel: React.FC = () => {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* ── Delete confirmation ── */}
+            {deleteTarget && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60"
+                    onClick={() => { if (!isDeleting) setDeleteTarget(null); }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 space-y-4"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-black leading-tight">
+                                    {deleteTarget === 'all' ? 'Delete all audits?' : 'Sigurado ka ba?'}
+                                </h3>
+                                <p className="text-xs text-zinc-500 font-medium mt-1 leading-relaxed">
+                                    {deleteTarget === 'all' ? (
+                                        <>
+                                            Are you sure you want to delete{' '}
+                                            <span className="font-black text-black">{visible.length}</span>{' '}
+                                            audit entr{visible.length === 1 ? 'y' : 'ies'} shown here
+                                            {deleteRecordCount > 0 && (
+                                                <> including <span className="font-black text-black">{deleteRecordCount}</span> client record{deleteRecordCount === 1 ? '' : 's'}</>
+                                            )}
+                                            ? This action cannot be undone.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Delete the{' '}
+                                            <span className="font-black text-black">
+                                                {new Date(`${deleteTarget.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </span>{' '}
+                                            audit of <span className="font-black text-black">{workerOf(deleteTarget.worker_id)?.name || 'this account'}</span>
+                                            {deleteTarget.records.length > 0 && (
+                                                <> including <span className="font-black text-black">{deleteTarget.records.length}</span> client record{deleteTarget.records.length === 1 ? '' : 's'}</>
+                                            )}
+                                            ? This action cannot be undone.
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        {deleteError && (
+                            <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                                {deleteError}
+                            </p>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="flex-1 py-2.5 border-2 border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={runDelete}
+                                disabled={isDeleting}
+                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+                            >
+                                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Success toast ── */}
+            {notice && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 bg-zinc-900 text-white rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>{notice}</span>
+                </div>
             )}
         </div>
     );

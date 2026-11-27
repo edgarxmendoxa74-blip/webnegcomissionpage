@@ -10,6 +10,13 @@ import {
     deleteApplicant
 } from '../lib/applicants';
 import {
+    getTelHref,
+    getMailtoHref,
+    getFacebookUrl,
+    getSocialUrl,
+    sanitizePhoneNumber
+} from '../lib/contactLinks';
+import {
     Users,
     CheckCircle2,
     Clock,
@@ -23,7 +30,6 @@ import {
     Filter,
     RefreshCw,
     UserCheck,
-    PhoneCall,
     ArrowLeft,
     MessageSquare,
     Save,
@@ -58,6 +64,8 @@ export const ApplicantsPage: React.FC = () => {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [deleteSuccess, setDeleteSuccess] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'sheet'>('grid');
+    const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+    const copiedPhoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── new-applicant notification ──────────────────────────────────────────
     const knownCountRef = useRef<number | null>(null); // null = not yet initialised
@@ -97,6 +105,22 @@ export const ApplicantsPage: React.FC = () => {
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setNewApplicantToast({ name });
         toastTimerRef.current = setTimeout(() => setNewApplicantToast(null), 5000);
+    };
+
+    // Desktop browsers usually have no dialer app, so clicking "Call Phone"
+    // would silently do nothing. Copy the number as a fallback (mobile keeps
+    // using the native tel: dialer).
+    const handleCallClick = (phone?: string | null) => {
+        const number = sanitizePhoneNumber(phone);
+        if (!number) return;
+
+        const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        if (isMobileDevice) return;
+
+        navigator.clipboard?.writeText(number).catch(() => { /* clipboard blocked */ });
+        if (copiedPhoneTimerRef.current) clearTimeout(copiedPhoneTimerRef.current);
+        setCopiedPhone(number);
+        copiedPhoneTimerRef.current = setTimeout(() => setCopiedPhone(null), 3000);
     };
 
     const handleCopyHiringLink = () => {
@@ -262,17 +286,11 @@ export const ApplicantsPage: React.FC = () => {
         const total = applicants.length;
         const completed = applicants.filter(a => a.status === 'completed' || a.status === 'interview_scheduled' || a.status === 'hired').length;
         const incomplete = applicants.filter(a => a.status === 'incomplete').length;
-        const morningCount = applicants.filter(a => a.meeting_time === '10:00 AM').length;
-        const afternoonCount = applicants.filter(a => a.meeting_time === '4:00 PM').length;
-        const eveningCount = applicants.filter(a => a.meeting_time === '10:00 PM').length;
 
         return {
             total,
             completed,
-            incomplete,
-            morningCount,
-            afternoonCount,
-            eveningCount
+            incomplete
         };
     }, [applicants]);
 
@@ -280,8 +298,26 @@ export const ApplicantsPage: React.FC = () => {
     // VIEW 2: APPLICANT DETAILS NEXT PAGE (FULL-PAGE DOSSIER VIEW)
     // =========================================================================
     if (selectedApplicant) {
+        // Normalize whatever the applicant typed into working links
+        const phoneHref = getTelHref(selectedApplicant.phone_number);
+        const emailSubject = selectedApplicant.application_code
+            ? `SmartMenu Sales Consultant Application — ${selectedApplicant.application_code}`
+            : 'SmartMenu Sales Consultant Application';
+        const emailHref = getMailtoHref(selectedApplicant.email, emailSubject);
+        const facebookUrl = getFacebookUrl(selectedApplicant.fb_link);
+
         return (
             <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Copied number toast (desktop has no dialer app) */}
+                {copiedPhone && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-zinc-900 text-white rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                        <Copy className="w-4 h-4 text-emerald-400" />
+                        <span>
+                            Number copied: <span className="font-mono">{copiedPhone}</span>
+                        </span>
+                    </div>
+                )}
+
                 {/* Top Navigation & Dossier Title Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200">
                     <div className="flex items-center gap-3">
@@ -352,58 +388,66 @@ export const ApplicantsPage: React.FC = () => {
 
                             <div className="space-y-1">
                                 <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Email Address</span>
-                                <a
-                                    href={`mailto:${selectedApplicant.email}`}
-                                    className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
-                                >
-                                    <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>{selectedApplicant.email}</span>
-                                </a>
+                                {emailHref ? (
+                                    <a
+                                        href={emailHref}
+                                        className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
+                                    >
+                                        <Mail className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{selectedApplicant.email}</span>
+                                    </a>
+                                ) : (
+                                    <p className="font-bold text-zinc-800 flex items-center gap-1.5">
+                                        <Mail className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{selectedApplicant.email || 'None'}</span>
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1">
                                 <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Phone Number</span>
-                                <a
-                                    href={`tel:${selectedApplicant.phone_number}`}
-                                    className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
-                                >
-                                    <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>{selectedApplicant.phone_number || 'None'}</span>
-                                </a>
-                            </div>
-
-                            <div className="space-y-1">
-                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Meeting Schedule</span>
-                                <p className="font-black text-emerald-700 flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    <span>{selectedApplicant.meeting_time ? `${selectedApplicant.meeting_time} (${selectedApplicant.meeting_date})` : 'Not yet selected'}</span>
-                                </p>
+                                {phoneHref ? (
+                                    <a
+                                        href={phoneHref}
+                                        onClick={() => handleCallClick(selectedApplicant.phone_number)}
+                                        className="font-bold text-zinc-800 hover:text-black hover:underline flex items-center gap-1.5"
+                                    >
+                                        <Phone className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{selectedApplicant.phone_number}</span>
+                                    </a>
+                                ) : (
+                                    <p className="font-bold text-zinc-800 flex items-center gap-1.5">
+                                        <Phone className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>None</span>
+                                    </p>
+                                )}
                             </div>
                         </div>
 
                         {/* Social Links & Direct Action Buttons */}
                         <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center gap-2">
-                            {selectedApplicant.phone_number && (
+                            {phoneHref && (
                                 <a
-                                    href={`tel:${selectedApplicant.phone_number}`}
+                                    href={phoneHref}
+                                    onClick={() => handleCallClick(selectedApplicant.phone_number)}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
                                 >
                                     <Phone className="w-3.5 h-3.5" />
                                     <span>Call Phone</span>
                                 </a>
                             )}
-                            {selectedApplicant.email && (
+                            {emailHref && (
                                 <a
-                                    href={`mailto:${selectedApplicant.email}`}
+                                    href={emailHref}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
                                 >
                                     <Mail className="w-3.5 h-3.5" />
                                     <span>Send Email</span>
                                 </a>
                             )}
-                            {selectedApplicant.fb_link && (
+                            {facebookUrl && (
                                 <a
-                                    href={selectedApplicant.fb_link}
+                                    href={facebookUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-2xs"
@@ -420,7 +464,19 @@ export const ApplicantsPage: React.FC = () => {
                                 <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
                                     Other Social Accounts / Links
                                 </span>
-                                <p className="font-semibold text-zinc-800 mt-0.5">{selectedApplicant.other_socials}</p>
+                                {getSocialUrl(selectedApplicant.other_socials) ? (
+                                    <a
+                                        href={getSocialUrl(selectedApplicant.other_socials)!}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="font-semibold text-blue-600 hover:underline mt-0.5 inline-flex items-center gap-1"
+                                    >
+                                        <span>{selectedApplicant.other_socials}</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                ) : (
+                                    <p className="font-semibold text-zinc-800 mt-0.5">{selectedApplicant.other_socials}</p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -486,16 +542,16 @@ export const ApplicantsPage: React.FC = () => {
                 {/* Uploaded Resume Photo Card (Full Preview) */}
                 {selectedApplicant.resume_link && (
                     <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs space-y-3">
-                        <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-black" />
-                                <span>Uploaded Resume Dossier</span>
+                        <div className="flex items-center justify-between gap-3 flex-wrap border-b border-zinc-100 pb-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-2 min-w-0">
+                                <FileText className="w-4 h-4 text-black shrink-0" />
+                                <span className="truncate">Uploaded Resume Dossier</span>
                             </h3>
                             <a
                                 href={selectedApplicant.resume_link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[10px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
+                                className="text-[10px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
                             >
                                 <span>Open Full Size</span>
                                 <ExternalLink className="w-3 h-3" />
@@ -511,13 +567,22 @@ export const ApplicantsPage: React.FC = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
-                                <span className="font-bold text-xs text-zinc-700">Resume Link: {selectedApplicant.resume_link}</span>
+                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="min-w-0 flex-1 text-left">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
+                                        Resume Link
+                                    </span>
+                                    <p className="font-bold text-xs text-zinc-700 break-all line-clamp-2 leading-relaxed">
+                                        {selectedApplicant.resume_link.startsWith('data:')
+                                            ? 'Uploaded file (embedded)'
+                                            : selectedApplicant.resume_link}
+                                    </p>
+                                </div>
                                 <a
                                     href={selectedApplicant.resume_link}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold inline-flex items-center gap-1"
+                                    className="shrink-0 self-start sm:self-auto whitespace-nowrap px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold inline-flex items-center gap-1"
                                 >
                                     <span>Open Link</span>
                                     <ExternalLink className="w-3 h-3" />
@@ -527,7 +592,7 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Candidate Assessment Answers (2 Sections) */}
+                {/* Candidate Assessment Answers */}
                 <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs space-y-6">
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                         <div>
@@ -536,7 +601,7 @@ export const ApplicantsPage: React.FC = () => {
                                 <span>Candidate Assessment ({SALES_QUESTIONS.length} Questions)</span>
                             </h3>
                             <p className="text-[10px] text-zinc-400 font-bold">
-                                Candidate's submitted answers to HR personality & sales call scenarios
+                                Candidate's submitted answers to the HR & personality questions
                             </p>
                         </div>
                         <span className="text-[10px] font-black text-zinc-800 bg-zinc-100 px-2.5 py-1 rounded-full border border-zinc-200">
@@ -571,52 +636,6 @@ export const ApplicantsPage: React.FC = () => {
                                         <div className="flex items-center justify-between">
                                             <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
                                                 Q{idx + 1}: {q.badge}
-                                            </span>
-                                            {!answer && (
-                                                <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                                                    Walang Sagot
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="font-extrabold text-black text-xs leading-snug">{q.question}</p>
-                                        <div className="p-3 bg-white rounded-lg border border-zinc-200 font-medium text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed shadow-2xs">
-                                            {answer || <span className="text-zinc-400 italic">Walang ibinigay na sagot.</span>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* SECTION 2: Sales Call Scenarios */}
-                    <div className="space-y-3 pt-2">
-                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <PhoneCall className="w-4 h-4 text-rose-700" />
-                                <span className="font-black text-xs uppercase tracking-wider text-rose-950">
-                                    Section 2: Sales Call Scenarios
-                                </span>
-                            </div>
-                            <span className="text-[9px] font-bold text-rose-800 bg-white/80 px-2.5 py-0.5 rounded-full border border-rose-200">
-                                Objections, Phone Pitch & Closing
-                            </span>
-                        </div>
-
-                        <div className="space-y-3">
-                            {SALES_QUESTIONS.filter(q => q.category === 'sales_call').map((q, idx) => {
-                                const answer = selectedApplicant.answers?.[q.id]
-                                    || (q.id === 'q_sales_first_minute' ? selectedApplicant.answers?.['q5_first_minute'] : undefined)
-                                    || (q.id === 'q_sales_price_objection' ? selectedApplicant.answers?.['q6_price_objection'] : undefined)
-                                    || (q.id === 'q_sales_busy_client' ? selectedApplicant.answers?.['q7_busy_client'] : undefined)
-                                    || (q.id === 'q_sales_think_about_it' ? selectedApplicant.answers?.['q8_think_about_it'] : undefined)
-                                    || (q.id === 'q_sales_closing_deal' ? selectedApplicant.answers?.['q9_closing_downpayment'] : undefined)
-                                    || (q.id === 'q_sales_rejection_resilience' ? selectedApplicant.answers?.['q10_rejection_resilience'] : undefined);
-
-                                return (
-                                    <div key={q.id} className="p-4 bg-zinc-50/80 rounded-xl border border-zinc-200/80 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[9px] font-black uppercase tracking-wider text-rose-800 bg-rose-100/70 px-2 py-0.5 rounded">
-                                                Q{SALES_QUESTIONS.filter(sq => sq.category === 'personality').length + idx + 1}: {q.badge}
                                             </span>
                                             {!answer && (
                                                 <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
@@ -758,7 +777,7 @@ export const ApplicantsPage: React.FC = () => {
             )}
 
             {/* Top Metric Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-white border border-zinc-100 p-4 rounded-2xl shadow-xs">
                     <div className="flex items-center justify-between">
                         <p className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Total Applicants</p>
@@ -778,7 +797,7 @@ export const ApplicantsPage: React.FC = () => {
                     <p className="text-2xl font-black tracking-tight text-emerald-700 tabular-nums mt-1">
                         {stats.completed}
                     </p>
-                    <p className="text-[9px] text-emerald-600/80 font-bold mt-1">With meeting schedule & code</p>
+                    <p className="text-[9px] text-emerald-600/80 font-bold mt-1">Finished the full assessment</p>
                 </div>
 
                 <div className="bg-white border border-zinc-100 p-4 rounded-2xl shadow-xs">
@@ -790,19 +809,6 @@ export const ApplicantsPage: React.FC = () => {
                         {stats.incomplete}
                     </p>
                     <p className="text-[9px] text-amber-600/80 font-bold mt-1">Dropped off at Stage 1 or 2</p>
-                </div>
-
-                <div className="bg-white border border-zinc-100 p-4 rounded-2xl shadow-xs">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Scheduled Slots</p>
-                        <Calendar className="w-4 h-4 text-zinc-500" />
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xs font-bold text-black">10AM: <strong className="text-emerald-700">{stats.morningCount}</strong></span>
-                        <span className="text-xs font-bold text-black">4PM: <strong className="text-blue-700">{stats.afternoonCount}</strong></span>
-                        <span className="text-xs font-bold text-black">10PM: <strong className="text-purple-700">{stats.eveningCount}</strong></span>
-                    </div>
-                    <p className="text-[9px] text-zinc-400 font-bold mt-1">Meeting distribution</p>
                 </div>
             </div>
 
@@ -995,10 +1001,20 @@ export const ApplicantsPage: React.FC = () => {
 
                                         {/* Links: FB / Resume */}
                                         <div className="flex items-center gap-2">
-                                            {app.fb_link && (
-                                                <span className="inline-flex items-center gap-0.5 text-blue-600 font-bold">
+                                            {getFacebookUrl(app.fb_link) && (
+                                                <span
+                                                    role="link"
+                                                    tabIndex={0}
+                                                    title="Open Facebook profile"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(getFacebookUrl(app.fb_link)!, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                    className="inline-flex items-center gap-0.5 text-blue-600 font-bold hover:text-blue-800 hover:underline cursor-pointer"
+                                                >
                                                     <Facebook className="w-3 h-3" />
                                                     <span>FB</span>
+                                                    <ExternalLink className="w-2.5 h-2.5" />
                                                 </span>
                                             )}
                                             {app.resume_link && (
@@ -1118,8 +1134,16 @@ export const ApplicantsPage: React.FC = () => {
 
                                                 {/* Contact */}
                                                 <td className="px-4 py-3 whitespace-nowrap text-zinc-600">
-                                                    {app.phone_number
-                                                        ? <a href={`tel:${app.phone_number}`} className="hover:text-black hover:underline flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{app.phone_number}</a>
+                                                    {getTelHref(app.phone_number)
+                                                        ? (
+                                                            <a
+                                                                href={getTelHref(app.phone_number)!}
+                                                                onClick={() => handleCallClick(app.phone_number)}
+                                                                className="hover:text-black hover:underline flex items-center gap-1"
+                                                            >
+                                                                <Phone className="w-3 h-3 shrink-0" />{app.phone_number}
+                                                            </a>
+                                                        )
                                                         : <span className="text-zinc-300">—</span>
                                                     }
                                                 </td>
@@ -1170,8 +1194,8 @@ export const ApplicantsPage: React.FC = () => {
                                                 {/* Links */}
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
-                                                        {app.fb_link && (
-                                                            <a href={app.fb_link} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700" title="Facebook">
+                                                        {getFacebookUrl(app.fb_link) && (
+                                                            <a href={getFacebookUrl(app.fb_link)!} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700" title="Facebook">
                                                                 <Facebook className="w-3.5 h-3.5" />
                                                             </a>
                                                         )}
@@ -1232,6 +1256,16 @@ export const ApplicantsPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Copied number toast (desktop has no dialer app) */}
+            {copiedPhone && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-zinc-900 text-white rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                    <Copy className="w-4 h-4 text-emerald-400" />
+                    <span>
+                        Number copied: <span className="font-mono">{copiedPhone}</span>
+                    </span>
+                </div>
+            )}
 
             {/* New Applicant Notification Toast */}
             {newApplicantToast && (

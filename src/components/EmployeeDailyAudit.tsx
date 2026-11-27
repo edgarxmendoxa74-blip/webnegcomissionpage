@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, Pencil, Plus, Trash2, X, Info } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 
@@ -243,14 +243,13 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
         if (err) setError(err.message);
         else setSavedMsg(submit ? 'Audit submitted to the owner' : 'Saved');
     };
-    const handleSave = () => run(false);
     const handleSubmit = () => run(true);
 
-    // Opens the export form, defaulting to the past week (the export is meant to be done weekly).
+    // Opens the export form, defaulting to the past 2 weeks (the export is required every 2 weeks for commission release).
     const handleExport = () => {
         const today = new Date();
-        const weekAgo = new Date(today.getTime() - 6 * 24 * 3600 * 1000);
-        setExportFrom(toInputDate(weekAgo));
+        const twoWeeksAgo = new Date(today.getTime() - 13 * 24 * 3600 * 1000);
+        setExportFrom(toInputDate(twoWeeksAgo));
         setExportTo(toInputDate(today));
         setExportError(null);
         setShowExportModal(true);
@@ -319,6 +318,15 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                 />
             </div>
 
+            {/* Export reminder */}
+            <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] sm:text-[11px] font-bold text-amber-900 leading-relaxed">
+                    <span className="font-black uppercase tracking-widest text-[9px]">Reminder:</span>{' '}
+                    Export your audit list <span className="font-black">every 2 weeks</span> — it is used for releasing commissions.
+                </p>
+            </div>
+
             {error && (
                 <p className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] font-black text-red-600 uppercase tracking-widest">{error}</p>
             )}
@@ -352,19 +360,12 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                                 <Download className="w-3.5 h-3.5" /> Export
                             </button>
                             <p className="text-[7px] font-black uppercase tracking-widest text-zinc-400 text-center leading-tight">
-                                Export list every 1 week
+                                Export every 2 weeks for releasing commissions
                             </p>
                         </div>
                         <button
-                            onClick={handleSave}
-                            disabled={saving || loading}
-                            className="self-start flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 bg-white border border-zinc-200 text-ink rounded-xl font-black uppercase tracking-widest text-[9px] hover:border-ink transition-all active:scale-95 disabled:opacity-40"
-                        >
-                            <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
                             onClick={() => openRecordModal()}
-                            className="col-span-2 flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 bg-ink text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:shadow-xl hover:shadow-black/20 transition-all active:scale-95"
+                            className="self-start flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 bg-ink text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:shadow-xl hover:shadow-black/20 transition-all active:scale-95"
                         >
                             <Plus className="w-3.5 h-3.5" /> Add
                         </button>
@@ -464,7 +465,7 @@ export const EmployeeDailyAudit: React.FC<{ workerId: string; rate: number }> = 
                             </button>
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 leading-relaxed">
-                            Set the date range of the list you want to export. Export every 1 week.
+                            Set the date range of the list you want to export. Export your audit list every 2 weeks for releasing commissions.
                         </p>
                         <div className="space-y-1.5">
                             <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block px-1">From</span>

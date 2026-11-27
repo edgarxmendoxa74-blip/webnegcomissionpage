@@ -56,6 +56,9 @@ DROP POLICY IF EXISTS "Allow authenticated users to read partner applications"
 DROP POLICY IF EXISTS "Allow authenticated users to update partner applications"
   ON partner_applications;
 
+DROP POLICY IF EXISTS "Allow authenticated users to delete partner applications"
+  ON partner_applications;
+
 -- Allow anyone (anon + authenticated) to INSERT — the sign-up form is public
 CREATE POLICY "Allow public to insert partner applications"
   ON partner_applications FOR INSERT
@@ -74,3 +77,9 @@ CREATE POLICY "Allow authenticated users to update partner applications"
   TO authenticated
   USING (TRUE)
   WITH CHECK (TRUE);
+
+-- Allow authenticated users (admin) to delete a partner
+CREATE POLICY "Allow authenticated users to delete partner applications"
+  ON partner_applications FOR DELETE
+  TO authenticated
+  USING (TRUE);
