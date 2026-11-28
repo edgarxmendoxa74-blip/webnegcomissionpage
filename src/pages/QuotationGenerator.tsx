@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Briefcase,
@@ -14,7 +14,7 @@ import {
 import { SignaturePad } from '../components/SignaturePad';
 import { exportHtmlToPdf } from '../lib/pdfExport';
 
-/* ─── Brand & Page Constants ─────────────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Brand & Page Constants Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 const A4_WIDTH_PX = 794;   // 210mm at 96dpi
 const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
 const PAGE_GAP_PX = 24;
@@ -105,7 +105,7 @@ function getNextQuoteNumber(commit = false): string {
   }
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -142,7 +142,7 @@ function nl2br(value: string): string {
   return escapeHTML(value).replace(/\n/g, '<br/>');
 }
 
-/* ─── 3-Page Quotation HTML Builder ──────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 3-Page Quotation HTML Builder Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   const esc = escapeHTML;
   const subtotal = data.items.reduce(
@@ -192,7 +192,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   html, body {
     width: 210mm;
     background: #ffffff;
-    color: #222222;
+    color: #000000;
     font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
     font-size: 9.5pt;
     line-height: 1.45;
@@ -217,7 +217,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
     break-after: auto;
   }
 
-  /* ── Page 1 Header ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Page 1 Header Ã¢â€â‚¬Ã¢â€â‚¬ */
   .top-header {
     display: flex;
     justify-content: space-between;
@@ -242,13 +242,13 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .company-name {
     font-size: 10pt;
     font-weight: 700;
-    color: #111111;
+    color: #000000;
     margin-bottom: 0.5mm;
   }
 
   .company-meta {
     font-size: 9pt;
-    color: #333333;
+    color: #000000;
     line-height: 1.4;
   }
 
@@ -260,7 +260,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .quote-title {
     font-size: 28pt;
     font-weight: 400;
-    color: #111111;
+    color: #000000;
     line-height: 1.05;
     letter-spacing: -0.01em;
   }
@@ -269,10 +269,10 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
     margin-top: 1.5mm;
     font-size: 9.5pt;
     font-weight: 700;
-    color: #222222;
+    color: #000000;
   }
 
-  /* ── Bill To & Meta ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Bill To & Meta Ã¢â€â‚¬Ã¢â€â‚¬ */
   .bill-meta-row {
     display: flex;
     justify-content: space-between;
@@ -283,14 +283,14 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 
   .bill-to-label {
     font-size: 9pt;
-    color: #555555;
+    color: #000000;
     margin-bottom: 0.8mm;
   }
 
   .bill-to-name {
     font-size: 10pt;
     font-weight: 700;
-    color: #111111;
+    color: #000000;
   }
 
   .meta-table {
@@ -303,18 +303,18 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   }
 
   .meta-table td.k {
-    color: #555555;
+    color: #000000;
     text-align: right;
     padding-right: 6mm;
   }
 
   .meta-table td.v {
-    color: #111111;
+    color: #000000;
     text-align: right;
     min-width: 28mm;
   }
 
-  /* ── Items Table ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Items Table Ã¢â€â‚¬Ã¢â€â‚¬ */
   .items-table {
     width: 100%;
     border-collapse: collapse;
@@ -340,27 +340,27 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
     border-bottom: 0.5pt solid #e2e2e2;
     vertical-align: top;
     font-size: 8.8pt;
-    color: #222222;
+    color: #000000;
   }
 
-  .items-table tbody td.col-num { text-align: center; color: #333333; }
+  .items-table tbody td.col-num { text-align: center; color: #000000; }
   .items-table tbody td.col-qty { text-align: right; }
   .items-table tbody td.col-rate { text-align: right; }
   .items-table tbody td.col-amt { text-align: right; }
 
   .item-title {
     font-weight: 600;
-    color: #111111;
+    color: #000000;
     margin-bottom: 0.8mm;
   }
 
   .item-body {
     font-size: 8.4pt;
-    color: #555555;
+    color: #000000;
     line-height: 1.42;
   }
 
-  /* ── Totals ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Totals Ã¢â€â‚¬Ã¢â€â‚¬ */
   .totals-wrap {
     display: flex;
     justify-content: flex-end;
@@ -381,11 +381,11 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .totals-table tr.total-row td {
     background: #f2f2f2;
     font-weight: 700;
-    color: #111111;
+    color: #000000;
     padding: 2.6mm 2.5mm;
   }
 
-  /* ── Notes & Terms Intro ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Notes & Terms Intro Ã¢â€â‚¬Ã¢â€â‚¬ */
   .notes-block {
     margin-top: 9mm;
   }
@@ -393,13 +393,13 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .section-heading {
     font-size: 10pt;
     font-weight: 500;
-    color: #444444;
+    color: #000000;
     margin-bottom: 1.5mm;
   }
 
   .notes-text {
     font-size: 8.6pt;
-    color: #333333;
+    color: #000000;
   }
 
   .terms-block {
@@ -408,7 +408,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 
   .terms-p {
     font-size: 8.4pt;
-    color: #333333;
+    color: #000000;
     line-height: 1.45;
     margin-bottom: 2.4mm;
   }
@@ -416,7 +416,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .terms-subhead {
     font-size: 8.6pt;
     font-weight: 500;
-    color: #222222;
+    color: #000000;
     margin-top: 3mm;
     margin-bottom: 1mm;
   }
@@ -424,7 +424,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   .terms-list {
     margin: 0.8mm 0 2.2mm 5mm;
     font-size: 8.4pt;
-    color: #333333;
+    color: #000000;
     line-height: 1.42;
   }
 
@@ -432,10 +432,10 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
     margin-bottom: 0.6mm;
   }
 
-  /* ── Page 3 Agreement ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Page 3 Agreement Ã¢â€â‚¬Ã¢â€â‚¬ */
   .agreement-meta {
     font-size: 8.8pt;
-    color: #222222;
+    color: #000000;
     line-height: 1.5;
     margin-bottom: 4.5mm;
   }
@@ -451,14 +451,14 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 
   .sub-details-title {
     font-size: 9pt;
-    color: #222222;
+    color: #000000;
     margin-bottom: 3.5mm;
   }
 
   .details-table {
     border-collapse: collapse;
     font-size: 8.6pt;
-    color: #222222;
+    color: #000000;
     margin-bottom: 5mm;
     width: 100%;
   }
@@ -481,7 +481,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 
   .agr-clauses {
     font-size: 8.6pt;
-    color: #222222;
+    color: #000000;
     line-height: 1.48;
     margin-bottom: 6mm;
   }
@@ -492,7 +492,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 
   .sig-section {
     font-size: 8.8pt;
-    color: #222222;
+    color: #000000;
     line-height: 1.5;
   }
 
@@ -523,13 +523,13 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
     display: block;
   }
 
-  /* ── Page Footer ── */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Page Footer Ã¢â€â‚¬Ã¢â€â‚¬ */
   .page-footer {
     margin-top: auto;
     padding-top: 3mm;
     text-align: right;
     font-size: 8.5pt;
-    color: #666666;
+    color: #000000;
   }
 
   .page-footer.with-rule {
@@ -544,7 +544,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 </head>
 <body>
 
-<!-- ════════════════════ PAGE 1 ════════════════════ -->
+<!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â PAGE 1 Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
 <div class="page">
   <div class="top-header">
     <div class="brand-col">
@@ -629,7 +629,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   <div class="page-footer">1</div>
 </div>
 
-<!-- ════════════════════ PAGE 2 ════════════════════ -->
+<!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â PAGE 2 Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
 <div class="page">
   <p class="terms-p">and the Subscription Agreement that follows.</p>
 
@@ -728,7 +728,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
   <div class="page-footer with-rule">2</div>
 </div>
 
-<!-- ════════════════════ PAGE 3 ════════════════════ -->
+<!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â PAGE 3 Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
 <div class="page">
   <div class="agreement-meta">
     <div class="row"><span class="lbl">Provider:</span><span>${PROVIDER.agreementHeader}</span></div>
@@ -826,41 +826,8 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 </html>`;
 }
 
-/* ─── Print via hidden iframe → "Save as PDF" ────────────────────────────── */
-function printToPDF(html: string): void {
-  const frame = document.createElement('iframe');
-  frame.setAttribute('aria-hidden', 'true');
-  frame.style.cssText =
-    'position:fixed;right:0;bottom:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;z-index:-1;';
-  document.body.appendChild(frame);
 
-  const frameWindow = frame.contentWindow;
-  const frameDocument = frameWindow?.document;
-  if (!frameWindow || !frameDocument) {
-    frame.remove();
-    return;
-  }
-
-  let printed = false;
-  const print = () => {
-    if (printed) return;
-    printed = true;
-    try {
-      frameWindow.focus();
-      frameWindow.print();
-    } finally {
-      window.setTimeout(() => frame.remove(), 1000);
-    }
-  };
-
-  frameWindow.addEventListener('load', () => window.setTimeout(print, 350), { once: true });
-  frameDocument.open();
-  frameDocument.write(html);
-  frameDocument.close();
-  window.setTimeout(print, 2500);
-}
-
-/* ─── Field Styling ──────────────────────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Field Styling Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 const labelCls =
   'block text-[10px] font-black text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-[0.16em]';
 const inputCls =
@@ -868,7 +835,7 @@ const inputCls =
 const sectionTitleCls =
   'flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400';
 
-/* ─── Component ──────────────────────────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Component Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 export function QuotationGenerator() {
   const today = toISODate(new Date());
 
@@ -1039,7 +1006,7 @@ export function QuotationGenerator() {
 
       {/* Form */}
       <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-5 sm:p-6 shadow-sm space-y-5">
-        {/* ── Quote & Client ── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Quote & Client Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="space-y-4">
           <div className={sectionTitleCls}>
             <User className="w-3.5 h-3.5" />
@@ -1138,7 +1105,7 @@ export function QuotationGenerator() {
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-700" />
 
-        {/* ── Line Items ── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Line Items Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div className={sectionTitleCls}>
@@ -1258,7 +1225,7 @@ export function QuotationGenerator() {
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-700" />
 
-        {/* ── Subscription Agreement Details (Page 3) ── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Subscription Agreement Details (Page 3) Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="space-y-4">
           <div className={sectionTitleCls}>
             <Briefcase className="w-3.5 h-3.5" />
@@ -1358,10 +1325,10 @@ export function QuotationGenerator() {
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-700" />
 
-        {/* ── E-Signatures (Page 3) ── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ E-Signatures (Page 3) Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="space-y-4">
           <div className={sectionTitleCls}>
-            Provider E-Signature Pen (Opsyonal · Page 3)
+            Provider E-Signature Pen (Opsyonal Ã‚Â· Page 3)
           </div>
 
           <SignaturePad
@@ -1401,11 +1368,11 @@ export function QuotationGenerator() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <div className="mr-auto">
-              <p className="text-sm font-black text-zinc-900 dark:text-white">Preview · 3 Pages (A4 Portrait)</p>
+              <p className="text-sm font-black text-zinc-900 dark:text-white">Preview Ã‚Â· 3 Pages (A4 Portrait)</p>
               <p className="text-[11px] text-zinc-400">
                 Quote# {quoteNumber}
                 {isDirty && (
-                  <span className="ml-2 font-bold text-amber-600">· may binago, i-generate muli</span>
+                  <span className="ml-2 font-bold text-amber-600">Ã‚Â· may binago, i-generate muli</span>
                 )}
               </p>
             </div>
@@ -1431,14 +1398,6 @@ export function QuotationGenerator() {
               <Download className="w-4 h-4" />
               {isExporting ? 'Ginagawa ang PDF...' : 'I-download bilang PDF'}
             </motion.button>
-
-            <button
-              type="button"
-              onClick={() => printToPDF(previewHTML)}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl font-bold text-xs transition-all cursor-pointer"
-            >
-              Print
-            </button>
 
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -1480,8 +1439,8 @@ export function QuotationGenerator() {
           <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 px-3.5 py-2.5">
             <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-200">
-              <span className="font-bold">Sa print dialog:</span> Destination → “Save as PDF”, Paper → A4,
-              Margins → None, at i-check ang “Background graphics” para lumabas ang dark table header at total highlight.
+              <span className="font-bold">Sa print dialog:</span> Destination Ã¢â€ â€™ Ã¢â‚¬Å“Save as PDFÃ¢â‚¬Â, Paper Ã¢â€ â€™ A4,
+              Margins Ã¢â€ â€™ None, at i-check ang Ã¢â‚¬Å“Background graphicsÃ¢â‚¬Â para lumabas ang dark table header at total highlight.
             </p>
           </div>
         </motion.div>
