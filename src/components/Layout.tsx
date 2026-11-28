@@ -17,6 +17,7 @@ import {
     UserPlus,
     Briefcase,
     Award,
+    FileSpreadsheet,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
@@ -82,6 +83,7 @@ const navItems = [
     { icon: TrendingUp, label: 'Sales', short: 'Sales' },
     { icon: Briefcase, label: 'Partners', short: 'Partners' },
     { icon: Award, label: 'Certificate', short: 'Cert' },
+    { icon: FileSpreadsheet, label: 'Quotation', short: 'Quote' },
 ];
 
 const primaryLabels = ['Master List', 'Receipts', 'Daily Audit'];

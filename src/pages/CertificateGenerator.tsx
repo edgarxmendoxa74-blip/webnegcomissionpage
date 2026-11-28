@@ -10,6 +10,7 @@ import {
   RefreshCw,
   User,
 } from 'lucide-react';
+import { SignaturePad } from '../components/SignaturePad';
 
 /* ─── Brand tokens ───────────────────────────────────────────────────────── */
 const BRAND = {
@@ -102,6 +103,7 @@ interface CertificateData {
   signatoryRole: string;
   pronoun: Pronoun;
   referenceNo: string;
+  signatorySignature?: string;
 }
 
 /* ─── Certificate HTML — A4 print sheet ──────────────────────────────────── */
@@ -251,6 +253,24 @@ function buildCertificateHTML(data: CertificateData, logoUrl: string): string {
     margin-bottom: 15mm;
   }
 
+  .signature-closing.with-img {
+    margin-bottom: 2mm;
+  }
+
+  .signature-img-wrap {
+    height: 15mm;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 1mm;
+  }
+
+  .signature-img {
+    max-height: 14.5mm;
+    max-width: 68mm;
+    object-fit: contain;
+    display: block;
+  }
+
   .signature-line { height: 1px; background: #1f1f23; margin-bottom: 2.4mm; }
 
   .signature-caption {
@@ -368,7 +388,12 @@ function buildCertificateHTML(data: CertificateData, logoUrl: string): string {
     <!-- SIGNATURE -->
     <div class="signature">
       <div class="signature-box">
-        <div class="signature-closing">Sincerely,</div>
+        <div class="signature-closing${data.signatorySignature ? ' with-img' : ''}">Sincerely,</div>
+        ${
+          data.signatorySignature
+            ? `<div class="signature-img-wrap"><img class="signature-img" src="${data.signatorySignature}" alt="Signatory E-Signature"/></div>`
+            : ''
+        }
         <div class="signature-line"></div>
         <div class="signature-name">${esc(data.signatoryName)}</div>
         <div class="signature-role">${esc(data.signatoryRole)}</div>
@@ -457,6 +482,8 @@ export function CertificateGenerator() {
   const [issueDate, setIssueDate] = useState(() => toISODate(new Date()));
   const [signatoryName, setSignatoryName] = useState('John Angelo David');
   const [signatoryRole, setSignatoryRole] = useState('Owner / Founder');
+  const [signatorySignature, setSignatorySignature] = useState('');
+  const [sigResetSignal, setSigResetSignal] = useState(0);
 
   const [previewHTML, setPreviewHTML] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
@@ -513,6 +540,7 @@ export function CertificateGenerator() {
       signatoryRole: signatoryRole.trim() || 'Owner / Founder',
       pronoun,
       referenceNo: ref,
+      signatorySignature,
     };
 
     setReferenceNo(ref);
@@ -533,6 +561,8 @@ export function CertificateGenerator() {
     setIssueDate(toISODate(new Date()));
     setSignatoryName('John Angelo David');
     setSignatoryRole('Owner / Founder');
+    setSignatorySignature('');
+    setSigResetSignal((n) => n + 1);
     setPreviewHTML('');
     setReferenceNo('');
     setIsDirty(false);
@@ -547,7 +577,7 @@ export function CertificateGenerator() {
           <FileText className="w-6 h-6 text-[#E8191A]" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Certificate of Employment</h1>
+          <h1 className="text-2xl font-black text-black">Certificate of Employment</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Buuin ang opisyal na COE at i-export bilang A4 PDF
           </p>
@@ -740,6 +770,13 @@ export function CertificateGenerator() {
               />
             </div>
           </div>
+
+          <SignaturePad
+            label="Signatory E-Signature (Opsyonal)"
+            value={signatorySignature}
+            onChange={(url) => { setSignatorySignature(url); touch(); }}
+            resetSignal={sigResetSignal}
+          />
         </section>
 
         <motion.button

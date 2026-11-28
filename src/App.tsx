@@ -22,6 +22,7 @@ import { PartnerProgram } from './pages/PartnerProgram';
 import { PartnerAdmin } from './pages/PartnerAdmin';
 import { PartnersList } from './pages/PartnersList';
 import { CertificateGenerator } from './pages/CertificateGenerator';
+import { QuotationGenerator } from './pages/QuotationGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function AppContent() {
@@ -70,6 +71,8 @@ function AppContent() {
         return <PartnersList />;
       case 'Certificate':
         return <CertificateGenerator />;
+      case 'Quotation':
+        return <QuotationGenerator />;
       default:
         return (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground text-center">
