@@ -1,87 +1,211 @@
 /**
- * Mobile-compatible PDF export.
+ * Mobile-compatible PDF export using jsPDF + html2canvas.
  *
- * Strategy:
- *  1. Open the full HTML in a new browser tab/window as a Blob URL.
- *  2. Automatically trigger the browser's native print dialog (which allows
- *     "Save as PDF" on both desktop and mobile).
- *  3. On Capacitor / mobile, if the Web Share API is available and supports
- *     file sharing, offer the HTML as a shareable file so the user can save,
- *     email, or print it through their device's native sheet.
- *  4. Fallback: direct .html file download that the user can open and print.
- *
- * This approach avoids `html-to-image` which silently fails on mobile WebViews.
+ * Flow:
+ *  1. Render each .page element to a canvas image using html2canvas
+ *  2. Build a real multi-page A4 PDF using jsPDF
+ *  3. On Capacitor (mobile app):
+ *     - Save PDF to device cache via @capacitor/filesystem
+ *     - Open native share sheet via @capacitor/share
+ *  4. On desktop browser:
+ *     - Direct blob download
  */
+
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+
+const A4_WIDTH_PX = 794;   // 210mm at 96dpi
+const A4_HEIGHT_PX = 1123;  // 297mm at 96dpi
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
+/** Detect if running inside Capacitor native app */
+function isCapacitorNative(): boolean {
+  try {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    return Boolean(cap?.isNativePlatform?.());
+  } catch {
+    return false;
+  }
+}
+
+/** Detect mobile browser (not necessarily Capacitor) */
+function isMobile(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 /**
- * Opens the given HTML document in a new window and triggers print (Save as PDF).
- * Works on desktop and mobile browsers, including Capacitor WebView.
+ * Renders an HTML document's `.page` elements into a real downloadable multi-page A4 PDF.
+ *
+ * - On Capacitor native: saves to cache dir and opens native share sheet with real PDF file.
+ * - On mobile browser: uses Web Share API if available, else blob download.
+ * - On desktop: triggers direct download.
  */
 export async function exportHtmlToPdf(html: string, fileName: string): Promise<void> {
-  const safeName = fileName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9_\-. ]/g, '_');
+  const safeName = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
 
-  const isMobileOrApp =
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    Boolean(
-      (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.(),
-    );
+  // ── 1. Create off-screen iframe to render HTML ──
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText =
+    `position:fixed;left:-10000px;top:0;width:${A4_WIDTH_PX}px;height:${A4_HEIGHT_PX}px;border:0;background:#fff;`;
+  document.body.appendChild(frame);
 
-  // On Capacitor native apps, try Web Share API with HTML file
-  if (isMobileOrApp && typeof navigator.share === 'function') {
-    try {
-      const htmlBlob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const htmlFile = new File([htmlBlob], `${safeName}.html`, { type: 'text/html' });
-      if (!navigator.canShare || navigator.canShare({ files: [htmlFile] })) {
-        await navigator.share({
-          files: [htmlFile],
-          title: safeName,
-        });
-        return;
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return; // User cancelled share sheet
-      }
-      // Fall through to other methods
+  try {
+    const frameWindow = frame.contentWindow;
+    const frameDocument = frameWindow?.document;
+    if (!frameWindow || !frameDocument) {
+      throw new Error('Hindi ma-load ang PDF renderer.');
     }
-  }
 
-  // Open HTML in a new window and trigger print → "Save as PDF"
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
+    frameDocument.open();
+    frameDocument.write(html);
+    frameDocument.close();
 
-  const printWindow = window.open(blobUrl, '_blank');
-  if (printWindow) {
-    // Wait for content to load, then trigger print
-    const tryPrint = () => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } catch {
-        // Some browsers block print() from opener; user can manually Ctrl+P
+    // Wait for document to be ready
+    const parsedAt = Date.now();
+    while (frameDocument.readyState !== 'complete' && Date.now() - parsedAt < 6000) {
+      await wait(50);
+    }
+
+    // Wait for images to load
+    const images = Array.from(frameDocument.images);
+    await Promise.race([
+      Promise.all(
+        images.map((img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              }),
+        ),
+      ),
+      wait(6000),
+    ]);
+
+    // Wait for fonts
+    if (frameDocument.fonts?.ready) {
+      await Promise.race([frameDocument.fonts.ready, wait(3000)]);
+    }
+
+    // Small delay for final rendering
+    await wait(300);
+
+    // ── 2. Capture each .page as canvas ──
+    const pageNodes = Array.from(frameDocument.querySelectorAll<HTMLElement>('.page'));
+    if (pageNodes.length === 0) {
+      throw new Error('Walang page na nakita para sa PDF.');
+    }
+
+    const canvases: HTMLCanvasElement[] = [];
+    for (const pageNode of pageNodes) {
+      const canvas = await html2canvas(pageNode, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: A4_WIDTH_PX,
+        height: A4_HEIGHT_PX,
+        windowWidth: A4_WIDTH_PX,
+        windowHeight: A4_HEIGHT_PX,
+        logging: false,
+      });
+      canvases.push(canvas);
+    }
+
+    // ── 3. Build PDF with jsPDF ──
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+    });
+
+    for (let i = 0; i < canvases.length; i++) {
+      if (i > 0) {
+        pdf.addPage('a4', 'portrait');
       }
-    };
+      const imgData = canvases[i].toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+    }
 
-    printWindow.addEventListener('load', () => window.setTimeout(tryPrint, 600), { once: true });
-    // Fallback timer in case load event doesn't fire reliably
-    window.setTimeout(tryPrint, 3000);
-
-    // Clean up blob URL after a delay
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    return;
+    // ── 4. Deliver the PDF ──
+    if (isCapacitorNative()) {
+      // Capacitor native: save to cache + share
+      await deliverPdfCapacitor(pdf, safeName);
+    } else if (isMobile() && typeof navigator.share === 'function') {
+      // Mobile browser with Web Share API
+      await deliverPdfWebShare(pdf, safeName);
+    } else {
+      // Desktop: direct download
+      pdf.save(safeName);
+    }
+  } finally {
+    frame.remove();
   }
+}
 
-  // Fallback: if popup was blocked, download the HTML file directly
-  const link = document.createElement('a');
-  link.href = blobUrl;
-  link.download = `${safeName}.html`;
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+/**
+ * Save PDF to Capacitor cache directory and open native share sheet.
+ */
+async function deliverPdfCapacitor(pdf: jsPDF, fileName: string): Promise<void> {
+  try {
+    // Dynamic import so these don't break on web-only builds
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
 
-  await wait(100);
+    // Convert PDF to base64
+    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+    // Write to cache directory
+    const result = await Filesystem.writeFile({
+      path: fileName,
+      data: pdfBase64,
+      directory: Directory.Cache,
+    });
+
+    // Share the file
+    await Share.share({
+      title: fileName,
+      url: result.uri,
+      dialogTitle: 'I-share ang PDF',
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return; // User cancelled
+    }
+    // Fallback: try jsPDF's built-in save
+    console.warn('Capacitor share failed, falling back to jsPDF save:', err);
+    pdf.save(fileName);
+  }
+}
+
+/**
+ * Use Web Share API to share the PDF file on mobile browsers.
+ */
+async function deliverPdfWebShare(pdf: jsPDF, fileName: string): Promise<void> {
+  try {
+    const pdfBlob = pdf.output('blob');
+    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+    if (navigator.canShare && !navigator.canShare({ files: [pdfFile] })) {
+      // Browser doesn't support sharing files, fall back to download
+      pdf.save(fileName);
+      return;
+    }
+
+    await navigator.share({
+      files: [pdfFile],
+      title: fileName,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return; // User cancelled share sheet
+    }
+    // Fallback to direct download
+    pdf.save(fileName);
+  }
 }
