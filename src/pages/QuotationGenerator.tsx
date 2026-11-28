@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { SignaturePad } from '../components/SignaturePad';
+import { exportHtmlToPdf } from '../lib/pdfExport';
 
 /* ─── Brand & Page Constants ─────────────────────────────────────────────── */
 const A4_WIDTH_PX = 794;   // 210mm at 96dpi
@@ -899,6 +900,8 @@ export function QuotationGenerator() {
 
   const [previewHTML, setPreviewHTML] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
@@ -1408,14 +1411,34 @@ export function QuotationGenerator() {
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => printToPDF(previewHTML)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#E8191A] hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-200 dark:shadow-red-900/30 cursor-pointer"
+              whileHover={{ scale: isExporting ? 1 : 1.03 }}
+              whileTap={{ scale: isExporting ? 1 : 0.97 }}
+              disabled={isExporting}
+              onClick={async () => {
+                setExportError('');
+                setIsExporting(true);
+                try {
+                  const safeClient = clientName.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'Client';
+                  await exportHtmlToPdf(previewHTML, `${quoteNumber}-${safeClient}.pdf`);
+                } catch (err) {
+                  setExportError(err instanceof Error ? err.message : 'Hindi ma-export ang PDF.');
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#E8191A] hover:bg-red-700 disabled:opacity-60 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-200 dark:shadow-red-900/30 cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              I-download bilang PDF
+              {isExporting ? 'Ginagawa ang PDF...' : 'I-download bilang PDF'}
             </motion.button>
+
+            <button
+              type="button"
+              onClick={() => printToPDF(previewHTML)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl font-bold text-xs transition-all cursor-pointer"
+            >
+              Print
+            </button>
 
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -1427,6 +1450,10 @@ export function QuotationGenerator() {
               Bago Muli
             </motion.button>
           </div>
+
+          {exportError && (
+            <p className="text-xs font-bold text-red-600 dark:text-red-400">{exportError}</p>
+          )}
 
           <div
             ref={previewWrapRef}
