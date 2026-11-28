@@ -4,7 +4,6 @@ import {
   Briefcase,
   Download,
   FileText,
-  Info,
   Package,
   Plus,
   RefreshCw,
@@ -826,40 +825,7 @@ function buildQuotationHTML(data: QuotationData, logoUrl: string): string {
 </html>`;
 }
 
-/* â”€â”€â”€ Print via hidden iframe â†’ "Save as PDF" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function printToPDF(html: string): void {
-  const frame = document.createElement('iframe');
-  frame.setAttribute('aria-hidden', 'true');
-  frame.style.cssText =
-    'position:fixed;right:0;bottom:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;z-index:-1;';
-  document.body.appendChild(frame);
-
-  const frameWindow = frame.contentWindow;
-  const frameDocument = frameWindow?.document;
-  if (!frameWindow || !frameDocument) {
-    frame.remove();
-    return;
-  }
-
-  let printed = false;
-  const print = () => {
-    if (printed) return;
-    printed = true;
-    try {
-      frameWindow.focus();
-      frameWindow.print();
-    } finally {
-      window.setTimeout(() => frame.remove(), 1000);
-    }
-  };
-
-  frameWindow.addEventListener('load', () => window.setTimeout(print, 350), { once: true });
-  frameDocument.open();
-  frameDocument.write(html);
-  frameDocument.close();
-  window.setTimeout(print, 2500);
-}
-
+/* â”€â”€â”€ PDF export uses the shared exporter â†’ "Save as PDF" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* â”€â”€â”€ Field Styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const labelCls =
   'block text-[10px] font-black text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-[0.16em]';
@@ -1401,7 +1367,7 @@ export function QuotationGenerator() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <div className="mr-auto">
-              <p className="text-sm font-black text-zinc-900 dark:text-white">Preview Â· 3 Pages (A4 Portrait)</p>
+              <p className="text-sm font-black text-black">Preview Â· 3 Pages (A4 Portrait)</p>
               <p className="text-[11px] text-zinc-400">
                 Quote# {quoteNumber}
                 {isDirty && (
@@ -1469,13 +1435,6 @@ export function QuotationGenerator() {
             />
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 px-3.5 py-2.5">
-            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-200">
-              <span className="font-bold">Sa print dialog:</span> Destination â†’ â€œSave as PDFâ€, Paper â†’ A4,
-              Margins â†’ None, at i-check ang â€œBackground graphicsâ€ para lumabas ang dark table header at total highlight.
-            </p>
-          </div>
         </motion.div>
       )}
     </div>
